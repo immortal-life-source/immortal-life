@@ -71,7 +71,7 @@ async function handleSubmit() {
      Replace WEBHOOK_URL with your n8n webhook endpoint.
      The payload includes consent timestamp for GDPR audit trail.
      ─────────────────────────────────────────────────────── */
-  const WEBHOOK_URL = 'YOUR_N8N_WEBHOOK_URL'; // TODO: replace before go-live
+  const WEBHOOK_URL = 'https://nifbuyoghesveotugday.supabase.co/functions/v1/subscribe';
 
   const payload = {
     email:      email,
