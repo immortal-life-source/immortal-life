@@ -1,0 +1,21 @@
+OG IMAGE REQUIRED
+=================
+
+File expected at: /og-image.jpg
+Dimensions:       1200 × 630 px
+Format:           JPG, quality 85+
+
+Design brief:
+- Background: #070706 (same as site)
+- Centered text: "immortal.life" in Cormorant Garamond 200 weight
+- Subtitle: "The end of ageing begins here"
+- Gold accent: #b8955a
+- The horizon glow from the hero can be used as background element
+
+This file is referenced in index.html og:image and twitter:image meta tags.
+Create this before launch — social shares will show a broken image without it.
+
+Tools to create it:
+- Figma (export as JPG)
+- Any design tool that supports the font
+- Or commission a designer
