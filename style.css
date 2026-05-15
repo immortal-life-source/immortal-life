@@ -927,8 +927,9 @@ h1 {
   }
 
   .foot-right {
-    flex-wrap: wrap;
-    gap: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
 
   .privacy-link,
