@@ -930,4 +930,15 @@ h1 {
     flex-wrap: wrap;
     gap: 16px;
   }
+
+  .privacy-link,
+  .foot-link {
+    min-height: 44px;
+    min-width: 44px;
+    touch-action: manipulation;
+  }
+
+  .s1-particles-canvas {
+    pointer-events: none;
+  }
 }

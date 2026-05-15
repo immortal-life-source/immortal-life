@@ -110,7 +110,9 @@ function showSuccess() {
 const modal = document.getElementById('privacyModal');
 const firstFocus = modal?.querySelector('.modal-close');
 
-function openPrivacy() {
+function openPrivacy(e) {
+  document.getElementById('privacyModal').style.display = 'block';
+  if (e && e.preventDefault) e.preventDefault();
   if (!modal) return;
   modal.classList.add('open');
   modal.setAttribute('aria-hidden', 'false');
@@ -120,6 +122,7 @@ function openPrivacy() {
 
 function closePrivacy() {
   if (!modal) return;
+  modal.style.display = '';
   modal.classList.remove('open');
   modal.setAttribute('aria-hidden', 'true');
   document.body.style.overflow = '';
@@ -133,14 +136,17 @@ if (modal) {
 
 firstFocus?.addEventListener('click', closePrivacy);
 
-document.querySelector('.privacy-link')?.addEventListener('click', (e) => {
-  e.preventDefault();
-  openPrivacy();
-});
+function bindPrivacyOpenTriggers(el) {
+  if (!el) return;
+  const handler = (e) => openPrivacy(e);
+  el.addEventListener('click', handler, { passive: false });
+  el.addEventListener('touchstart', handler, { passive: false });
+}
 
-document
-  .querySelector('.site-footer .foot-right > button.foot-link')
-  ?.addEventListener('click', openPrivacy);
+bindPrivacyOpenTriggers(document.querySelector('.privacy-link'));
+bindPrivacyOpenTriggers(
+  document.querySelector('.site-footer .foot-right > button.foot-link')
+);
 
 document.getElementById('submitBtn')?.addEventListener('click', () => {
   handleSubmit();
