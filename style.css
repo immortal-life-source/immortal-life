@@ -252,6 +252,17 @@ h1 {
   opacity: 0.4;
 }
 
+.s1-particles-canvas {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 55%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
 /* ============================================================
    SECTION 2 — MANIFESTO
    ============================================================ */
@@ -310,6 +321,7 @@ h1 {
   font-style: normal;
   color: var(--off);
   line-height: 1.80;
+  letter-spacing: normal;
   margin-top: 20px;
   max-width: 580px;
 }
@@ -377,15 +389,20 @@ h1 {
    ============================================================ */
 .s4 {
   border-top: 1px solid var(--border);
-  padding: var(--pad-section) var(--pad-x);
+  padding-top: 40px;
+  padding-right: var(--pad-x);
+  padding-bottom: 40px;
+  padding-left: var(--pad-x);
   display: grid;
-  grid-template-columns: 1fr 440px;
+  grid-template-columns: minmax(0, 1fr) 440px;
   gap: 120px;
-  align-items: center;
+  align-items: start;
   position: relative;
   overflow: hidden;
 }
 
+/* Glow is a grid child: without explicit placement it steals the first cell and
+   shoves .s4-left into the 440px column — span the full area behind content. */
 .s4-glow {
   position: absolute;
   top: 50%;
@@ -396,6 +413,26 @@ h1 {
   border-radius: 50%;
   background: radial-gradient(ellipse, rgba(184, 149, 90, 0.07) 0%, transparent 65%);
   pointer-events: none;
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  z-index: 0;
+}
+
+.s4-left,
+.form-wrapper {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.s4-left {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.form-wrapper {
+  grid-column: 2;
+  grid-row: 1;
 }
 
 .s4-eyebrow {
@@ -410,7 +447,7 @@ h1 {
 .s4-headline {
   font-family: var(--font-serif);
   font-weight: 200;
-  font-size: clamp(44px, 5.5vw, 76px);
+  font-size: clamp(64px, 8.5vw, 110px);
   line-height: 1.0;
   letter-spacing: -0.03em;
   color: var(--white);

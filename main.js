@@ -137,3 +137,166 @@ document.addEventListener('keydown', (e) => {
 window.openPrivacy  = openPrivacy;
 window.closePrivacy = closePrivacy;
 window.handleSubmit = handleSubmit;
+
+/* ── Hero particle canvas ─────────────────────────────────── */
+(function initHeroParticles() {
+  const canvas = document.getElementById('heroParticles');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const N = 220;
+  const CONN_DIST = 90;
+  const ROTATION_PERIOD_S = 120;
+  const dprCap = 2;
+
+  const goldCount = Math.round(N * 0.3);
+  const isGoldArr = [];
+  let i;
+  for (i = 0; i < goldCount; i++) isGoldArr.push(true);
+  for (i = goldCount; i < N; i++) isGoldArr.push(false);
+  for (i = isGoldArr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = isGoldArr[i];
+    isGoldArr[i] = isGoldArr[j];
+    isGoldArr[j] = tmp;
+  }
+
+  const particles = [];
+  let cssW = 0;
+  let cssH = 0;
+
+  function insetXMin(w) {
+    return Math.max(20, Math.round(w * 0.1));
+  }
+
+  function wrap1D(v, lo, hi) {
+    const span = hi - lo;
+    if (span < 1) return lo;
+    let t = v - lo;
+    t = ((t % span) + span) % span;
+    return lo + t;
+  }
+
+  function layoutCanvas() {
+    const nextW = canvas.clientWidth;
+    const nextH = canvas.clientHeight;
+    if (nextW < 2 || nextH < 2) return;
+
+    const xMin = insetXMin(nextW);
+
+    if (particles.length === 0) {
+      const spanX = Math.max(1, nextW - xMin);
+      for (i = 0; i < N; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.08 + Math.random() * (0.18 - 0.08);
+        particles.push({
+          x: xMin + Math.random() * spanX,
+          y: Math.random() * nextH,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          baseR: 0.8 + Math.random() * (2 - 0.8),
+          phase: Math.random() * Math.PI * 2,
+          period: 3 + Math.random() * 3,
+          isGold: isGoldArr[i],
+        });
+      }
+    } else if (cssW > 0 && cssH > 0 && (nextW !== cssW || nextH !== cssH)) {
+      const sx = nextW / cssW;
+      const sy = nextH / cssH;
+      const xMinN = insetXMin(nextW);
+      particles.forEach((pp) => {
+        pp.x *= sx;
+        pp.y *= sy;
+        pp.x = wrap1D(pp.x, xMinN, nextW);
+        pp.y = wrap1D(pp.y, 0, nextH);
+      });
+    }
+
+    cssW = nextW;
+    cssH = nextH;
+    const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function tick(now) {
+    if (document.hidden) return;
+
+    if (cssW < 2 || cssH < 2) {
+      layoutCanvas();
+      requestAnimationFrame(tick);
+      return;
+    }
+
+    const tSec = now * 0.001;
+    const rot = (tSec * (Math.PI * 2)) / ROTATION_PERIOD_S;
+    const xMin = insetXMin(cssW);
+
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    ctx.save();
+    ctx.translate(cssW * 0.5, cssH * 0.5);
+    ctx.rotate(rot);
+    ctx.translate(-cssW * 0.5, -cssH * 0.5);
+
+    let a;
+    let b;
+    let d;
+    let dx;
+    let dy;
+    let j;
+    let prox;
+    let p;
+    let breath;
+    let r;
+
+    for (i = 0; i < N; i++) {
+      p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.x = wrap1D(p.x, xMin, cssW);
+      p.y = wrap1D(p.y, 0, cssH);
+    }
+
+    for (i = 0; i < N; i++) {
+      a = particles[i];
+      for (j = i + 1; j < N; j++) {
+        b = particles[j];
+        dx = b.x - a.x;
+        dy = b.y - a.y;
+        d = Math.hypot(dx, dy);
+        if (d >= CONN_DIST) continue;
+        prox = 1 - d / CONN_DIST;
+        ctx.strokeStyle = 'rgba(184,149,90,' + (0.12 * prox) + ')';
+        ctx.lineWidth = 2 * prox;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+    }
+
+    for (i = 0; i < N; i++) {
+      p = particles[i];
+      breath = 0.4 * Math.sin((tSec * (Math.PI * 2)) / p.period + p.phase);
+      r = Math.max(0.2, p.baseR + breath);
+      ctx.fillStyle = p.isGold ? 'rgba(184,149,90,0.6)' : 'rgba(237,233,224,0.4)';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+
+    requestAnimationFrame(tick);
+  }
+
+  layoutCanvas();
+  window.addEventListener('resize', layoutCanvas);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) requestAnimationFrame(tick);
+  });
+  requestAnimationFrame(tick);
+})();
