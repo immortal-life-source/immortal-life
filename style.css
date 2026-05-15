@@ -857,3 +857,77 @@ h1 {
     transition: none;
   }
 }
+
+/* ============================================================
+   MOBILE — max-width 768px (desktop rules above unchanged)
+   ============================================================ */
+@media (max-width: 768px) {
+  .s2 {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 80px 28px;
+  }
+
+  .s2-label {
+    position: static;
+  }
+
+  .manifesto-line {
+    font-size: clamp(26px, 7vw, 36px);
+    padding-bottom: 40px;
+  }
+
+  .manifesto-line .aside {
+    font-size: 14px;
+  }
+
+  .s3 {
+    grid-template-columns: 1fr;
+  }
+
+  .pillar {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 48px 28px;
+  }
+
+  .pillar:last-child {
+    border-bottom: none;
+  }
+
+  .s4 {
+    grid-template-columns: 1fr;
+    gap: 48px;
+    padding: 80px 28px 60px;
+  }
+
+  .s4-headline {
+    font-size: clamp(48px, 12vw, 72px);
+  }
+
+  .s4-body {
+    max-width: 100%;
+  }
+
+  .form-wrapper {
+    width: 100%;
+  }
+
+  .s4-left,
+  .form-wrapper {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .site-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 32px 28px;
+  }
+
+  .foot-right {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+}
