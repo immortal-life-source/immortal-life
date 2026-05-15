@@ -107,36 +107,49 @@ function showSuccess() {
 }
 
 /* ── Privacy modal ─────────────────────────────────────────── */
-const modal     = document.getElementById('privacyModal');
-const firstFocus = modal.querySelector('.modal-close');
+const modal = document.getElementById('privacyModal');
+const firstFocus = modal?.querySelector('.modal-close');
 
 function openPrivacy() {
+  if (!modal) return;
   modal.classList.add('open');
   modal.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
-  firstFocus.focus();
+  firstFocus?.focus();
 }
 
 function closePrivacy() {
+  if (!modal) return;
   modal.classList.remove('open');
   modal.setAttribute('aria-hidden', 'true');
   document.body.style.overflow = '';
 }
 
-/* Close on backdrop click */
-modal.addEventListener('click', (e) => {
-  if (e.target === modal) closePrivacy();
+if (modal) {
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closePrivacy();
+  });
+}
+
+firstFocus?.addEventListener('click', closePrivacy);
+
+document.querySelector('.privacy-link')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  openPrivacy();
+});
+
+document
+  .querySelector('.site-footer .foot-right > button.foot-link')
+  ?.addEventListener('click', openPrivacy);
+
+document.getElementById('submitBtn')?.addEventListener('click', () => {
+  handleSubmit();
 });
 
 /* Close on Escape */
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && modal.classList.contains('open')) closePrivacy();
+  if (e.key === 'Escape' && modal?.classList.contains('open')) closePrivacy();
 });
-
-/* Expose to inline onclick handlers */
-window.openPrivacy  = openPrivacy;
-window.closePrivacy = closePrivacy;
-window.handleSubmit = handleSubmit;
 
 /* ── Hero particle canvas ─────────────────────────────────── */
 (function initHeroParticles() {
@@ -300,3 +313,7 @@ window.handleSubmit = handleSubmit;
   });
   requestAnimationFrame(tick);
 })();
+
+window.openPrivacy  = openPrivacy;
+window.closePrivacy = closePrivacy;
+window.handleSubmit = handleSubmit;
