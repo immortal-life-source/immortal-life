@@ -16,6 +16,29 @@ function generateInviteCodes(count: number): string[] {
 type AuthOk = { ok: true; sessionData: string }
 type AuthErr = { ok: false; joinError: string }
 
+async function invokeAwardPoints(
+  memberId: number,
+  action: string,
+  base_points: number,
+  meta: Record<string, unknown>
+): Promise<void> {
+  const url = `${Deno.env.get('SUPABASE_URL')}/functions/v1/award-points`
+  const serviceKey = Deno.env.get('SERVICE_ROLE_KEY') ?? ''
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${serviceKey}`,
+      apikey: serviceKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ member_id: memberId, action, base_points, meta }),
+  })
+  if (!res.ok) {
+    const t = await res.text()
+    throw new Error(`award-points failed: ${res.status} ${t}`)
+  }
+}
+
 async function runOAuthFlow(
   code: string | null,
   stateParam: string | null,
@@ -144,60 +167,25 @@ async function runOAuthFlow(
       const inviterNewNetwork = (inviter.network_size ?? 0) + 1
       await supabase.from('members').update({ network_size: inviterNewNetwork }).eq('id', inviter.id)
 
-      await supabase.from('points_log').insert({
-        member_id: inviter.id,
-        action: 'invite_signup',
-        points: 500,
-        meta: { invited_x_username: xProfile.username },
+      await invokeAwardPoints(inviter.id, 'invite_signup', 500, {
+        invited_x_username: xProfile.username,
       })
 
-      const { data: inviterAfterNet } = await supabase
-        .from('members')
-        .select('points')
-        .eq('id', inviter.id)
-        .single()
-
-      if (inviterAfterNet) {
-        await supabase
-          .from('members')
-          .update({ points: inviterAfterNet.points + 500 })
-          .eq('id', inviter.id)
-      }
-
       if (inviter.invited_by) {
-        await supabase.from('points_log').insert({
-          member_id: inviter.invited_by,
-          action: 'chain_signup_depth2',
-          points: 250,
-          meta: { invited_x_username: xProfile.username },
+        await invokeAwardPoints(inviter.invited_by, 'chain_signup_depth2', 250, {
+          invited_x_username: xProfile.username,
         })
+
         const { data: depth2Member } = await supabase
           .from('members')
-          .select('points, invited_by')
+          .select('invited_by')
           .eq('id', inviter.invited_by)
           .single()
-        if (depth2Member) {
-          await supabase.from('members').update({ points: depth2Member.points + 250 }).eq('id', inviter.invited_by)
 
-          if (depth2Member.invited_by) {
-            await supabase.from('points_log').insert({
-              member_id: depth2Member.invited_by,
-              action: 'chain_signup_depth3',
-              points: 125,
-              meta: { invited_x_username: xProfile.username },
-            })
-            const { data: depth3Member } = await supabase
-              .from('members')
-              .select('points')
-              .eq('id', depth2Member.invited_by)
-              .single()
-            if (depth3Member) {
-              await supabase
-                .from('members')
-                .update({ points: depth3Member.points + 125 })
-                .eq('id', depth2Member.invited_by)
-            }
-          }
+        if (depth2Member?.invited_by) {
+          await invokeAwardPoints(depth2Member.invited_by, 'chain_signup_depth3', 125, {
+            invited_x_username: xProfile.username,
+          })
         }
       }
     }

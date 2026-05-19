@@ -6,9 +6,11 @@
 
   var ACTION_LABELS = {
     signup: 'Account created',
+    daily_login: 'Daily login',
     invite_signup: 'Someone joined with your invite',
     chain_signup_depth2: 'Network signup (depth 2)',
     chain_signup_depth3: 'Network signup (depth 3)',
+    codes_unlocked: 'Invite codes unlocked',
   };
 
   function getSession() {
@@ -68,6 +70,22 @@
       document.getElementById('dashUser').textContent = '@' + (m.x_username || '');
       document.getElementById('dashTier').textContent = data.tier || 'Member';
       document.getElementById('dashPoints').textContent = String(m.points ?? 0);
+
+      var streak = Number(m.login_streak ?? 0);
+      var streakEl = document.getElementById('dashLoginStreak');
+      streakEl.textContent = '';
+      if (streak >= 3) {
+        var flame = document.createElement('span');
+        flame.className = 'dash-streak-flame';
+        flame.setAttribute('aria-hidden', 'true');
+        flame.textContent = '🔥 ';
+        streakEl.appendChild(flame);
+      }
+      var dayWord = streak === 1 ? 'day' : 'days';
+      streakEl.appendChild(
+        document.createTextNode(streak + ' ' + dayWord + ' login streak')
+      );
+
       document.getElementById('dashRank').innerHTML =
         '<a href="/leaderboard">#' +
         esc(data.rank) +
