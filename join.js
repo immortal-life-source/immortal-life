@@ -31,10 +31,41 @@
 
   var input = document.getElementById('inviteInput');
   var btnContinue = document.getElementById('btnContinue');
-  var btnX = document.getElementById('btnX');
   var errEl = document.getElementById('inviteError');
   var successWrap = document.getElementById('successWrap');
   var formCard = document.getElementById('formCard');
+
+  var inviteValidated = false;
+
+  function startXOAuth() {
+    var code = normalizeCode(input.value);
+    if (!code) return;
+
+    var verifier = randomVerifier(64);
+    pkceChallenge(verifier).then(function (challenge) {
+      sessionStorage.setItem('oauth_code_verifier', verifier);
+      sessionStorage.setItem('oauth_invite_code', code);
+
+      var stateObj = { invite_code: code, code_verifier: verifier };
+      var stateB64 = btoa(JSON.stringify(stateObj));
+
+      var url =
+        'https://x.com/i/oauth2/authorize?response_type=code' +
+        '&client_id=' +
+        encodeURIComponent(X_CLIENT_ID) +
+        '&redirect_uri=' +
+        encodeURIComponent(REDIRECT) +
+        '&scope=' +
+        encodeURIComponent('users.read tweet.read offline.access') +
+        '&state=' +
+        encodeURIComponent(stateB64) +
+        '&code_challenge=' +
+        encodeURIComponent(challenge) +
+        '&code_challenge_method=S256';
+
+      window.location.href = url;
+    });
+  }
 
   function showError(msg) {
     errEl.textContent = msg;
@@ -70,6 +101,11 @@
   }
 
   btnContinue.addEventListener('click', function () {
+    if (inviteValidated) {
+      startXOAuth();
+      return;
+    }
+
     clearError();
     var code = normalizeCode(input.value);
     if (code.length < 1) {
@@ -89,10 +125,11 @@
       .then(function (data) {
         btnContinue.disabled = false;
         if (data && data.valid === true) {
+          inviteValidated = true;
           input.classList.add('invite-input-valid');
           input.readOnly = true;
           successWrap.hidden = false;
-          btnX.hidden = false;
+          btnContinue.textContent = 'Continue with X →';
           formCard.classList.add('join-card-success');
         } else {
           showError('This code is not valid.');
@@ -102,35 +139,5 @@
         btnContinue.disabled = false;
         showError('This code is not valid.');
       });
-  });
-
-  btnX.addEventListener('click', function () {
-    var code = normalizeCode(input.value);
-    if (!code) return;
-
-    var verifier = randomVerifier(64);
-    pkceChallenge(verifier).then(function (challenge) {
-      sessionStorage.setItem('oauth_code_verifier', verifier);
-      sessionStorage.setItem('oauth_invite_code', code);
-
-      var stateObj = { invite_code: code, code_verifier: verifier };
-      var stateB64 = btoa(JSON.stringify(stateObj));
-
-      var url =
-        'https://x.com/i/oauth2/authorize?response_type=code' +
-        '&client_id=' +
-        encodeURIComponent(X_CLIENT_ID) +
-        '&redirect_uri=' +
-        encodeURIComponent(REDIRECT) +
-        '&scope=' +
-        encodeURIComponent('users.read tweet.read offline.access') +
-        '&state=' +
-        encodeURIComponent(stateB64) +
-        '&code_challenge=' +
-        encodeURIComponent(challenge) +
-        '&code_challenge_method=S256';
-
-      window.location.href = url;
-    });
   });
 })();
