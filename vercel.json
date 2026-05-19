@@ -33,7 +33,6 @@
     }
   ],
   "rewrites": [
-    { "source": "/auth/x", "destination": "/auth-x.html" },
     { "source": "/dashboard", "destination": "/dashboard.html" },
     { "source": "/leaderboard", "destination": "/leaderboard.html" },
     { "source": "/join", "destination": "/join.html" },

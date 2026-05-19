@@ -2,7 +2,7 @@
   'use strict';
 
   var X_CLIENT_ID = 'YV9iTTY1WnB0OVFHY25kaTFZVXo6MTpjaQ';
-  var REDIRECT = 'https://immortal.life/auth/x';
+  var REDIRECT = 'https://immortal.life/auth-x';
   var FN = window.IL_FN_BASE + '/validate-invite';
 
   function base64url(buffer) {
