@@ -1,0 +1,106 @@
+/* immortal.life — shared styles for /join, /dashboard, /leaderboard, /auth/x */
+:root {
+  --bg: #070706;
+  --bg2: #0d0d0b;
+  --gold: #b8955a;
+  --gold-faint: rgba(184, 149, 90, 0.12);
+  --gold-mid: rgba(184, 149, 90, 0.35);
+  --white: #ede9e0;
+  --off: #8a8878;
+  --border: rgba(237, 233, 224, 0.08);
+  --border-mid: rgba(237, 233, 224, 0.14);
+  --error: rgba(180, 70, 70, 0.85);
+  --font-serif: 'Cormorant', Georgia, serif;
+  --font-sans: 'Instrument Sans', system-ui, sans-serif;
+}
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: var(--font-sans);
+  font-weight: 300;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.028'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  mix-blend-mode: screen;
+}
+
+.m-shell {
+  position: relative;
+  z-index: 1;
+}
+
+.m-logo {
+  font-family: var(--font-serif);
+  font-weight: 200;
+  font-size: 12px;
+  letter-spacing: 0.35em;
+  color: var(--gold);
+  text-transform: lowercase;
+}
+
+.m-muted {
+  color: var(--off);
+}
+
+.m-error {
+  color: var(--error);
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+button.m-btn-primary {
+  width: 100%;
+  background: var(--gold);
+  border: none;
+  padding: 18px 24px;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--bg);
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+button.m-btn-primary:hover {
+  opacity: 0.88;
+}
+
+button.m-btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.m-link-gold {
+  color: var(--gold);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.m-link-gold:hover {
+  opacity: 0.85;
+}

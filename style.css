@@ -943,3 +943,40 @@ h1 {
     pointer-events: none;
   }
 }
+
+/* Landing — member counter & members CTA */
+.member-counter {
+  margin-top: 28px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--off);
+  opacity: 0.85;
+  max-width: 480px;
+}
+
+.members-cta {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.members-cta p {
+  font-size: 12px;
+  color: var(--off);
+  margin-bottom: 10px;
+  letter-spacing: 0.04em;
+}
+
+.members-cta a {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-decoration: none;
+}
+
+.members-cta a:hover {
+  opacity: 0.85;
+}

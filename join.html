@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Join — immortal.life</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,200;0,300;1,200;1,300&family=Instrument+Sans:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/members.css" />
+  <style>
+    .join-page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 48px 28px 80px;
+      max-width: 440px;
+      margin: 0 auto;
+    }
+    .join-top {
+      margin-bottom: auto;
+    }
+    .join-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 40px 0;
+    }
+    .join-h1 {
+      font-family: var(--font-serif);
+      font-weight: 200;
+      font-size: clamp(36px, 8vw, 52px);
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+      margin-bottom: 16px;
+    }
+    .join-sub {
+      font-size: 15px;
+      line-height: 1.75;
+      color: var(--off);
+      margin-bottom: 36px;
+    }
+    .join-card {
+      border: 1px solid var(--border-mid);
+      background: rgba(237, 233, 224, 0.02);
+      padding: 28px;
+      transition: border-color 0.3s;
+    }
+    .join-card-success {
+      border-color: rgba(184, 149, 90, 0.45);
+    }
+    .invite-input {
+      width: 100%;
+      display: block;
+      background: transparent;
+      border: 1px solid var(--border-mid);
+      padding: 17px 20px;
+      font-family: ui-monospace, 'Cascadia Code', monospace;
+      font-size: 18px;
+      font-weight: 400;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--white);
+      outline: none;
+      text-align: center;
+      transition: border-color 0.3s;
+      margin-bottom: 8px;
+    }
+    .invite-input:focus {
+      border-color: rgba(184, 149, 90, 0.65);
+      box-shadow: 0 0 0 1px rgba(184, 149, 90, 0.15);
+    }
+    .invite-input-valid {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+    .invite-input-error {
+      border-color: var(--error);
+    }
+    #successWrap {
+      margin-top: 14px;
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+    #btnX {
+      margin-top: 16px;
+      display: none;
+    }
+    .join-waiting {
+      margin-top: 48px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--off);
+      line-height: 1.8;
+    }
+    .join-waiting a {
+      color: var(--gold);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="m-shell join-page">
+    <header class="join-top">
+      <a href="/" class="m-logo" style="text-decoration: none;">immortal.life</a>
+    </header>
+
+    <main class="join-main">
+      <h1 class="join-h1">You were invited.</h1>
+      <p class="join-sub">Enter your invite code to request access.</p>
+
+      <div class="join-card" id="formCard">
+        <input
+          id="inviteInput"
+          class="invite-input"
+          type="text"
+          maxlength="8"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          aria-label="Invite code"
+          placeholder="────────"
+        />
+        <p id="inviteError" class="m-error" hidden role="alert"></p>
+        <div id="successWrap" hidden>Code accepted.</div>
+        <button type="button" class="m-btn-primary" id="btnContinue">Continue</button>
+        <button type="button" class="m-btn-primary" id="btnX" hidden>Continue with X</button>
+      </div>
+
+      <p class="join-waiting">
+        No invite code? <a href="/">Join the waiting list.</a>
+      </p>
+    </main>
+  </div>
+  <script src="/il-config.js"></script>
+  <script src="/join.js"></script>
+</body>
+</html>

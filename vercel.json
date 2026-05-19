@@ -1,6 +1,7 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "buildCommand": "node build.js",
   "headers": [
     {
       "source": "/(.*)",
@@ -12,7 +13,7 @@
         { "key": "Permissions-Policy",        "value": "camera=(), microphone=(), geolocation=()" },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; script-src 'self'; img-src 'self' data:; connect-src 'self' https://nifbuyoghesveotugday.supabase.co; frame-ancestors 'none';"
+          "value": "default-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; script-src 'self'; img-src 'self' data: https:; connect-src 'self' https://nifbuyoghesveotugday.supabase.co https://api.x.com https://x.com https://twitter.com; frame-ancestors 'none';"
         }
       ]
     },
@@ -28,5 +29,12 @@
         { "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" }
       ]
     }
+  ],
+  "rewrites": [
+    { "source": "/auth/x", "destination": "/auth-x.html" },
+    { "source": "/dashboard", "destination": "/dashboard.html" },
+    { "source": "/leaderboard", "destination": "/leaderboard.html" },
+    { "source": "/join", "destination": "/join.html" },
+    { "source": "/invite/:code", "destination": "/join.html?code=:code" }
   ]
 }

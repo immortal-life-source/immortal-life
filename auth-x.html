@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Connecting X — immortal.life</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,200;0,300;1,200;1,300&family=Instrument+Sans:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/members.css" />
+  <style>
+    .ax-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      text-align: center;
+    }
+    .ax-inner {
+      max-width: 400px;
+    }
+    .ax-logo {
+      margin-bottom: 32px;
+      display: inline-block;
+      text-decoration: none;
+    }
+    .ax-msg {
+      font-size: 15px;
+      color: var(--off);
+      line-height: 1.75;
+    }
+  </style>
+</head>
+<body>
+  <div class="m-shell ax-wrap">
+    <div class="ax-inner">
+      <a href="/" class="m-logo ax-logo">immortal.life</a>
+      <p class="ax-msg" id="axMsg">Connecting your X account…</p>
+    </div>
+  </div>
+  <script src="/il-config.js"></script>
+  <script src="/auth-x.js"></script>
+</body>
+</html>
