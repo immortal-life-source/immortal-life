@@ -3,6 +3,7 @@
 
   var SESSION_KEY = 'il_session';
   var FN = window.IL_FN_BASE + '/get-dashboard';
+  var CLAIM_FN = window.IL_FN_BASE + '/claim-daily';
 
   var ACTION_LABELS = {
     signup: 'Account created',
@@ -32,6 +33,198 @@
     } catch {
       return iso;
     }
+  }
+
+  function pad2(n) {
+    return n < 10 ? '0' + n : String(n);
+  }
+
+  function formatHms(ms) {
+    if (ms < 0) ms = 0;
+    var s = Math.floor(ms / 1000);
+    var h = Math.floor(s / 3600);
+    var m = Math.floor((s % 3600) / 60);
+    var sec = s % 60;
+    return pad2(h) + ':' + pad2(m) + ':' + pad2(sec);
+  }
+
+  function nextMidnightUtcIso() {
+    var now = new Date();
+    var next = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0)
+    );
+    return next.toISOString();
+  }
+
+  /** Same UTC calendar day as now — aligns with claim-daily */
+  function alreadyClaimedTodayUtc(iso) {
+    if (!iso) return false;
+    try {
+      var last = new Date(iso);
+      var now = new Date();
+      return last.toISOString().slice(0, 10) === now.toISOString().slice(0, 10);
+    } catch {
+      return false;
+    }
+  }
+
+  function animatePoints(el, fromVal, toVal, durationMs, onDone) {
+    var startTs = null;
+    function step(ts) {
+      if (startTs === null) startTs = ts;
+      var p = Math.min(1, (ts - startTs) / durationMs);
+      var cur = Math.round(fromVal + (toVal - fromVal) * p);
+      el.textContent = String(cur);
+      if (p < 1) {
+        requestAnimationFrame(step);
+      } else {
+        el.textContent = String(toVal);
+        if (onDone) onDone();
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  function setStreakLine(streakEl, n) {
+    streakEl.textContent = '';
+    var streakNum = Number(n) || 0;
+    if (streakNum < 3) {
+      streakEl.hidden = true;
+      return;
+    }
+    streakEl.hidden = false;
+    var words = streakNum === 1 ? ' day streak ' : ' days streak ';
+    streakEl.appendChild(document.createTextNode(String(streakNum) + words));
+    var flame = document.createElement('span');
+    flame.className = 'dash-streak-flame';
+    flame.setAttribute('aria-hidden', 'true');
+    flame.textContent = '🔥';
+    streakEl.appendChild(flame);
+  }
+
+  function setupDailyClaim(memberId, sessionToken, pointsEl, initialStreak, lastDailyClaimIso) {
+    var btn = document.getElementById('btnClaimDaily');
+    var statusEl = document.getElementById('dashClaimStatus');
+    var countdownEl = document.getElementById('dashClaimCountdown');
+    var streakEl = document.getElementById('dashClaimStreak');
+    var countdownTimer = null;
+
+    setStreakLine(streakEl, initialStreak);
+
+    function headers() {
+      return Object.assign({}, window.ilFnHeaders(), {
+        Authorization: 'Bearer ' + sessionToken,
+      });
+    }
+
+    function clearCountdown() {
+      if (countdownTimer) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+      countdownEl.hidden = true;
+      countdownEl.textContent = '';
+    }
+
+    function startCountdown(nextClaimIso) {
+      clearCountdown();
+      countdownEl.hidden = false;
+      var target = new Date(nextClaimIso).getTime();
+      function tick() {
+        var left = target - Date.now();
+        if (left <= 0) {
+          countdownEl.textContent = 'You can claim now — refresh the page.';
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+          return;
+        }
+        countdownEl.textContent = 'Next claim in ' + formatHms(left) + ' (UTC)';
+      }
+      tick();
+      countdownTimer = setInterval(tick, 1000);
+    }
+
+    function setClaimedUi(nextClaimIso) {
+      btn.disabled = true;
+      btn.textContent = '✓ Claimed · come back tomorrow';
+      btn.classList.add('dash-btn-daily--inactive');
+      statusEl.hidden = true;
+      statusEl.textContent = '';
+      startCountdown(nextClaimIso);
+    }
+
+    function setClaimableUi() {
+      clearCountdown();
+      btn.disabled = false;
+      btn.textContent = 'Claim daily points +10';
+      btn.classList.remove('dash-btn-daily--inactive');
+      statusEl.hidden = true;
+      statusEl.textContent = '';
+    }
+
+    if (alreadyClaimedTodayUtc(lastDailyClaimIso)) {
+      setClaimedUi(nextMidnightUtcIso());
+    } else {
+      setClaimableUi();
+    }
+
+    btn.addEventListener('click', function () {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      var startPts = parseInt(String(pointsEl.textContent || '0'), 10) || 0;
+
+      fetch(CLAIM_FN, {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ member_id: memberId }),
+      })
+        .then(function (r) {
+          return r.json().then(function (j) {
+            return { ok: r.ok, j: j };
+          });
+        })
+        .then(function (pack) {
+          var data = pack.j;
+          if (!pack.ok || data.error) {
+            btn.disabled = false;
+            return;
+          }
+          if (data.success === true && data.new_total != null) {
+            animatePoints(pointsEl, startPts, data.new_total, 600, function () {
+              statusEl.hidden = false;
+              statusEl.textContent = '✓ Claimed today';
+              setStreakLine(streakEl, data.login_streak ?? 0);
+              btn.disabled = true;
+              btn.textContent = '✓ Claimed · come back tomorrow';
+              btn.classList.add('dash-btn-daily--inactive');
+              startCountdown(nextMidnightUtcIso());
+
+              var logEl = document.getElementById('dashPointsLog');
+              var li = document.createElement('li');
+              li.className = 'dash-log-row';
+              var earned = data.points_earned != null ? data.points_earned : 10;
+              li.innerHTML =
+                '<span class="dash-log-action">' +
+                esc(ACTION_LABELS.daily_login) +
+                '</span>' +
+                '<span class="dash-log-pts">+' +
+                esc(String(earned)) +
+                '</span>' +
+                '<span class="dash-log-time">' +
+                esc(formatWhen(new Date().toISOString())) +
+                '</span>';
+              logEl.insertBefore(li, logEl.firstChild);
+            });
+          } else if (data.reason === 'already_claimed' && data.next_claim_at) {
+            setClaimedUi(data.next_claim_at);
+          } else {
+            btn.disabled = false;
+          }
+        })
+        .catch(function () {
+          btn.disabled = false;
+        });
+    });
   }
 
   var loading = document.getElementById('dashLoading');
@@ -64,27 +257,13 @@
       root.hidden = false;
 
       var m = data.member;
+      var pointsEl = document.getElementById('dashPoints');
       document.getElementById('dashAvatar').src = m.x_avatar_url || '';
       document.getElementById('dashAvatar').alt = '@' + m.x_username;
       document.getElementById('dashDisplay').textContent = m.x_display_name || '';
       document.getElementById('dashUser').textContent = '@' + (m.x_username || '');
       document.getElementById('dashTier').textContent = data.tier || 'Member';
-      document.getElementById('dashPoints').textContent = String(m.points ?? 0);
-
-      var streak = Number(m.login_streak ?? 0);
-      var streakEl = document.getElementById('dashLoginStreak');
-      streakEl.textContent = '';
-      if (streak >= 3) {
-        var flame = document.createElement('span');
-        flame.className = 'dash-streak-flame';
-        flame.setAttribute('aria-hidden', 'true');
-        flame.textContent = '🔥 ';
-        streakEl.appendChild(flame);
-      }
-      var dayWord = streak === 1 ? 'day' : 'days';
-      streakEl.appendChild(
-        document.createTextNode(streak + ' ' + dayWord + ' login streak')
-      );
+      pointsEl.textContent = String(m.points ?? 0);
 
       document.getElementById('dashRank').innerHTML =
         '<a href="/leaderboard">#' +
@@ -175,6 +354,8 @@
           '</span>';
         logEl.appendChild(li);
       });
+
+      setupDailyClaim(m.id, session, pointsEl, m.login_streak ?? 0, m.last_daily_claim);
     })
     .catch(function () {
       if (loading) loading.textContent = 'Could not load dashboard.';

@@ -1,0 +1,4 @@
+# https://supabase.com/docs/guides/functions/function-configuration
+
+[functions.claim-daily]
+verify_jwt = false

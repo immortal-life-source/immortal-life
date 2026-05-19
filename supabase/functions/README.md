@@ -11,6 +11,7 @@ Source lives in this repo; **deployment is done in your Supabase project**.
 | `get-leaderboard` | `get-leaderboard/` | GET `?limit=&offset=` — public leaderboard slice |
 | `auth-x-callback` | `auth-x-callback/` | X OAuth: **POST** JSON `{ code, state, code_verifier }` returns `{ ok, session }`; **GET** redirects + `Set-Cookie` (legacy; cookie won’t land on immortal.life when the response is from `*.supabase.co`) |
 | `get-dashboard` | `get-dashboard/` | **GET** with `Authorization: Bearer <base64 session payload>` — member row, rank, invite codes, points log (see `dashboard.html`) |
+| `claim-daily` | `claim-daily/` | **GET** `?member_id=&check_only=true` and **POST** `{ member_id }` — same `Authorization` as `get-dashboard`; JWT verification **off** — uses **`members.last_daily_claim`** (UTC date) for eligibility; **`last_login`** is OAuth-only |
 
 For **auth-x-callback**, set **`X_REDIRECT_URI`** to **`https://immortal.life/auth/x`** so it matches the X Developer Portal and `join.html`.
 
@@ -25,7 +26,7 @@ For each function:
 
 1. **Edge Functions → Deploy new function → Via Editor**
 2. Name the function exactly (each as its own function):  
-   `validate-invite`, `award-points`, `get-leaderboard`, `auth-x-callback`, **`get-dashboard`**
+   `validate-invite`, `award-points`, `get-leaderboard`, `auth-x-callback`, **`get-dashboard`**, **`claim-daily`**
 3. Paste the contents of the matching `index.ts` file from this repo.
 4. Deploy.
 5. Open **that function’s Settings** and turn **OFF** **“Verify JWT with legacy secret”** (as you requested).
@@ -40,10 +41,19 @@ supabase functions deploy award-points --no-verify-jwt
 supabase functions deploy get-leaderboard --no-verify-jwt
 supabase functions deploy auth-x-callback --no-verify-jwt
 supabase functions deploy get-dashboard --no-verify-jwt
+supabase functions deploy claim-daily --no-verify-jwt
 ```
 
 (`--no-verify-jwt` matches turning off JWT verification in the dashboard.)
 
 ## Frontend session note
 
-The browser **cannot** send an `HttpOnly` cookie set by `*.supabase.co` to `immortal.life`. **POST `/auth-x-callback`** returns `{ session }`; `auth-x.html` stores it in **`sessionStorage`** as `il_session` and `dashboard.html` sends it as **`Authorization: Bearer …`** to **`get-dashboard`**.
+The browser **cannot** send an `HttpOnly` cookie set by `*.supabase.co` to `immortal.life`. **POST `/auth-x-callback`** returns `{ session }`; `auth-x.html` stores it in **`sessionStorage`** as `il_session` and `dashboard.html` sends it as **`Authorization: Bearer …`** to **`get-dashboard`** and **`claim-daily`** (decoded `member_id` must match the request).
+
+## `claim-daily` JWT off
+
+`supabase/config.toml` sets **`[functions.claim-daily] verify_jwt = false`**. Deploy with:
+
+```bash
+supabase functions deploy claim-daily --no-verify-jwt
+```

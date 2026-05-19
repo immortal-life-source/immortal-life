@@ -75,17 +75,67 @@
       line-height: 1;
       margin-bottom: 12px;
     }
-    .dash-login-streak {
+    .dash-daily-claim {
+      width: 100%;
+      margin-bottom: 18px;
+    }
+    .dash-btn-daily {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px 14px;
+      font-family: var(--font-sans);
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--gold);
+      background: transparent;
+      border: 1px solid var(--gold);
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, opacity 0.2s;
+    }
+    .dash-btn-daily:hover:not(:disabled) {
+      border-color: var(--gold-mid);
+      color: var(--white);
+    }
+    .dash-btn-daily:disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+    .dash-btn-daily.dash-btn-daily--inactive {
+      border-color: var(--border-mid);
+      color: var(--off);
+    }
+    .dash-btn-daily.dash-btn-daily--inactive:hover {
+      border-color: var(--border-mid);
+      color: var(--off);
+    }
+    .dash-claim-status {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 300;
+      color: var(--off);
+      margin-top: 10px;
+      line-height: 1.4;
+    }
+    .dash-claim-countdown {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 300;
+      color: var(--off);
+      margin-top: 8px;
+      font-variant-numeric: tabular-nums;
+    }
+    .dash-claim-streak {
       font-family: var(--font-sans);
       font-size: 13px;
       font-weight: 300;
       color: var(--off);
-      margin-bottom: 10px;
+      margin-top: 10px;
       line-height: 1.4;
     }
-    .dash-streak-flame {
+    .dash-claim-streak .dash-streak-flame {
       color: var(--gold);
-      margin-right: 4px;
     }
     .dash-rank a {
       font-size: 13px;
@@ -252,7 +302,12 @@
           <div id="dashUser" class="dash-user"></div>
           <div id="dashTier" class="dash-tier"></div>
           <div id="dashPoints" class="dash-points"></div>
-          <div id="dashLoginStreak" class="dash-login-streak"></div>
+          <div class="dash-daily-claim">
+            <button type="button" id="btnClaimDaily" class="dash-btn-daily">Claim daily points +10</button>
+            <p id="dashClaimStatus" class="dash-claim-status" hidden></p>
+            <p id="dashClaimCountdown" class="dash-claim-countdown" hidden></p>
+            <p id="dashClaimStreak" class="dash-claim-streak" hidden></p>
+          </div>
           <div id="dashRank" class="dash-rank"></div>
           <div id="dashNetwork" class="dash-network"></div>
         </aside>
@@ -285,7 +340,7 @@
               <div class="dash-acc-body">
                 <ul>
                   <li>Account created + X connected — <strong class="m-muted" style="color:var(--gold)">300</strong> pts (once)</li>
-                  <li>Daily login — <strong style="color:var(--gold)">10</strong> pts (every 20+ hours)</li>
+                  <li>Daily login — <strong style="color:var(--gold)">10</strong> pts: tap <strong style="color:var(--gold)">Claim daily points</strong> once per UTC day</li>
                   <li>Direct invite signup — <strong style="color:var(--gold)">500</strong> pts each</li>
                   <li>Depth-2 signup in your network — <strong style="color:var(--gold)">250</strong> pts</li>
                   <li>Depth-3 signup — <strong style="color:var(--gold)">125</strong> pts</li>

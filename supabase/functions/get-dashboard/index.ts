@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     const { data: member, error: memErr } = await supabase
       .from('members')
       .select(
-        'id, created_at, x_id, x_username, x_display_name, x_avatar_url, x_follower_count, points, tier, invited_by, referral_chain_depth, network_size, multiplier, last_login, login_streak'
+        'id, created_at, x_id, x_username, x_display_name, x_avatar_url, x_follower_count, points, tier, invited_by, referral_chain_depth, network_size, multiplier, last_login, last_daily_claim, login_streak'
       )
       .eq('id', memberId)
       .single()
@@ -87,65 +87,10 @@ Deno.serve(async (req) => {
       })
     }
 
-    let activeMember = member
-    const prevLoginIso = member.last_login as string | null
-    const prevLogin = prevLoginIso ? new Date(prevLoginIso) : null
-    const now = new Date()
-    const hoursSinceLogin = prevLogin
-      ? (now.getTime() - prevLogin.getTime()) / (1000 * 60 * 60)
-      : Number.POSITIVE_INFINITY
-
-    if (hoursSinceLogin >= 20) {
-      const fnUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/award-points`
-      const serviceKey = Deno.env.get('SERVICE_ROLE_KEY') ?? ''
-      const awardRes = await fetch(fnUrl, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${serviceKey}`,
-          apikey: serviceKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          member_id: memberId,
-          action: 'daily_login',
-          base_points: 10,
-          meta: {},
-        }),
-      })
-      if (!awardRes.ok) {
-        const t = await awardRes.text()
-        throw new Error(`daily_login award-points failed: ${awardRes.status} ${t}`)
-      }
-
-      const newStreak =
-        prevLogin && hoursSinceLogin < 48 ? (member.login_streak ?? 0) + 1 : 1
-
-      const { error: upErr } = await supabase
-        .from('members')
-        .update({
-          last_login: now.toISOString(),
-          login_streak: newStreak,
-        })
-        .eq('id', memberId)
-
-      if (upErr) throw upErr
-
-      const { data: refreshed, error: refErr } = await supabase
-        .from('members')
-        .select(
-          'id, created_at, x_id, x_username, x_display_name, x_avatar_url, x_follower_count, points, tier, invited_by, referral_chain_depth, network_size, multiplier, last_login, login_streak'
-        )
-        .eq('id', memberId)
-        .single()
-
-      if (refErr || !refreshed) throw refErr ?? new Error('Member refetch failed')
-      activeMember = refreshed
-    }
-
     const { count: rankAhead } = await supabase
       .from('members')
       .select('*', { count: 'exact', head: true })
-      .gt('points', activeMember.points)
+      .gt('points', member.points)
 
     const rank = (rankAhead ?? 0) + 1
 
@@ -164,14 +109,14 @@ Deno.serve(async (req) => {
 
     const codes = inviteCodes ?? []
     const issued = codes.length
-    const maxEntitled = entitledMaxCodes(activeMember.points)
-    const nextUnlock = nextCodeUnlockInfo(activeMember.points)
+    const maxEntitled = entitledMaxCodes(member.points)
+    const nextUnlock = nextCodeUnlockInfo(member.points)
     const unusedCodes = codes.filter((c) => !c.is_used)
     const firstUnusedCode = unusedCodes[0]?.code ?? codes[0]?.code ?? ''
 
     return new Response(
       JSON.stringify({
-        member: activeMember,
+        member,
         rank,
         tier: getTier(rank),
         invite_codes: codes,
