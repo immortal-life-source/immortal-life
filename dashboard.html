@@ -112,6 +112,7 @@
               <summary>Spread the word</summary>
               <div class="dash-acc-body">
                 <p class="dash-spread-hint m-muted">Copy a message and post it on X in your own words.</p>
+                <p class="dash-spread-tip">Tip: add your referral link after the message to earn points when someone joins.</p>
                 <div class="dash-tweet-cards">
                   <div class="dash-tweet-card">
                     <p class="dash-tweet-text">Just got access to immortal.life — founding circle only, by invite. DM me if you want in.</p>
@@ -148,25 +149,19 @@
   <script src="/il-config.js"></script>
   <script src="/dashboard.js"></script>
   <script>
-    (function () {
-      document.querySelectorAll('.dash-tweet-card .dash-tweet-copy-btn').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          var card = btn.closest('.dash-tweet-card');
-          var textEl = card && card.querySelector('.dash-tweet-text');
-          if (!textEl) return;
-          var msg = textEl.textContent.trim();
-          navigator.clipboard.writeText(msg).then(function () {
-            if (!btn.hasAttribute('data-copy-label')) {
-              btn.setAttribute('data-copy-label', btn.textContent);
-            }
-            btn.textContent = 'Copied ✓';
-            setTimeout(function () {
-              btn.textContent = btn.getAttribute('data-copy-label') || 'Copy';
-            }, 1500);
-          });
+    document.querySelectorAll('.dash-tweet-copy-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var card = btn.closest('.dash-tweet-card');
+        var text = card.querySelector('.dash-tweet-text').textContent.trim();
+        navigator.clipboard.writeText(text).then(function () {
+          var orig = btn.textContent;
+          btn.textContent = 'Copied ✓';
+          setTimeout(function () {
+            btn.textContent = orig;
+          }, 1500);
         });
       });
-    })();
+    });
   </script>
 </body>
 </html>
