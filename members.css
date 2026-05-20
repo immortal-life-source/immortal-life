@@ -707,22 +707,27 @@ details.dash-acc summary {
     order: 2;
   }
 
-  .dash-right > .dash-section:nth-child(3) {
+  .dash-right > .dash-section:nth-child(4) {
     order: 3;
   }
 
-  .dash-right > .dash-section:nth-child(4) {
+  .dash-left > .dash-section-label,
+  .dash-left > .dash-section-label + details.dash-acc {
     order: 4;
+    min-width: 0;
   }
 
-  .dash-right > .dash-section:nth-child(5) {
+  .dash-right > .dash-section:nth-child(3) {
     order: 5;
   }
 
-  .dash-left > .dash-section-label,
-  .dash-left > details.dash-acc {
+  .dash-left > details.dash-acc + details.dash-acc {
     order: 6;
     min-width: 0;
+  }
+
+  .dash-right > .dash-section:nth-child(5) {
+    order: 7;
   }
 
   .dash-right > .dash-section {
