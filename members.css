@@ -675,12 +675,57 @@ details.dash-acc summary {
   }
 
   .dash-grid {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 40px;
   }
 
+  /* Flatten columns so `order` can place profile, then share…recent, then earn/accordions */
   .dash-left,
   .dash-right {
+    display: contents;
+  }
+
+  .dash-left > .dash-avatar,
+  .dash-left > .dash-display,
+  .dash-left > .dash-user,
+  .dash-left > .dash-tier,
+  .dash-left > .dash-points,
+  .dash-left > .dash-multiplier-badge,
+  .dash-left > .dash-daily-claim,
+  .dash-left > .dash-rank-network,
+  .dash-left > .dash-multiplier-progress-wrap {
+    order: 0;
+    min-width: 0;
+  }
+
+  .dash-right > .dash-section:nth-child(1) {
+    order: 1;
+  }
+
+  .dash-right > .dash-section:nth-child(2) {
+    order: 2;
+  }
+
+  .dash-right > .dash-section:nth-child(3) {
+    order: 3;
+  }
+
+  .dash-right > .dash-section:nth-child(4) {
+    order: 4;
+  }
+
+  .dash-right > .dash-section:nth-child(5) {
+    order: 5;
+  }
+
+  .dash-left > .dash-section-label,
+  .dash-left > details.dash-acc {
+    order: 6;
+    min-width: 0;
+  }
+
+  .dash-right > .dash-section {
     min-width: 0;
   }
 
