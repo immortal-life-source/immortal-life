@@ -269,8 +269,9 @@
         '<a href="/leaderboard">#' +
         esc(data.rank) +
         ' on the leaderboard</a>';
+      var networkN = Number(m.network_size ?? 0);
       document.getElementById('dashNetwork').textContent =
-        String(m.network_size ?? 0) + ' people in your network';
+        networkN === 1 ? '1 person in your network' : networkN + ' people in your network';
 
       var refCode = data.referral_code || '';
       var refUrl = refCode
@@ -339,6 +340,7 @@
       var logEl = document.getElementById('dashPointsLog');
       logEl.innerHTML = '';
       (data.points_log || []).forEach(function (row) {
+        if (!row.points) return;
         var li = document.createElement('li');
         li.className = 'dash-log-row';
         var label = ACTION_LABELS[row.action] || row.action;
