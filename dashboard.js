@@ -415,6 +415,61 @@
       });
 
       setupDailyClaim(m.id, session, pointsEl, m.login_streak ?? 0, m.last_daily_claim);
+
+      var btnDeleteAccount = document.getElementById('btnDeleteAccount');
+      var deleteModal = document.getElementById('deleteModal');
+      var btnDeleteConfirm = document.getElementById('btnDeleteConfirm');
+      var btnDeleteCancel = document.getElementById('btnDeleteCancel');
+      var deleteError = document.getElementById('deleteError');
+
+      if (btnDeleteAccount && deleteModal) {
+        btnDeleteAccount.addEventListener('click', function () {
+          deleteModal.hidden = false;
+        });
+      }
+
+      if (btnDeleteCancel && deleteModal && deleteError) {
+        btnDeleteCancel.addEventListener('click', function () {
+          deleteModal.hidden = true;
+          deleteError.hidden = true;
+        });
+      }
+
+      if (btnDeleteConfirm && deleteModal && deleteError) {
+        btnDeleteConfirm.addEventListener('click', function () {
+          btnDeleteConfirm.disabled = true;
+          btnDeleteConfirm.textContent = 'Deleting…';
+          deleteError.hidden = true;
+
+          fetch(window.IL_FN_BASE + '/delete-member', {
+            method: 'POST',
+            headers: Object.assign({}, window.ilFnHeaders(), {
+              Authorization: 'Bearer ' + session,
+            }),
+            body: JSON.stringify({ member_id: m.id }),
+          })
+            .then(function (r) {
+              return r.json();
+            })
+            .then(function (data) {
+              if (data.error) {
+                deleteError.textContent = data.error;
+                deleteError.hidden = false;
+                btnDeleteConfirm.disabled = false;
+                btnDeleteConfirm.textContent = 'Yes, delete my account';
+              } else {
+                sessionStorage.removeItem(SESSION_KEY);
+                window.location.replace('/?deleted=1');
+              }
+            })
+            .catch(function () {
+              deleteError.textContent = 'Something went wrong. Please try again.';
+              deleteError.hidden = false;
+              btnDeleteConfirm.disabled = false;
+              btnDeleteConfirm.textContent = 'Yes, delete my account';
+            });
+        });
+      }
     })
     .catch(function () {
       if (loading) loading.textContent = 'Could not load dashboard.';

@@ -84,6 +84,9 @@
               <p>Special events are coming. Founding circle members will be first to know.</p>
             </div>
           </details>
+          <div class="dash-delete-section">
+            <button type="button" class="dash-delete-btn" id="btnDeleteAccount">Delete my account</button>
+          </div>
         </aside>
 
         <div class="dash-right">
@@ -143,6 +146,19 @@
             <ul id="dashPointsLog"></ul>
           </section>
         </div>
+      </div>
+    </div>
+
+    <!-- Delete confirmation modal -->
+    <div class="dash-delete-modal" id="deleteModal" hidden>
+      <div class="dash-delete-modal-box">
+        <h2 class="dash-delete-modal-title">Delete your account?</h2>
+        <p class="dash-delete-modal-body">This cannot be undone. Your points, invite codes, and all activity will be permanently deleted. Points already awarded to others in your network will remain.</p>
+        <div class="dash-delete-modal-btns">
+          <button type="button" class="dash-delete-confirm" id="btnDeleteConfirm">Yes, delete my account</button>
+          <button type="button" class="dash-delete-cancel" id="btnDeleteCancel">Cancel</button>
+        </div>
+        <p class="dash-delete-modal-error" id="deleteError" hidden></p>
       </div>
     </div>
   </div>
