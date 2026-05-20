@@ -163,6 +163,13 @@ body::after {
   color: #C9A227 !important;
 }
 
+.s1-header .s1-nav a,
+.s1-header .s1-nav a:visited,
+.s1-header .s1-nav a:link {
+  color: #C9A227 !important;
+  text-decoration: none !important;
+}
+
 /* Hero headline */
 .s1-center {
   display: flex;
