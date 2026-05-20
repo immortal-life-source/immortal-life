@@ -274,7 +274,7 @@
 
       var refCode = data.referral_code || '';
       var refUrl = refCode
-        ? 'https://immortal.life/invite/' + encodeURIComponent(refCode)
+        ? 'https://immortal.life/join?code=' + encodeURIComponent(refCode)
         : 'https://immortal.life/join';
       document.getElementById('dashReferralUrl').textContent = refUrl;
 
@@ -285,8 +285,8 @@
       });
 
       var tweet =
-        'I secured my place on immortal.life — join me: immortal.life/invite/' +
-        (refCode || '');
+        'I secured my place on immortal.life — join me: https://immortal.life/join' +
+        (refCode ? '?code=' + encodeURIComponent(refCode) : '');
       document.getElementById('btnShareX').href =
         'https://twitter.com/intent/tweet?text=' + encodeURIComponent(tweet);
 

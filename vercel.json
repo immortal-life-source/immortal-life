@@ -35,7 +35,6 @@
   "rewrites": [
     { "source": "/dashboard", "destination": "/dashboard.html" },
     { "source": "/leaderboard", "destination": "/leaderboard.html" },
-    { "source": "/join", "destination": "/join.html" },
-    { "source": "/invite/:code", "destination": "/join.html" }
+    { "source": "/join", "destination": "/join.html" }
   ]
 }
