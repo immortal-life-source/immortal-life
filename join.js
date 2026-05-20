@@ -92,11 +92,15 @@
     clearError();
   });
 
-  var params = new URLSearchParams(window.location.search);
-  if (params.get('code')) {
-    input.value = normalizeCode(params.get('code'));
+  var pathParts = window.location.pathname.split('/');
+  var pathCode = pathParts[pathParts.length - 1];
+  var urlParams = new URLSearchParams(window.location.search);
+  var prefilledCode = urlParams.get('code') || (pathCode && pathCode.length === 8 ? pathCode : '');
+
+  if (prefilledCode) {
+    input.value = normalizeCode(prefilledCode);
   }
-  if (params.get('error') === 'invalid_code') {
+  if (urlParams.get('error') === 'invalid_code') {
     showError('This code is not valid.');
   }
 
