@@ -343,8 +343,8 @@
       });
 
       var tweet =
-        'I secured my place on immortal.life — join me: https://immortal.life/join' +
-        (refCode ? '?code=' + encodeURIComponent(refCode) : '');
+        'The founding circle at immortal.life is forming — I\'m in. Join me before it closes: https://immortal.life/join?code=' +
+        encodeURIComponent(refCode);
       document.getElementById('btnShareX').href =
         'https://twitter.com/intent/tweet?text=' + encodeURIComponent(tweet);
 
