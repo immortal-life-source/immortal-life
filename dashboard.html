@@ -149,17 +149,18 @@
   <script src="/il-config.js"></script>
   <script src="/dashboard.js"></script>
   <script>
-    document.querySelectorAll('.dash-tweet-copy-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var card = btn.closest('.dash-tweet-card');
-        var text = card.querySelector('.dash-tweet-text').textContent.trim();
-        navigator.clipboard.writeText(text).then(function () {
-          var orig = btn.textContent;
-          btn.textContent = 'Copied ✓';
-          setTimeout(function () {
-            btn.textContent = orig;
-          }, 1500);
-        });
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('.dash-tweet-copy-btn');
+      if (!btn) return;
+      var card = btn.closest('.dash-tweet-card');
+      if (!card) return;
+      var text = card.querySelector('.dash-tweet-text').textContent.trim();
+      navigator.clipboard.writeText(text).then(function () {
+        var orig = btn.textContent;
+        btn.textContent = 'Copied ✓';
+        setTimeout(function () {
+          btn.textContent = orig;
+        }, 1500);
       });
     });
   </script>
