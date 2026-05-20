@@ -677,25 +677,9 @@ details.dash-acc summary {
   .dash-grid {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 0;
   }
 
-  .dash-left details.dash-acc,
-  .dash-right details.dash-acc {
-    width: 100%;
-    box-sizing: border-box;
-    margin-top: 8px;
-  }
-
-  .dash-left details.dash-acc + details.dash-acc {
-    margin-top: 8px;
-  }
-
-  .dash-section-label {
-    margin-bottom: 4px;
-  }
-
-  /* Flatten columns so `order` can place profile, then share…recent, then earn/accordions */
   .dash-left,
   .dash-right {
     display: contents;
@@ -712,6 +696,48 @@ details.dash-acc summary {
   .dash-left > .dash-multiplier-progress-wrap {
     order: 0;
     min-width: 0;
+    margin-bottom: 16px;
+  }
+
+  .dash-right > .dash-section {
+    margin-bottom: 16px;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    min-width: 0;
+  }
+
+  .dash-right > .dash-section:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .dash-left details.dash-acc,
+  .dash-right details.dash-acc {
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 0;
+  }
+
+  .dash-left details.dash-acc {
+    margin-bottom: 16px;
+  }
+
+  .dash-right details.dash-acc {
+    margin-bottom: 0;
+  }
+
+  .dash-left details.dash-acc + details.dash-acc {
+    margin-top: 0;
+  }
+
+  .dash-left > .dash-section-label {
+    margin-bottom: 16px;
+  }
+
+  .dash-section-label {
+    margin-bottom: 8px;
   }
 
   .dash-right > .dash-section:nth-child(1) {
@@ -743,10 +769,6 @@ details.dash-acc summary {
 
   .dash-right > .dash-section:nth-child(5) {
     order: 7;
-  }
-
-  .dash-right > .dash-section {
-    min-width: 0;
   }
 
   .dash-btn-daily {
