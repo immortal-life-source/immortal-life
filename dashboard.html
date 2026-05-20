@@ -320,6 +320,21 @@
     .dash-acc-body tr:last-child td {
       border-bottom: none;
     }
+    .dash-left details.dash-acc {
+      margin-top: 28px;
+    }
+    .dash-acc-body > ul {
+      margin: 0 0 18px 0;
+      padding-left: 1.15em;
+      list-style: disc;
+      color: var(--off);
+    }
+    .dash-acc-body > ul > li::marker {
+      color: var(--gold-mid);
+    }
+    .dash-acc-body > ul > li {
+      margin-left: 0;
+    }
     #dashLoading {
       text-align: center;
       padding: 120px 24px;
@@ -440,6 +455,29 @@
           </div>
           <div id="dashRank" class="dash-rank"></div>
           <div id="dashNetwork" class="dash-network"></div>
+          <details class="dash-acc">
+            <summary>How to earn more</summary>
+            <div class="dash-acc-body">
+              <ul>
+                <li>Account created + X connected — <strong style="color:var(--gold)">300</strong> pts (once)</li>
+                <li>Daily login — <strong style="color:var(--gold)">10</strong> pts: tap <strong style="color:var(--gold)">Claim daily points</strong> once per UTC day</li>
+                <li>Direct invite signup — <strong style="color:var(--gold)">500</strong> pts each</li>
+                <li>Depth-2 signup in your network — <strong style="color:var(--gold)">250</strong> pts</li>
+                <li>Depth-3 signup — <strong style="color:var(--gold)">125</strong> pts</li>
+              </ul>
+              <p>The more active your network, the more every point you earn is worth — up to 3×.</p>
+              <p>Your multiplier grows as your network grows. And your network includes everyone your invitees bring in, not just your direct invites.</p>
+              <p>So the best move: give your codes to people who will use them.</p>
+              <table>
+                <tr><th>Network size</th><th>Multiplier</th></tr>
+                <tr><td>1–10 people</td><td>1×</td></tr>
+                <tr><td>11–50 people</td><td>1.5×</td></tr>
+                <tr><td>51–199 people</td><td>2×</td></tr>
+                <tr><td>200+ people</td><td>3×</td></tr>
+              </table>
+              <p>You also earn when your invitees invite others — 250 pts per second-level signup, 125 pts per third-level signup. These are also multiplied by your current multiplier.</p>
+            </div>
+          </details>
         </aside>
 
         <div class="dash-right">
@@ -462,25 +500,6 @@
           <section class="dash-section">
             <h2 class="dash-h2">Recent points activity</h2>
             <ul id="dashPointsLog"></ul>
-          </section>
-
-          <section class="dash-section">
-            <details class="dash-acc">
-              <summary>How to earn more</summary>
-              <div class="dash-acc-body">
-                <p>The more active your network, the more every point you earn is worth — up to 3×.</p>
-                <p>Your multiplier grows as your network grows. And your network includes everyone your invitees bring in, not just your direct invites.</p>
-                <p>So the best move: give your codes to people who will use them.</p>
-                <table>
-                  <tr><th>Network size</th><th>Multiplier</th></tr>
-                  <tr><td>1–10 people</td><td>1×</td></tr>
-                  <tr><td>11–50 people</td><td>1.5×</td></tr>
-                  <tr><td>51–199 people</td><td>2×</td></tr>
-                  <tr><td>200+ people</td><td>3×</td></tr>
-                </table>
-                <p>You also earn when your invitees invite others — 250 pts per second-level signup, 125 pts per third-level signup. These are also multiplied by your current multiplier.</p>
-              </div>
-            </details>
           </section>
         </div>
       </div>
