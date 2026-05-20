@@ -155,13 +155,38 @@
       var card = btn.closest('.dash-tweet-card');
       if (!card) return;
       var text = card.querySelector('.dash-tweet-text').textContent.trim();
-      navigator.clipboard.writeText(text).then(function () {
+
+      function flash() {
         var orig = btn.textContent;
         btn.textContent = 'Copied ✓';
         setTimeout(function () {
           btn.textContent = orig;
         }, 1500);
-      });
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(flash).catch(function () {
+          fallbackCopy(text);
+          flash();
+        });
+      } else {
+        fallbackCopy(text);
+        flash();
+      }
+
+      function fallbackCopy(str) {
+        var ta = document.createElement('textarea');
+        ta.value = str;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try {
+          document.execCommand('copy');
+        } catch (err) {}
+        document.body.removeChild(ta);
+      }
     });
   </script>
 </body>
