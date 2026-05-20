@@ -211,7 +211,7 @@
       fetch(window.IL_FN_BASE + '/subscribe', {
         method: 'POST',
         headers: window.ilFnHeaders(),
-        body: JSON.stringify({ email: email, source: 'join_request' }),
+        body: JSON.stringify({ email: email, source: 'join_request', consent: true, consent_ts: new Date().toISOString() }),
       })
         .then(function (r) {
           return r.json();
