@@ -116,12 +116,37 @@ body::after {
   user-select: none;
 }
 
-.header-tag {
-  font-size: 10px;
-  letter-spacing: 0.22em;
+.s1-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.s1-nav-counter {
+  font-size: 13px;
+  color: var(--gold);
+  opacity: 0.6;
+  font-family: 'Instrument Sans', sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.s1-nav-link {
+  font-size: 13px;
+  color: var(--gold);
+  text-decoration: none;
+  font-family: 'Instrument Sans', sans-serif;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--off);
+}
+
+.s1-nav-link:hover {
   opacity: 0.7;
+}
+
+.s1-nav-sep {
+  color: var(--gold);
+  opacity: 0.4;
+  font-size: 13px;
 }
 
 /* Hero headline */
@@ -873,12 +898,21 @@ h1 {
     align-items: center;
   }
 
-  .s1-header .header-tag {
+  .s1-header .s1-nav {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    text-align: right;
+    gap: 10px;
+  }
+
+  .s1-nav-link {
     min-height: 44px;
     display: inline-flex;
     align-items: center;
-    justify-content: flex-end;
-    text-align: right;
+    box-sizing: border-box;
   }
 
   .s1-sub {
@@ -991,17 +1025,7 @@ h1 {
   }
 }
 
-/* Landing — member counter & members CTA */
-.member-counter {
-  margin-top: 28px;
-  font-family: var(--font-sans);
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  color: var(--off);
-  opacity: 0.85;
-  max-width: 480px;
-}
-
+/* Landing — members CTA */
 .members-cta {
   margin-top: 28px;
   padding-top: 24px;
