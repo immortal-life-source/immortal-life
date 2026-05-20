@@ -418,6 +418,7 @@
 
       var btnDeleteAccount = document.getElementById('btnDeleteAccount');
       var deleteModal = document.getElementById('deleteModal');
+      deleteModal.hidden = true;
       var btnDeleteConfirm = document.getElementById('btnDeleteConfirm');
       var btnDeleteCancel = document.getElementById('btnDeleteCancel');
       var deleteError = document.getElementById('deleteError');
