@@ -85,6 +85,58 @@
     requestAnimationFrame(step);
   }
 
+  function formatMultiplierBadge(mul) {
+    var n = Number(mul);
+    if (!Number.isFinite(n)) n = 1;
+    var sym;
+    if (Math.abs(n - 1.5) < 1e-9) sym = '1.5×';
+    else if (n === 1) sym = '1×';
+    else if (n === 2) sym = '2×';
+    else if (n === 3) sym = '3×';
+    else {
+      sym = (n % 1 === 0 ? String(Math.round(n)) : String(n)) + '×';
+    }
+    return sym + ' multiplier';
+  }
+
+  function updateMultiplierProgressUI(networkSize) {
+    var n = Number(networkSize) || 0;
+    var labelEl = document.getElementById('dashMultiplierProgress');
+    var fillEl = document.getElementById('dashMultiplierFill');
+    if (!labelEl || !fillEl) return;
+
+    if (n >= 200) {
+      labelEl.textContent = 'Maximum multiplier reached';
+      fillEl.style.width = '100%';
+      return;
+    }
+
+    var nextThreshold;
+    var nextSym;
+    var pct;
+    if (n < 11) {
+      nextThreshold = 11;
+      nextSym = '1.5×';
+      pct = Math.min(100, (n / 11) * 100);
+    } else if (n < 51) {
+      nextThreshold = 51;
+      nextSym = '2×';
+      pct = Math.min(100, ((n - 11) / (51 - 11)) * 100);
+    } else {
+      nextThreshold = 200;
+      nextSym = '3×';
+      pct = Math.min(100, ((n - 51) / (200 - 51)) * 100);
+    }
+
+    fillEl.style.width = pct + '%';
+    var need = Math.max(0, nextThreshold - n);
+    if (need === 1) {
+      labelEl.textContent = '1 more person to reach ' + nextSym;
+    } else {
+      labelEl.textContent = need + ' more people to reach ' + nextSym;
+    }
+  }
+
   function setStreakLine(streakEl, n) {
     streakEl.textContent = '';
     var streakNum = Number(n) || 0;
@@ -265,6 +317,9 @@
       document.getElementById('dashTier').textContent = data.tier || 'Member';
       pointsEl.textContent = String(m.points ?? 0);
 
+      var multEl = document.getElementById('dashMultiplier');
+      if (multEl) multEl.textContent = formatMultiplierBadge(m.multiplier);
+
       document.getElementById('dashRank').innerHTML =
         '<a href="/leaderboard">#' +
         esc(data.rank) +
@@ -272,6 +327,8 @@
       var networkN = Number(m.network_size ?? 0);
       document.getElementById('dashNetwork').textContent =
         networkN === 1 ? '1 person in your network' : networkN + ' people in your network';
+
+      updateMultiplierProgressUI(networkN);
 
       var refCode = data.referral_code || '';
       var refUrl = refCode
