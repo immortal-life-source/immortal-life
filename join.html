@@ -97,6 +97,41 @@
       text-decoration: underline;
       text-underline-offset: 3px;
     }
+    @media (max-width: 768px) {
+      .join-page {
+        max-width: 100%;
+        padding: 28px 18px calc(64px + env(safe-area-inset-bottom, 0));
+        box-sizing: border-box;
+        overflow-x: hidden;
+      }
+      .join-main {
+        padding: 24px 0;
+      }
+      .join-card {
+        width: 100%;
+        max-width: 100%;
+        padding: 22px 18px;
+        box-sizing: border-box;
+      }
+      .invite-input {
+        width: 100%;
+        max-width: 100%;
+        font-size: 16px;
+        min-height: 48px;
+        box-sizing: border-box;
+        letter-spacing: 0.22em;
+      }
+      .join-top a.m-logo {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+      }
+      .join-waiting a {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+      }
+    }
   </style>
 </head>
 <body>

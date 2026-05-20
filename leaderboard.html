@@ -14,6 +14,14 @@
       margin: 0 auto;
       padding: 48px 28px 140px;
     }
+    .lb-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
     .lb-hero {
       text-align: center;
       margin-bottom: 48px;
@@ -223,11 +231,113 @@
       text-transform: uppercase;
       text-decoration: none;
     }
+    @media (max-width: 768px) {
+      .lb-page {
+        max-width: 100%;
+        padding: 28px 18px calc(140px + env(safe-area-inset-bottom, 0));
+        box-sizing: border-box;
+        overflow-x: hidden;
+      }
+      .lb-head a.m-logo,
+      .lb-head .m-link-gold {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+      }
+      .lb-top-grid {
+        grid-template-columns: 1fr;
+      }
+      .lb-card {
+        min-width: 0;
+      }
+      .lb-card-rank1 {
+        transform: none;
+        padding: 24px;
+      }
+      .lb-meta {
+        min-width: 0;
+      }
+      .lb-name,
+      .lb-handle {
+        overflow-wrap: anywhere;
+      }
+      .lb-handle {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+      }
+      .lb-row {
+        grid-template-columns: 44px 36px minmax(0, 1fr);
+        grid-template-rows: auto auto auto;
+        column-gap: 10px;
+        row-gap: 8px;
+        align-items: start;
+        padding: 14px 0;
+      }
+      .lb-row-rank {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+        align-self: center;
+        font-size: 17px;
+      }
+      .lb-row-av {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        align-self: center;
+      }
+      .lb-row-meta {
+        grid-column: 3;
+        grid-row: 1;
+        min-width: 0;
+      }
+      .lb-row-name {
+        font-size: 13px;
+        overflow-wrap: anywhere;
+      }
+      .lb-row-handle {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        margin-top: 2px;
+        overflow-wrap: anywhere;
+        font-size: 12px;
+      }
+      .lb-row-pts {
+        grid-column: 3;
+        grid-row: 2;
+        justify-self: start;
+      }
+      .lb-row-tier {
+        grid-column: 1 / -1;
+        grid-row: 3;
+        text-align: left;
+        justify-self: start;
+      }
+      #lbRestNav button {
+        min-height: 44px;
+        padding: 12px 18px;
+      }
+      #lbCta {
+        flex-direction: column;
+        padding: 16px 18px calc(16px + env(safe-area-inset-bottom, 0));
+        gap: 14px;
+        text-align: center;
+      }
+      #lbCta a {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="m-shell lb-page">
-    <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:40px;flex-wrap:wrap;gap:16px;">
+    <header class="lb-head">
       <a href="/" class="m-logo" style="text-decoration:none;">immortal.life</a>
       <a href="/join" class="m-link-gold">Members area</a>
     </header>

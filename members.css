@@ -104,3 +104,31 @@ button.m-btn-primary:disabled {
 .m-link-gold:hover {
   opacity: 0.85;
 }
+
+@media (max-width: 768px) {
+  a.m-logo {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .m-link-gold {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 2px;
+    box-sizing: border-box;
+  }
+
+  button.m-btn-primary {
+    min-height: 44px;
+  }
+
+  a.m-btn-primary {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+}

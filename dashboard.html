@@ -28,12 +28,6 @@
       gap: 64px;
       align-items: start;
     }
-    @media (max-width: 900px) {
-      .dash-grid {
-        grid-template-columns: 1fr;
-        gap: 48px;
-      }
-    }
     .dash-avatar {
       width: 112px;
       height: 112px;
@@ -282,6 +276,94 @@
       text-align: center;
       padding: 120px 24px;
       color: var(--off);
+    }
+    @media (max-width: 768px) {
+      .dash-page {
+        max-width: 100%;
+        padding: 28px 18px calc(100px + env(safe-area-inset-bottom, 0));
+        box-sizing: border-box;
+        overflow-x: hidden;
+      }
+      .dash-head {
+        margin-bottom: 36px;
+        gap: 16px;
+      }
+      .dash-head .m-link-gold,
+      .dash-head a.m-logo {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+      }
+      .dash-grid {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+      .dash-left,
+      .dash-right {
+        min-width: 0;
+      }
+      .dash-btn-daily {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .dash-codes-grid {
+        gap: 8px;
+      }
+      .dash-chip {
+        min-height: 44px;
+        min-width: 0;
+        max-width: 100%;
+        flex: 0 1 auto;
+        box-sizing: border-box;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        word-break: break-all;
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+      #dashReferralUrl.dash-ref-url {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+      .dash-row-btns {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .dash-row-btns .m-btn-primary,
+      .dash-row-btns a.m-btn-primary {
+        width: 100%;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+      }
+      .dash-log-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 6px 10px;
+        overflow-wrap: anywhere;
+      }
+      .dash-log-action {
+        min-width: 0;
+      }
+      .dash-log-pts {
+        justify-self: start;
+      }
+      .dash-rank a {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+      }
+      details.dash-acc summary {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+      }
     }
   </style>
 </head>
