@@ -282,6 +282,44 @@
       margin-bottom: 10px;
       margin-left: 1.2em;
     }
+    .dash-acc-body > p {
+      margin-bottom: 14px;
+    }
+    .dash-acc-body > p:last-child {
+      margin-bottom: 0;
+    }
+    .dash-acc-body table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0;
+      font-size: 13px;
+      background: rgba(237, 233, 224, 0.03);
+    }
+    .dash-acc-body th,
+    .dash-acc-body td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-weight: 300;
+    }
+    .dash-acc-body th {
+      color: var(--gold);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .dash-acc-body td {
+      color: var(--off);
+    }
+    .dash-acc-body td:last-child {
+      color: var(--gold);
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .dash-acc-body tr:last-child th,
+    .dash-acc-body tr:last-child td {
+      border-bottom: none;
+    }
     #dashLoading {
       text-align: center;
       padding: 120px 24px;
@@ -430,15 +468,17 @@
             <details class="dash-acc">
               <summary>How to earn more</summary>
               <div class="dash-acc-body">
-                <ul>
-                  <li>Account created + X connected — <strong class="m-muted" style="color:var(--gold)">300</strong> pts (once)</li>
-                  <li>Daily login — <strong style="color:var(--gold)">10</strong> pts: tap <strong style="color:var(--gold)">Claim daily points</strong> once per UTC day</li>
-                  <li>Direct invite signup — <strong style="color:var(--gold)">500</strong> pts each</li>
-                  <li>Depth-2 signup in your network — <strong style="color:var(--gold)">250</strong> pts</li>
-                  <li>Depth-3 signup — <strong style="color:var(--gold)">125</strong> pts</li>
-                  <li>Verified X post drives a signup — <strong style="color:var(--gold)">300</strong> pts per signup</li>
-                  <li>Multiplier scales with network size (1× → 1.5× → 2× → 3×) on new earnings.</li>
-                </ul>
+                <p>The more active your network, the more every point you earn is worth — up to 3×.</p>
+                <p>Your multiplier grows as your network grows. And your network includes everyone your invitees bring in, not just your direct invites.</p>
+                <p>So the best move: give your codes to people who will use them.</p>
+                <table>
+                  <tr><th>Network size</th><th>Multiplier</th></tr>
+                  <tr><td>1–10 people</td><td>1×</td></tr>
+                  <tr><td>11–50 people</td><td>1.5×</td></tr>
+                  <tr><td>51–199 people</td><td>2×</td></tr>
+                  <tr><td>200+ people</td><td>3×</td></tr>
+                </table>
+                <p>You also earn when your invitees invite others — 250 pts per second-level signup, 125 pts per third-level signup. These are also multiplied by your current multiplier.</p>
               </div>
             </details>
           </section>

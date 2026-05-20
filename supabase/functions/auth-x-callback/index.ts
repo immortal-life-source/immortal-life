@@ -169,6 +169,33 @@ async function runOAuthFlow(
       const inviterNewNetwork = (inviter.network_size ?? 0) + 1
       await supabase.from('members').update({ network_size: inviterNewNetwork }).eq('id', inviter.id)
 
+      if (inviter.invited_by) {
+        const { data: depth2 } = await supabase
+          .from('members')
+          .select('network_size, invited_by')
+          .eq('id', inviter.invited_by)
+          .single()
+        if (depth2) {
+          await supabase
+            .from('members')
+            .update({ network_size: (depth2.network_size ?? 0) + 1 })
+            .eq('id', inviter.invited_by)
+          if (depth2.invited_by) {
+            const { data: depth3 } = await supabase
+              .from('members')
+              .select('network_size')
+              .eq('id', depth2.invited_by)
+              .single()
+            if (depth3) {
+              await supabase
+                .from('members')
+                .update({ network_size: (depth3.network_size ?? 0) + 1 })
+                .eq('id', depth2.invited_by)
+            }
+          }
+        }
+      }
+
       await invokeAwardPoints(inviter.id, 'invite_signup', 500, {
         invited_x_username: xProfile.username,
       })
