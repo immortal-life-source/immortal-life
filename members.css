@@ -557,8 +557,73 @@ details.dash-acc summary {
   border-bottom: none;
 }
 
-.dash-left details.dash-acc {
+.dash-left > .dash-section-label {
   margin-top: 28px;
+}
+
+.dash-spread-hint {
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0 0 16px;
+}
+
+.dash-tweet-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dash-tweet-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  background: rgba(237, 233, 224, 0.04);
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+
+.dash-tweet-text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 300;
+  line-height: 1.6;
+  color: rgba(237, 233, 224, 0.82);
+}
+
+.dash-tweet-copy-btn {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 8px 14px;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: transparent;
+  border: 1px solid rgba(201, 162, 39, 0.55);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, opacity 0.2s;
+}
+
+.dash-tweet-copy-btn:hover {
+  border-color: var(--gold-mid);
+  color: var(--white);
+}
+
+.dash-left details.dash-acc {
+  margin-top: 14px;
+}
+
+.dash-left details.dash-acc + details.dash-acc {
+  margin-top: 16px;
 }
 
 .dash-acc-body > ul {
@@ -680,6 +745,20 @@ details.dash-acc summary {
     min-height: 44px;
     display: inline-flex;
     align-items: center;
+  }
+
+  .dash-tweet-card {
+    flex-wrap: wrap;
+  }
+
+  .dash-tweet-copy-btn {
+    min-height: 44px;
+    margin-left: auto;
+  }
+
+  .dash-tweet-text {
+    flex: 1 1 100%;
+    min-width: 0;
   }
 
   details.dash-acc summary {

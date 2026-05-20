@@ -54,8 +54,9 @@
               <div id="dashMultiplierFill" class="dash-multiplier-tier-fill"></div>
             </div>
           </div>
+          <p class="dash-section-label">How to earn more</p>
           <details class="dash-acc">
-            <summary>How to earn more</summary>
+            <summary>Your network</summary>
             <div class="dash-acc-body">
               <ul>
                 <li>Account created + X connected — <strong style="color:var(--gold)">300</strong> pts (once)</li>
@@ -75,6 +76,12 @@
                 <tr><td>200+ people</td><td>3×</td></tr>
               </table>
               <p>You also earn when your invitees invite others — 250 pts per second-level signup, 125 pts per third-level signup. These are also multiplied by your current multiplier.</p>
+            </div>
+          </details>
+          <details class="dash-acc">
+            <summary>Special events</summary>
+            <div class="dash-acc-body">
+              <p>Special events are coming. Founding circle members will be first to know.</p>
             </div>
           </details>
         </aside>
@@ -101,6 +108,29 @@
           </section>
 
           <section class="dash-section">
+            <details class="dash-acc">
+              <summary>Spread the word</summary>
+              <div class="dash-acc-body">
+                <p class="dash-spread-hint m-muted">Copy a message and post it on X in your own words.</p>
+                <div class="dash-tweet-cards">
+                  <div class="dash-tweet-card">
+                    <p class="dash-tweet-text">Just got access to immortal.life — founding circle only, by invite. DM me if you want in.</p>
+                    <button type="button" class="dash-tweet-copy-btn">Copy</button>
+                  </div>
+                  <div class="dash-tweet-card">
+                    <p class="dash-tweet-text">Something is forming at immortal.life. Can't say much yet.</p>
+                    <button type="button" class="dash-tweet-copy-btn">Copy</button>
+                  </div>
+                  <div class="dash-tweet-card">
+                    <p class="dash-tweet-text">Joined immortal.life today. The founding circle is small. Not for long.</p>
+                    <button type="button" class="dash-tweet-copy-btn">Copy</button>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </section>
+
+          <section class="dash-section">
             <p class="dash-section-label">Your invite codes</p>
             <div id="dashCodesGrid" class="dash-codes-grid"></div>
             <p id="dashUnlockText" class="m-muted" style="font-size: 13px;"></p>
@@ -117,5 +147,26 @@
   </div>
   <script src="/il-config.js"></script>
   <script src="/dashboard.js"></script>
+  <script>
+    (function () {
+      document.querySelectorAll('.dash-tweet-card .dash-tweet-copy-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var card = btn.closest('.dash-tweet-card');
+          var textEl = card && card.querySelector('.dash-tweet-text');
+          if (!textEl) return;
+          var msg = textEl.textContent.trim();
+          navigator.clipboard.writeText(msg).then(function () {
+            if (!btn.hasAttribute('data-copy-label')) {
+              btn.setAttribute('data-copy-label', btn.textContent);
+            }
+            btn.textContent = 'Copied ✓';
+            setTimeout(function () {
+              btn.textContent = btn.getAttribute('data-copy-label') || 'Copy';
+            }, 1500);
+          });
+        });
+      });
+    })();
+  </script>
 </body>
 </html>
