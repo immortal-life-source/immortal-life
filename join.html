@@ -129,17 +129,70 @@
       border-color: var(--gold-mid);
       color: var(--white);
     }
-    .join-waiting {
-      margin-top: 48px;
-      text-align: center;
+    .join-request-section {
+      margin-top: 32px;
+      border-top: 1px solid rgba(201, 162, 39, 0.2);
+      padding-top: 24px;
+      width: 100%;
+    }
+    .join-request-toggle {
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gold);
+      cursor: pointer;
+      text-align: left;
+    }
+    .join-request-form {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .join-request-hint {
       font-size: 13px;
       color: var(--off);
-      line-height: 1.8;
+      line-height: 1.7;
+      font-style: italic;
     }
-    .join-waiting a {
+    .join-request-input {
+      width: 100%;
+      box-sizing: border-box;
+      display: block;
+      background: transparent;
+      border: 1px solid var(--border-mid);
+      padding: 14px 16px;
+      font-family: var(--font-sans);
+      font-size: 16px;
+      font-weight: 300;
+      color: var(--white);
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    .join-request-input:focus {
+      border-color: rgba(184, 149, 90, 0.65);
+      box-shadow: 0 0 0 1px rgba(184, 149, 90, 0.15);
+    }
+    .join-request-input::placeholder {
+      color: rgba(138, 136, 120, 0.45);
+    }
+    .join-request-submit {
+      margin-top: 4px;
+    }
+    .join-request-success {
       color: var(--gold);
-      text-decoration: underline;
-      text-underline-offset: 3px;
+      font-size: 13px;
+      text-align: center;
+      margin: 0;
+    }
+    .join-request-error {
+      color: var(--error);
+      font-size: 12px;
+      margin: 0;
     }
     @media (max-width: 768px) {
       .join-page {
@@ -170,7 +223,7 @@
         display: inline-flex;
         align-items: center;
       }
-      .join-waiting a {
+      .join-request-toggle {
         min-height: 44px;
         display: inline-flex;
         align-items: center;
@@ -214,9 +267,18 @@
         <button type="button" class="join-btn-login-x" id="btnLoginX">Continue with X →</button>
       </div>
 
-      <p class="join-waiting">
-        No invite code? <a href="/">Join the waiting list.</a>
-      </p>
+      <div class="join-request-section">
+        <button type="button" class="join-request-toggle" id="btnRequestAccess">
+          No invite code? Request access
+        </button>
+        <div class="join-request-form" id="joinRequestForm" hidden>
+          <p class="join-request-hint">immortal.life is invite-only. Leave your email and we'll reach out when a spot opens — or find someone in the founding circle to invite you.</p>
+          <input type="email" id="joinRequestEmail" class="join-request-input" placeholder="your@email.com" autocomplete="email" />
+          <p class="join-request-error" id="joinRequestError" hidden></p>
+          <button type="button" class="m-btn-primary join-request-submit" id="btnRequestSubmit">Request access</button>
+          <p class="join-request-success" id="joinRequestSuccess" hidden>You're on the list. Watch your inbox.</p>
+        </div>
+      </div>
     </main>
   </div>
   <script src="/il-config.js"></script>

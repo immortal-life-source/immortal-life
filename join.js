@@ -180,4 +180,60 @@
       loginWithX();
     });
   }
+
+  var btnRequestAccess = document.getElementById('btnRequestAccess');
+  var joinRequestForm = document.getElementById('joinRequestForm');
+  var btnRequestSubmit = document.getElementById('btnRequestSubmit');
+  var joinRequestEmail = document.getElementById('joinRequestEmail');
+  var joinRequestError = document.getElementById('joinRequestError');
+  var joinRequestSuccess = document.getElementById('joinRequestSuccess');
+
+  if (btnRequestAccess && joinRequestForm) {
+    btnRequestAccess.addEventListener('click', function () {
+      joinRequestForm.hidden = !joinRequestForm.hidden;
+    });
+  }
+
+  if (btnRequestSubmit && joinRequestEmail && joinRequestError && joinRequestSuccess && joinRequestForm) {
+    btnRequestSubmit.addEventListener('click', function () {
+      var email = joinRequestEmail.value.trim();
+      joinRequestError.hidden = true;
+
+      if (!email || !email.includes('@')) {
+        joinRequestError.textContent = 'Please enter a valid email address.';
+        joinRequestError.hidden = false;
+        return;
+      }
+
+      btnRequestSubmit.disabled = true;
+      btnRequestSubmit.textContent = 'Sending…';
+
+      fetch(window.IL_FN_BASE + '/subscribe', {
+        method: 'POST',
+        headers: window.ilFnHeaders(),
+        body: JSON.stringify({ email: email, source: 'join_request' }),
+      })
+        .then(function (r) {
+          return r.json();
+        })
+        .then(function (data) {
+          if (data.error) {
+            joinRequestError.textContent = data.error;
+            joinRequestError.hidden = false;
+            btnRequestSubmit.disabled = false;
+            btnRequestSubmit.textContent = 'Request access';
+          } else {
+            joinRequestEmail.hidden = true;
+            btnRequestSubmit.hidden = true;
+            joinRequestSuccess.hidden = false;
+          }
+        })
+        .catch(function () {
+          joinRequestError.textContent = 'Something went wrong. Please try again.';
+          joinRequestError.hidden = false;
+          btnRequestSubmit.disabled = false;
+          btnRequestSubmit.textContent = 'Request access';
+        });
+    });
+  }
 })();
