@@ -320,22 +320,6 @@ document.addEventListener('keydown', (e) => {
   requestAnimationFrame(tick);
 })();
 
-(function initLeaderboardNavCounter() {
-  const navCounter = document.getElementById('s1NavCounter');
-  if (!navCounter) return;
-  const url =
-    'https://nifbuyoghesveotugday.supabase.co/functions/v1/get-leaderboard?limit=1';
-  fetch(url)
-    .then((r) => r.json())
-    .then((data) => {
-      const total = typeof data.total === 'number' ? data.total : 0;
-      navCounter.textContent = `${total} founding members`;
-    })
-    .catch(() => {
-      navCounter.textContent = '';
-    });
-})();
-
 window.openPrivacy  = openPrivacy;
 window.closePrivacy = closePrivacy;
 window.handleSubmit = handleSubmit;

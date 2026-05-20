@@ -118,16 +118,15 @@ body::after {
 
 .s1-nav {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
 }
 
-.s1-nav-counter {
-  font-size: 13px;
-  color: var(--gold);
-  opacity: 0.6;
-  font-family: 'Instrument Sans', sans-serif;
-  letter-spacing: 0.04em;
+.s1-nav-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .s1-nav-link {
@@ -144,9 +143,26 @@ body::after {
 }
 
 .s1-nav-sep {
+  display: inline-block;
+  width: 1px;
+  height: 12px;
+  background: var(--gold);
+  opacity: 0.3;
+  vertical-align: middle;
+}
+
+.s1-nav-leaderboard {
+  font-size: 11px;
   color: var(--gold);
-  opacity: 0.4;
-  font-size: 13px;
+  opacity: 0.5;
+  text-decoration: none;
+  font-family: 'Instrument Sans', sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.s1-nav-leaderboard:hover {
+  opacity: 0.8;
 }
 
 /* Hero headline */
@@ -900,18 +916,24 @@ h1 {
 
   .s1-header .s1-nav {
     min-height: 44px;
-    display: flex;
-    align-items: center;
+  }
+
+  .s1-nav-top {
     justify-content: flex-end;
-    flex-wrap: wrap;
-    text-align: right;
-    gap: 10px;
   }
 
   .s1-nav-link {
     min-height: 44px;
     display: inline-flex;
     align-items: center;
+    box-sizing: border-box;
+  }
+
+  .s1-nav-leaderboard {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
     box-sizing: border-box;
   }
 
