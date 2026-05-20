@@ -45,8 +45,37 @@
     pkceChallenge(verifier).then(function (challenge) {
       sessionStorage.setItem('oauth_code_verifier', verifier);
       sessionStorage.setItem('oauth_invite_code', code);
+      sessionStorage.removeItem('oauth_mode');
 
       var stateObj = { invite_code: code, code_verifier: verifier };
+      var stateB64 = btoa(JSON.stringify(stateObj));
+
+      var url =
+        'https://x.com/i/oauth2/authorize?response_type=code' +
+        '&client_id=' +
+        encodeURIComponent(X_CLIENT_ID) +
+        '&redirect_uri=' +
+        encodeURIComponent(REDIRECT) +
+        '&scope=' +
+        encodeURIComponent('users.read tweet.read offline.access') +
+        '&state=' +
+        encodeURIComponent(stateB64) +
+        '&code_challenge=' +
+        encodeURIComponent(challenge) +
+        '&code_challenge_method=S256';
+
+      window.location.href = url;
+    });
+  }
+
+  function loginWithX() {
+    var verifier = randomVerifier(64);
+    pkceChallenge(verifier).then(function (challenge) {
+      sessionStorage.setItem('oauth_code_verifier', verifier);
+      sessionStorage.setItem('oauth_mode', 'login');
+      sessionStorage.removeItem('oauth_invite_code');
+
+      var stateObj = { code_verifier: verifier };
       var stateB64 = btoa(JSON.stringify(stateObj));
 
       var url =
@@ -144,4 +173,11 @@
         showError('This code is not valid.');
       });
   });
+
+  var btnLoginX = document.getElementById('btnLoginX');
+  if (btnLoginX) {
+    btnLoginX.addEventListener('click', function () {
+      loginWithX();
+    });
+  }
 })();

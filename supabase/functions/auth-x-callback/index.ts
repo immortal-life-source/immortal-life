@@ -100,12 +100,13 @@ async function runOAuthFlow(
 
   const { data: existingMember } = await supabase
     .from('members')
-    .select('id, points')
+    .select('id')
     .eq('x_id', xProfile.id)
     .single()
 
   let memberId: number
 
+  /** Existing account: log in only (session + last_login / avatar). No points or invites. */
   if (existingMember) {
     memberId = existingMember.id
     const lastLogin = new Date()
@@ -114,6 +115,7 @@ async function runOAuthFlow(
       .update({ last_login: lastLogin.toISOString(), x_avatar_url: xProfile.profile_image_url })
       .eq('id', memberId)
   } else {
+    /** New account: require a valid unused invite code, then signup + referrals. */
     const { data: invite } = await supabase
       .from('invite_codes')
       .select('id, owner_id, is_used')

@@ -85,6 +85,40 @@
       text-transform: uppercase;
       color: var(--gold);
     }
+    .join-login-section {
+      margin-top: 32px;
+      padding-top: 28px;
+      border-top: 1px solid var(--border-mid);
+      width: 100%;
+    }
+    .join-login-label {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 300;
+      color: var(--off);
+      margin-bottom: 12px;
+      letter-spacing: 0.06em;
+    }
+    .join-btn-login-x {
+      width: 100%;
+      box-sizing: border-box;
+      min-height: 44px;
+      padding: 12px 16px;
+      font-family: var(--font-sans);
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--gold);
+      background: transparent;
+      border: 1px solid var(--gold);
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .join-btn-login-x:hover {
+      border-color: var(--gold-mid);
+      color: var(--white);
+    }
     .join-waiting {
       margin-top: 48px;
       text-align: center;
@@ -131,6 +165,10 @@
         display: inline-flex;
         align-items: center;
       }
+      .join-login-section {
+        margin-top: 28px;
+        padding-top: 24px;
+      }
     }
   </style>
 </head>
@@ -159,6 +197,11 @@
         <p id="inviteError" class="m-error" hidden role="alert"></p>
         <div id="successWrap" hidden>Code accepted.</div>
         <button type="button" class="m-btn-primary" id="btnContinue">Continue</button>
+      </div>
+
+      <div class="join-login-section">
+        <p class="join-login-label">Already a member?</p>
+        <button type="button" class="join-btn-login-x" id="btnLoginX">Continue with X →</button>
       </div>
 
       <p class="join-waiting">
