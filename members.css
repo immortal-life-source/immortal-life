@@ -677,7 +677,22 @@ details.dash-acc summary {
   .dash-grid {
     display: flex;
     flex-direction: column;
-    gap: 40px;
+    gap: 16px;
+  }
+
+  .dash-left details.dash-acc,
+  .dash-right details.dash-acc {
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 8px;
+  }
+
+  .dash-left details.dash-acc + details.dash-acc {
+    margin-top: 8px;
+  }
+
+  .dash-section-label {
+    margin-bottom: 4px;
   }
 
   /* Flatten columns so `order` can place profile, then share…recent, then earn/accordions */
