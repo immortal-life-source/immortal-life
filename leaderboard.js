@@ -39,6 +39,9 @@
 
   loggedIn = hasSession();
 
+  var lbMemberCount = document.getElementById('lbMemberCount');
+  if (lbMemberCount) lbMemberCount.hidden = !loggedIn;
+
   function tierBadgesCard(m) {
     var og = isOgMember(m) ? '<span class="dash-og-badge">OG</span>' : '';
     return (

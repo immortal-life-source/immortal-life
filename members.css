@@ -814,6 +814,11 @@ details.dash-acc summary {
   margin: 0;
 }
 
+.lb-blur-overlay-card a {
+  color: #b8955a !important;
+  text-decoration: none;
+}
+
 .lb-tier-row {
   display: inline-flex;
   align-items: center;
