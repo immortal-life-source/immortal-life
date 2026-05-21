@@ -699,6 +699,10 @@ details.dash-acc summary {
   color: rgba(180, 70, 70, 0.7);
 }
 
+.dash-delete-modal[hidden] {
+  display: none !important;
+}
+
 .dash-delete-modal {
   position: fixed;
   inset: 0;

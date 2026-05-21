@@ -5,7 +5,6 @@
   var lbRoot = document.getElementById('lbRoot');
   var lbLoading = document.getElementById('lbLoading');
   var lbTotal = document.getElementById('lbTotal');
-  var lbFirstCard = document.getElementById('lbFirstCard');
   var lbBlurContent = document.getElementById('lbBlurContent');
   var lbBlurOverlay = document.getElementById('lbBlurOverlay');
   var lbTop = document.getElementById('lbTop');
@@ -133,7 +132,6 @@
       lbBlurContent.classList.remove('lb-blur-active');
       lbBlurOverlay.hidden = true;
       lbBlurOverlay.setAttribute('aria-hidden', 'true');
-      lbFirstCard.innerHTML = '';
     }
   }
 
@@ -141,26 +139,18 @@
     var top = members.slice(0, 10);
     var mid = members.slice(10, 100);
 
-    if (!loggedIn && top.length > 0) {
-      var first = top[0];
-      lbFirstCard.innerHTML = cardHtml(first, first.rank === 1);
-      lbTop.innerHTML = top
-        .slice(1)
-        .map(function (m) {
-          return cardHtml(m, false);
-        })
-        .join('');
+    lbTop.innerHTML = top
+      .map(function (m) {
+        return cardHtml(m, m.rank === 1);
+      })
+      .join('');
+    lbMid.innerHTML = mid.map(rowHtml).join('');
+
+    if (!loggedIn) {
       setGuestBlur(true);
     } else {
       setGuestBlur(false);
-      lbTop.innerHTML = top
-        .map(function (m) {
-          return cardHtml(m, m.rank === 1);
-        })
-        .join('');
     }
-
-    lbMid.innerHTML = mid.map(rowHtml).join('');
     lbRestNav.hidden = totalMembers <= 100;
     if (!lbRestNav.hidden) loadBeyond();
   }
