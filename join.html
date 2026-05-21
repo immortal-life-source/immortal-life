@@ -51,6 +51,40 @@
       color: var(--off);
       margin-bottom: 36px;
     }
+    .join-what {
+      margin-bottom: 32px;
+      max-width: 420px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .join-what-list {
+      list-style: none;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .join-what-list li {
+      font-size: 14px;
+      color: var(--off);
+      padding-left: 20px;
+      position: relative;
+      line-height: 1.6;
+    }
+    .join-what-list li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: #b8955a;
+    }
+    .join-what-closing {
+      font-size: 13px;
+      font-style: italic;
+      color: #b8955a;
+      opacity: 0.8;
+      margin-top: 16px;
+      text-align: center;
+    }
     .join-card {
       border: 1px solid var(--border-mid);
       background: rgba(237, 233, 224, 0.02);
@@ -244,6 +278,15 @@
     <main class="join-main">
       <h1 class="join-h1">You were invited.</h1>
       <p class="join-sub">Enter your invite code to request access.</p>
+
+      <div class="join-what">
+        <ul class="join-what-list">
+          <li>A private circle around longevity science and life extension</li>
+          <li>Points, rankings, and something worth climbing for</li>
+          <li>Invite-only. Small group. Early.</li>
+        </ul>
+        <p class="join-what-closing">The circle is forming. Once it closes, it closes.</p>
+      </div>
 
       <div class="join-card" id="formCard">
         <input
