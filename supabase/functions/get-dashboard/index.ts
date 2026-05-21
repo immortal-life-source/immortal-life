@@ -6,11 +6,11 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
 }
 
-function getTier(rank: number): string {
-  if (rank <= 10) return 'Founding Circle'
-  if (rank <= 100) return 'Builder'
-  if (rank <= 1000) return 'Early'
-  return 'Member'
+function tierFromPoints(points: number): string {
+  if (points <= 999) return 'Mortal'
+  if (points <= 4999) return 'Awakened'
+  if (points <= 19999) return 'Ascendant'
+  return 'Immortal'
 }
 
 function entitledMaxCodes(points: number): number {
@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     const { data: member, error: memErr } = await supabase
       .from('members')
       .select(
-        'id, created_at, x_id, x_username, x_display_name, x_avatar_url, x_follower_count, points, tier, invited_by, referral_chain_depth, network_size, multiplier, last_login, last_daily_claim, login_streak'
+        'id, created_at, x_id, x_username, x_display_name, x_avatar_url, x_follower_count, points, is_og, invited_by, referral_chain_depth, network_size, multiplier, last_login, last_daily_claim, login_streak'
       )
       .eq('id', memberId)
       .single()
@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         member,
         rank,
-        tier: getTier(rank),
+        tier: tierFromPoints(Number(member.points) || 0),
         invite_codes: codes,
         points_log: pointsLog ?? [],
         codes_progress: {

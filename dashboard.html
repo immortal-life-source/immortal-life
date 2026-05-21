@@ -34,7 +34,10 @@
           <img id="dashAvatar" class="dash-avatar" src="" alt="" />
           <div id="dashDisplay" class="dash-display"></div>
           <div id="dashUser" class="dash-user"></div>
-          <div id="dashTier" class="dash-tier"></div>
+          <div class="dash-tier-row">
+            <span id="dashTier" class="dash-tier"></span>
+            <span id="dashOgBadge" class="dash-og-badge" hidden>OG</span>
+          </div>
           <div id="dashPoints" class="dash-points"></div>
           <div id="dashMultiplier" class="dash-multiplier-badge">1× multiplier</div>
           <div class="dash-daily-claim">
@@ -74,6 +77,14 @@
                 <tr><td>11–50 people</td><td>1.5×</td></tr>
                 <tr><td>51–199 people</td><td>2×</td></tr>
                 <tr><td>200+ people</td><td>3×</td></tr>
+              </table>
+              <p>Tiers reflect your lifetime points:</p>
+              <table>
+                <tr><th>Points</th><th>Tier</th></tr>
+                <tr><td>0–999</td><td>Mortal</td></tr>
+                <tr><td>1,000–4,999</td><td>Awakened</td></tr>
+                <tr><td>5,000–19,999</td><td>Ascendant</td></tr>
+                <tr><td>20,000+</td><td>Immortal</td></tr>
               </table>
               <p>You also earn when your invitees invite others — 250 pts per second-level signup, 125 pts per third-level signup. These are also multiplied by your current multiplier.</p>
             </div>

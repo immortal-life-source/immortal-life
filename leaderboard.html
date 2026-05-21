@@ -162,11 +162,13 @@
       font-size: 12px;
     }
     .lb-row-tier {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
       font-size: 9px;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--off);
-      text-align: right;
     }
     .lb-beyond-h {
       margin: 48px 0 16px;
@@ -320,8 +322,11 @@
       .lb-row-tier {
         grid-column: 1 / -1;
         grid-row: 3;
-        text-align: left;
         justify-self: start;
+        justify-content: flex-start;
+      }
+      .lb-row-tier-inner {
+        justify-content: flex-start;
       }
       #lbRestNav button {
         min-height: 44px;
@@ -353,25 +358,39 @@
     </header>
 
     <div class="lb-hero">
-      <h1 class="lb-h1">The founding circle</h1>
-      <p class="lb-sub">The people building immortal.life from the beginning.</p>
-      <p class="lb-count"><span id="lbTotal">—</span> founding members</p>
+      <h1 class="lb-h1">Leaderboard</h1>
+      <p class="lb-sub">Ranked by points. The higher you climb, the more you earn.</p>
+      <p class="lb-count"><span id="lbTotal">—</span> members</p>
     </div>
 
     <p id="lbLoading">Loading leaderboard…</p>
 
     <div id="lbRoot" hidden>
-      <div id="lbTop" class="lb-top-grid"></div>
-      <div class="lb-mid-h">Ranks 11–100</div>
-      <div id="lbMid"></div>
+      <div id="lbFirstCard" class="lb-first-card-slot"></div>
+      <div id="lbBlurWrap" class="lb-blur-wrap">
+        <div id="lbBlurContent" class="lb-blur-content">
+          <div id="lbTop" class="lb-top-grid"></div>
 
-      <div class="lb-beyond-h">Rank 101+</div>
-      <div id="lbRestNav" hidden>
-        <button type="button" id="lbPrev">Previous</button>
-        <span id="lbPageLabel"></span>
-        <button type="button" id="lbNext">Next</button>
+          <div class="lb-mid-h">Ranks 11–100</div>
+          <div id="lbMid"></div>
+
+          <div class="lb-beyond-h">Rank 101+</div>
+          <div id="lbRestNav" hidden>
+            <button type="button" id="lbPrev">Previous</button>
+            <span id="lbPageLabel"></span>
+            <button type="button" id="lbNext">Next</button>
+          </div>
+          <div id="lbRest"></div>
+        </div>
+
+        <div id="lbBlurOverlay" class="lb-blur-overlay" hidden aria-hidden="true">
+          <div class="lb-blur-overlay-card dash-delete-modal-box">
+            <h2 class="dash-delete-modal-title">Join to see the full leaderboard</h2>
+            <p class="dash-delete-modal-body">immortal.life is invite-only. Get a code from a member.</p>
+            <a href="/join" class="m-btn-primary">Enter invite code →</a>
+          </div>
+        </div>
       </div>
-      <div id="lbRest"></div>
     </div>
   </div>
 

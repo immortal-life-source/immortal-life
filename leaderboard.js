@@ -5,6 +5,9 @@
   var lbRoot = document.getElementById('lbRoot');
   var lbLoading = document.getElementById('lbLoading');
   var lbTotal = document.getElementById('lbTotal');
+  var lbFirstCard = document.getElementById('lbFirstCard');
+  var lbBlurContent = document.getElementById('lbBlurContent');
+  var lbBlurOverlay = document.getElementById('lbBlurOverlay');
   var lbTop = document.getElementById('lbTop');
   var lbMid = document.getElementById('lbMid');
   var lbRest = document.getElementById('lbRest');
@@ -14,8 +17,12 @@
   var lbNext = document.getElementById('lbNext');
   var lbCta = document.getElementById('lbCta');
 
+  /** Bottom bar replaced by blur overlay CTA for guests */
+  lbCta.hidden = true;
+
   var beyondPage = 1;
   var totalMembers = 0;
+  var loggedIn = false;
 
   function esc(s) {
     var d = document.createElement('div');
@@ -27,7 +34,37 @@
     return !!sessionStorage.getItem('il_session');
   }
 
-  if (!hasSession()) lbCta.hidden = false;
+  function isOgMember(m) {
+    return m.is_og === true || m.is_og === 1 || String(m.is_og) === 'true';
+  }
+
+  loggedIn = hasSession();
+
+  function tierBadgesCard(m) {
+    var og = isOgMember(m) ? '<span class="dash-og-badge">OG</span>' : '';
+    return (
+      '<div class="lb-tier-row">' +
+      '<span class="lb-tier">' +
+      esc(m.tier || '') +
+      '</span>' +
+      og +
+      '</div>'
+    );
+  }
+
+  function tierBadgesRow(m) {
+    var og = isOgMember(m) ? '<span class="dash-og-badge">OG</span>' : '';
+    return (
+      '<span class="lb-row-tier">' +
+      '<span class="lb-row-tier-inner">' +
+      '<span class="lb-tier">' +
+      esc(m.tier || '') +
+      '</span>' +
+      og +
+      '</span>' +
+      '</span>'
+    );
+  }
 
   function cardHtml(m, featured) {
     var cls = 'lb-card' + (featured ? ' lb-card-rank1' : '');
@@ -54,9 +91,7 @@
       '<div class="lb-points">' +
       esc(m.points) +
       ' pts</div>' +
-      '<span class="lb-tier">' +
-      esc(m.tier || '') +
-      '</span>' +
+      tierBadgesCard(m) +
       '</div></article>'
     );
   }
@@ -84,11 +119,50 @@
       '<span class="lb-row-pts">' +
       esc(m.points) +
       '</span>' +
-      '<span class="lb-row-tier">' +
-      esc(m.tier || '') +
-      '</span>' +
+      tierBadgesRow(m) +
       '</div>'
     );
+  }
+
+  function setGuestBlur(active) {
+    if (active) {
+      lbBlurContent.classList.add('lb-blur-active');
+      lbBlurOverlay.hidden = false;
+      lbBlurOverlay.setAttribute('aria-hidden', 'false');
+    } else {
+      lbBlurContent.classList.remove('lb-blur-active');
+      lbBlurOverlay.hidden = true;
+      lbBlurOverlay.setAttribute('aria-hidden', 'true');
+      lbFirstCard.innerHTML = '';
+    }
+  }
+
+  function paintTopAndMid(members) {
+    var top = members.slice(0, 10);
+    var mid = members.slice(10, 100);
+
+    if (!loggedIn && top.length > 0) {
+      var first = top[0];
+      lbFirstCard.innerHTML = cardHtml(first, first.rank === 1);
+      lbTop.innerHTML = top
+        .slice(1)
+        .map(function (m) {
+          return cardHtml(m, false);
+        })
+        .join('');
+      setGuestBlur(true);
+    } else {
+      setGuestBlur(false);
+      lbTop.innerHTML = top
+        .map(function (m) {
+          return cardHtml(m, m.rank === 1);
+        })
+        .join('');
+    }
+
+    lbMid.innerHTML = mid.map(rowHtml).join('');
+    lbRestNav.hidden = totalMembers <= 100;
+    if (!lbRestNav.hidden) loadBeyond();
   }
 
   fetch(FN + '?limit=100&offset=0', { headers: window.ilFnHeaders() })
@@ -100,21 +174,7 @@
       lbRoot.hidden = false;
       totalMembers = data.total ?? 0;
       lbTotal.textContent = String(totalMembers);
-
-      var members = data.members || [];
-      var top = members.slice(0, 10);
-      var mid = members.slice(10, 100);
-
-      lbTop.innerHTML = top
-        .map(function (m) {
-          return cardHtml(m, m.rank === 1);
-        })
-        .join('');
-
-      lbMid.innerHTML = mid.map(rowHtml).join('');
-
-      lbRestNav.hidden = totalMembers <= 100;
-      if (!lbRestNav.hidden) loadBeyond();
+      paintTopAndMid(data.members || []);
     })
     .catch(function () {
       lbLoading.textContent = 'Could not load leaderboard.';

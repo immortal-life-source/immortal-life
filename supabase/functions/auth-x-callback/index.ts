@@ -143,6 +143,7 @@ async function runOAuthFlow(
         invited_by: invite.owner_id,
         referral_chain_depth: newDepth,
         points: 300,
+        is_og: false,
       })
       .select('id')
       .single()

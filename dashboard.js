@@ -314,7 +314,11 @@
       document.getElementById('dashAvatar').alt = '@' + m.x_username;
       document.getElementById('dashDisplay').textContent = m.x_display_name || '';
       document.getElementById('dashUser').textContent = '@' + (m.x_username || '');
-      document.getElementById('dashTier').textContent = data.tier || 'Member';
+      document.getElementById('dashTier').textContent = data.tier || 'Mortal';
+      var ogBadge = document.getElementById('dashOgBadge');
+      if (ogBadge) {
+        ogBadge.hidden = !(m.is_og === true || m.is_og === 1 || m.is_og === 'true');
+      }
       pointsEl.textContent = String(m.points ?? 0);
 
       var multEl = document.getElementById('dashMultiplier');

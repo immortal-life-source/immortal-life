@@ -154,8 +154,17 @@ button.m-btn-primary:disabled {
   margin-bottom: 16px;
 }
 
+.dash-tier-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 24px;
+}
+
 .dash-tier {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   padding: 6px 14px;
   border-radius: 999px;
   border: 1px solid var(--gold-mid);
@@ -163,7 +172,27 @@ button.m-btn-primary:disabled {
   font-size: 10px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  margin-bottom: 24px;
+}
+
+.dash-og-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(201, 162, 39, 0.6);
+  color: #c9a227;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+
+.dash-tier-row .dash-og-badge {
+  margin-left: 0;
+}
+
+.lb-tier-row .dash-og-badge,
+.lb-row-tier-inner .dash-og-badge {
+  margin-left: 0;
 }
 
 .dash-points {
@@ -670,8 +699,6 @@ details.dash-acc summary {
   color: rgba(180, 70, 70, 0.7);
 }
 
-.dash-delete-modal[hidden] { display: none !important; }
-
 .dash-delete-modal {
   position: fixed;
   inset: 0;
@@ -747,6 +774,67 @@ details.dash-acc summary {
   margin: 0;
 }
 
+.lb-blur-wrap {
+  position: relative;
+}
+
+.lb-first-card-slot:empty {
+  display: none;
+}
+
+.lb-blur-content.lb-blur-active {
+  filter: blur(6px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.lb-blur-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  box-sizing: border-box;
+}
+
+.lb-blur-overlay:not([hidden]) {
+  display: flex;
+}
+
+.lb-blur-overlay-card {
+  max-width: 480px;
+  width: 100%;
+  margin: 0;
+}
+
+.lb-tier-row {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.lb-tier-row .lb-tier {
+  margin-top: 0;
+}
+
+.lb-row-tier-inner {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.lb-row .lb-tier {
+  font-size: 9px;
+  padding: 4px 8px;
+}
+
 #dashLoading {
   text-align: center;
   padding: 120px 24px;
@@ -787,7 +875,7 @@ details.dash-acc summary {
   .dash-left > .dash-avatar,
   .dash-left > .dash-display,
   .dash-left > .dash-user,
-  .dash-left > .dash-tier,
+  .dash-left > .dash-tier-row,
   .dash-left > .dash-points,
   .dash-left > .dash-multiplier-badge,
   .dash-left > .dash-daily-claim,

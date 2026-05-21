@@ -5,11 +5,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-function getTier(rank: number): string {
-  if (rank <= 10) return 'Founding Circle'
-  if (rank <= 100) return 'Builder'
-  if (rank <= 1000) return 'Early'
-  return 'Member'
+function tierFromPoints(points: number): string {
+  if (points <= 999) return 'Mortal'
+  if (points <= 4999) return 'Awakened'
+  if (points <= 19999) return 'Ascendant'
+  return 'Immortal'
 }
 
 Deno.serve(async (req) => {
@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
 
     const { data, error } = await supabase
       .from('members')
-      .select('id, x_username, x_display_name, x_avatar_url, points, network_size, created_at')
+      .select('id, x_username, x_display_name, x_avatar_url, points, network_size, created_at, is_og')
       .order('points', { ascending: false })
       .range(offset, offset + limit - 1)
 
@@ -42,7 +42,8 @@ Deno.serve(async (req) => {
     const ranked = (data ?? []).map((member, index) => ({
       rank: offset + index + 1,
       ...member,
-      tier: getTier(offset + index + 1)
+      tier: tierFromPoints(Number(member.points) || 0),
+      is_og: Boolean(member.is_og),
     }))
 
     return new Response(
