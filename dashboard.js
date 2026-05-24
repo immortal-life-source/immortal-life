@@ -12,6 +12,7 @@
     chain_signup_depth2: 'Network signup (depth 2)',
     chain_signup_depth3: 'Network signup (depth 3)',
     codes_unlocked: 'Invite codes unlocked',
+    streak_bonus: 'Streak bonus',
   };
 
   function getSession() {
@@ -244,7 +245,7 @@
           if (data.success === true && data.new_total != null) {
             animatePoints(pointsEl, startPts, data.new_total, 600, function () {
               statusEl.hidden = false;
-              statusEl.textContent = '✓ Claimed today';
+              var streakBonus = Number(data.streak_bonus);
               setStreakLine(streakEl, data.login_streak ?? 0);
               btn.disabled = true;
               btn.textContent = '✓ Claimed · come back tomorrow';
@@ -266,6 +267,26 @@
                 esc(formatWhen(new Date().toISOString())) +
                 '</span>';
               logEl.insertBefore(li, logEl.firstChild);
+
+              if (streakBonus > 0) {
+                var liBonus = document.createElement('li');
+                liBonus.className = 'dash-log-row';
+                liBonus.innerHTML =
+                  '<span class="dash-log-action">' +
+                  esc(ACTION_LABELS.streak_bonus) +
+                  '</span>' +
+                  '<span class="dash-log-pts">+' +
+                  esc(String(streakBonus)) +
+                  '</span>' +
+                  '<span class="dash-log-time">' +
+                  esc(formatWhen(new Date().toISOString())) +
+                  '</span>';
+                logEl.insertBefore(liBonus, li.nextSibling);
+                statusEl.textContent =
+                  '🔥 ' + data.streak_bonus_label + ' — +' + data.streak_bonus + ' pts!';
+              } else {
+                statusEl.textContent = '✓ Claimed today';
+              }
             });
           } else if (data.reason === 'already_claimed' && data.next_claim_at) {
             setClaimedUi(data.next_claim_at);
