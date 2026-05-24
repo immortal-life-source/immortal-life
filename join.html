@@ -29,6 +29,16 @@
     }
     .join-top {
       margin-bottom: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .join-top .join-news-link {
+      margin-bottom: 0;
+      text-align: right;
     }
     .join-main {
       flex: 1;
@@ -281,6 +291,7 @@
   <div class="m-shell join-page">
     <header class="join-top">
       <a href="/" class="m-logo" style="text-decoration: none;">immortal.life</a>
+      <p class="join-news-link"><a href="#" data-news-trigger>Latest updates →</a></p>
     </header>
 
     <main class="join-main">
@@ -293,11 +304,8 @@
           <li>Points, rankings, and something worth climbing for</li>
           <li>Invite-only. Small group. Early.</li>
         </ul>
-        <p class="join-what-closing">The circle is forming.</p>
         <p class="join-what-disclaimer">No token exists. No token is promised. But the circle remembers who was early.</p>
       </div>
-
-      <p class="join-news-link"><a href="#" data-news-trigger>Latest updates →</a></p>
 
       <div class="join-card" id="formCard">
         <input
