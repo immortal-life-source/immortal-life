@@ -928,10 +928,6 @@ details.dash-acc summary {
     margin-top: 0;
   }
 
-  .dash-left > .dash-section-label {
-    margin-bottom: 16px;
-  }
-
   .dash-section-label {
     margin-bottom: 8px;
   }
@@ -944,35 +940,41 @@ details.dash-acc summary {
     order: 2;
   }
 
-  .dash-right > .dash-section:nth-child(4) {
+  .dash-right > .dash-section:nth-child(3) {
     order: 3;
   }
 
-  .dash-left > .dash-section-label,
-  .dash-left > .dash-section-label + details.dash-acc {
+  .dash-right > .dash-section:nth-child(4) {
     order: 4;
-    min-width: 0;
-  }
-
-  .dash-right > .dash-section:nth-child(3) {
-    order: 5;
-  }
-
-  .dash-left > details.dash-acc + details.dash-acc {
-    order: 6;
-    min-width: 0;
   }
 
   .dash-right > .dash-section:nth-child(5) {
-    order: 6;
+    order: 5;
   }
 
-  .dash-right > .dash-section:nth-child(6) {
-    order: 7;
+  .dash-left > .dash-section-label {
+    order: 10;
+    margin-bottom: 16px;
+    min-width: 0;
+  }
+
+  .dash-left > .dash-section-label + details.dash-acc {
+    order: 11;
+    min-width: 0;
+  }
+
+  .dash-left > .dash-section-label + details + details {
+    order: 12;
+    min-width: 0;
+  }
+
+  .dash-left > .dash-section-label + details + details + details {
+    order: 13;
+    min-width: 0;
   }
 
   .dash-left > .dash-delete-section {
-    order: 8;
+    order: 14;
     min-width: 0;
   }
 
