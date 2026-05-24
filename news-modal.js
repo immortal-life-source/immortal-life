@@ -55,6 +55,7 @@
   document.addEventListener('click', function (e) {
     var trigger = e.target.closest('[data-news-trigger]');
     if (trigger) {
+      e.preventDefault();
       openNewsModal();
       return;
     }
