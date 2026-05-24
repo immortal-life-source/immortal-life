@@ -439,28 +439,6 @@
         logEl.appendChild(li);
       });
 
-      fetch(window.IL_FN_BASE + '/get-news', {
-        method: 'GET',
-        headers: window.ilFnHeaders(),
-      })
-        .then(function (r) {
-          return r.json();
-        })
-        .then(function (data) {
-          var newsList = document.getElementById('dashNews');
-          if (!newsList || !data.news) return;
-          newsList.innerHTML = '';
-          data.news.forEach(function (item) {
-            var li = document.createElement('li');
-            li.className = 'dash-news-item';
-            li.innerHTML =
-              '<span class="dash-news-date">' + esc(formatWhen(item.published_at)) + '</span>' +
-              '<span class="dash-news-content">' + esc(item.content) + '</span>';
-            newsList.appendChild(li);
-          });
-        })
-        .catch(function () {});
-
       setupDailyClaim(m.id, session, pointsEl, m.login_streak ?? 0, m.last_daily_claim);
 
       var btnDeleteAccount = document.getElementById('btnDeleteAccount');

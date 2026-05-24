@@ -156,8 +156,10 @@
           </section>
 
           <section class="dash-section">
-            <p class="dash-section-label">News</p>
-            <ul id="dashNews" class="dash-news-list"></ul>
+            <button type="button" class="dash-news-trigger" data-news-trigger>
+              <span class="dash-section-label" style="margin:0">News</span>
+              <span class="dash-news-arrow">→</span>
+            </button>
           </section>
 
           <section class="dash-section">
@@ -181,8 +183,20 @@
       </div>
     </div>
   </div>
+
+  <div class="news-modal" id="newsModal" hidden>
+    <div class="news-modal-box">
+      <div class="news-modal-header">
+        <span class="news-modal-title">NEWS</span>
+        <button type="button" class="news-modal-close" id="btnNewsClose">×</button>
+      </div>
+      <ul class="news-modal-list" id="newsModalList"></ul>
+    </div>
+  </div>
+
   <script src="/il-config.js"></script>
   <script src="/dashboard.js"></script>
   <script src="/spread-copy.js"></script>
+  <script src="/news-modal.js"></script>
 </body>
 </html>

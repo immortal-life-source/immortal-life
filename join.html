@@ -297,10 +297,7 @@
         <p class="join-what-disclaimer">No token exists. No token is promised. But the circle remembers who was early.</p>
       </div>
 
-      <div class="join-news">
-        <p class="join-news-label">News</p>
-        <ul id="joinNews" class="join-news-list"></ul>
-      </div>
+      <p class="join-news-link"><a href="#" data-news-trigger>Latest updates →</a></p>
 
       <div class="join-card" id="formCard">
         <input
@@ -338,7 +335,19 @@
       </div>
     </main>
   </div>
+
+  <div class="news-modal" id="newsModal" hidden>
+    <div class="news-modal-box">
+      <div class="news-modal-header">
+        <span class="news-modal-title">NEWS</span>
+        <button type="button" class="news-modal-close" id="btnNewsClose">×</button>
+      </div>
+      <ul class="news-modal-list" id="newsModalList"></ul>
+    </div>
+  </div>
+
   <script src="/il-config.js"></script>
   <script src="/join.js"></script>
+  <script src="/news-modal.js"></script>
 </body>
 </html>

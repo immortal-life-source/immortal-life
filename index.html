@@ -63,6 +63,7 @@
           <a href="/join" class="s1-nav-link s1-nav-join" style="color:#b8955a;text-decoration:none;">Join</a>
         </div>
         <a href="/leaderboard" class="s1-nav-leaderboard" style="color:#b8955a;text-decoration:none;">Leaderboard</a>
+        <a href="#" class="s1-nav-leaderboard" data-news-trigger style="color:#b8955a;text-decoration:none;">News</a>
       </nav>
     </header>
 
@@ -344,6 +345,18 @@
     </div>
   </div>
 
+  <div class="news-modal" id="newsModal" hidden>
+    <div class="news-modal-box">
+      <div class="news-modal-header">
+        <span class="news-modal-title">NEWS</span>
+        <button type="button" class="news-modal-close" id="btnNewsClose">×</button>
+      </div>
+      <ul class="news-modal-list" id="newsModalList"></ul>
+    </div>
+  </div>
+
+  <script src="/il-config.js"></script>
+  <script src="/news-modal.js"></script>
   <script src="main.js"></script>
 </body>
 </html>

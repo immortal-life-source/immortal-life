@@ -236,27 +236,4 @@
         });
     });
   }
-
-  fetch(window.IL_FN_BASE + '/get-news', {
-    method: 'GET',
-    headers: window.ilFnHeaders(),
-  })
-    .then(function (r) {
-      return r.json();
-    })
-    .then(function (data) {
-      var newsList = document.getElementById('joinNews');
-      if (!newsList || !data.news) return;
-      newsList.innerHTML = '';
-      data.news.forEach(function (item) {
-        var li = document.createElement('li');
-        li.className = 'join-news-item';
-        var date = new Date(item.published_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-        li.innerHTML =
-          '<span class="join-news-date">' + date + '</span>' +
-          '<span class="join-news-content">' + item.content + '</span>';
-        newsList.appendChild(li);
-      });
-    })
-    .catch(function () {});
 })();
