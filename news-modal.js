@@ -18,8 +18,13 @@
       .then(function (data) {
         list.innerHTML = '';
         if (!data.news || !data.news.length) {
-          list.innerHTML =
-            '<li class="news-modal-item"><span class="news-modal-content">No news yet.</span></li>';
+          var empty = document.createElement('li');
+          empty.className = 'news-modal-item';
+          var emptyText = document.createElement('span');
+          emptyText.className = 'news-modal-content';
+          emptyText.textContent = 'No project news yet.';
+          empty.appendChild(emptyText);
+          list.appendChild(empty);
           return;
         }
         data.news.forEach(function (item) {
@@ -30,13 +35,20 @@
             month: 'long',
             day: 'numeric',
           });
-          li.innerHTML =
-            '<span class="news-modal-date">' +
-            date +
-            '</span>' +
-            '<span class="news-modal-content">' +
-            item.content +
-            '</span>';
+          var dateNode = document.createElement('span');
+          dateNode.className = 'news-modal-date';
+          dateNode.textContent = date;
+          li.appendChild(dateNode);
+          if (item.title) {
+            var titleNode = document.createElement('strong');
+            titleNode.className = 'news-modal-entry-title';
+            titleNode.textContent = item.title;
+            li.appendChild(titleNode);
+          }
+          var contentNode = document.createElement('span');
+          contentNode.className = 'news-modal-content';
+          contentNode.textContent = item.content;
+          li.appendChild(contentNode);
           list.appendChild(li);
         });
         list.dataset.loaded = 'true';

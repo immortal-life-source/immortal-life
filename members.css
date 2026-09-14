@@ -1187,6 +1187,34 @@ details.dash-acc summary {
   line-height: 1.7;
 }
 
+.news-modal-entry-title {
+  color: #ede9e0;
+  font: 300 21px/1.2 'Cormorant', Georgia, serif;
+}
+
+.dash-intel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
+.dash-intel-copy { margin: 8px 0 18px; font-size: 13px; line-height: 1.6; max-width: 620px; }
+.dash-watch-topics { display: flex; flex-wrap: wrap; gap: 8px; }
+.dash-watch-chip { border: 1px solid rgba(237,233,224,.14); color: rgba(237,233,224,.58); background: transparent; padding: 9px 11px; cursor: pointer; font: 400 10px 'Instrument Sans', sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+.dash-watch-chip:hover, .dash-watch-chip.is-watched { border-color: #b8955a; color: #b8955a; background: rgba(184,149,90,.08); }
+.dash-watch-chip.is-watched::before { content: '✓ '; }
+.dash-briefing-toggle { display: flex; align-items: center; gap: 10px; margin-top: 22px; color: rgba(237,233,224,.75); font-size: 13px; cursor: pointer; }
+.dash-briefing-toggle input { accent-color: #b8955a; }
+.dash-watch-status { min-height: 18px; margin: 10px 0 0; color: #b8955a; font-size: 11px; }
+.dash-briefings { margin-top: 28px; }
+.dash-briefing-heading { margin-bottom: 12px; }
+.dash-briefing-card { border-top: 1px solid rgba(237,233,224,.1); }
+.dash-briefing-card:last-child { border-bottom: 1px solid rgba(237,233,224,.1); }
+.dash-briefing-card summary { padding: 16px 0; color: #ede9e0; cursor: pointer; font: 300 19px 'Cormorant', Georgia, serif; }
+.dash-briefing-body { padding: 0 0 20px; color: rgba(237,233,224,.62); font-size: 12px; line-height: 1.65; }
+.dash-briefing-body h4 { margin: 18px 0 6px; color: #b8955a; text-transform: uppercase; letter-spacing: .1em; font: 400 9px 'Instrument Sans', sans-serif; }
+.dash-briefing-body ul { margin: 0; padding-left: 18px; }
+.dash-briefing-body a { color: rgba(237,233,224,.8); }
+
+@media (max-width: 680px) {
+  .dash-intel-head { flex-direction: column; }
+}
+
 .dash-news-trigger {
   background: none;
   border: none;

@@ -25,6 +25,8 @@
       <a href="/research" data-nav="research">Research</a>
       <a href="/trials" data-nav="trials">Trial Radar</a>
       <a href="/topics" data-nav="topics">Topics</a>
+      <a href="/regulatory" data-nav="regulatory">Regulatory</a>
+      <a href="/evidence-graph" data-nav="graph">Evidence Graph</a>
       <a href="/join">Members</a>
     </nav>
   </header>
@@ -70,6 +72,39 @@
       </div>
       <div class="filter-row" id="trialFilters" hidden></div>
       <div class="record-list" id="trialList"></div>
+    </section>
+
+    <section class="intel-section" id="regulatorySection" hidden>
+      <div class="section-heading">
+        <div><span class="section-index">Official notices</span><h2>Regulatory watch</h2></div>
+        <a href="/integrity" class="section-link">Research integrity feed</a>
+      </div>
+      <div class="record-list" id="regulatoryList"></div>
+    </section>
+
+    <section class="intel-section" id="integritySection" hidden>
+      <div class="section-heading">
+        <div><span class="section-index">Corrections & retractions</span><h2>Research integrity</h2></div>
+        <a href="/research" class="section-link">Research feed</a>
+      </div>
+      <div class="record-list" id="integrityList"></div>
+    </section>
+
+    <section class="intel-section graph-section" id="graphSection" hidden>
+      <div class="section-heading">
+        <div><span class="section-index">Living map</span><h2>Visual evidence graph</h2></div>
+        <span class="graph-hint">Select a topic node to open its dossier</span>
+      </div>
+      <div class="evidence-graph-wrap">
+        <svg id="evidenceGraph" class="evidence-graph" viewBox="0 0 1200 720" role="img" aria-labelledby="graphTitle graphDescription">
+          <title id="graphTitle">Longevity evidence graph</title>
+          <desc id="graphDescription">A map connecting tracked longevity topics to research, trials, regulatory notices, research integrity events, and overlapping evidence.</desc>
+        </svg>
+      </div>
+      <div class="graph-legend" aria-label="Graph legend">
+        <span><i data-kind="topic"></i>Topic</span><span><i data-kind="research"></i>Research</span><span><i data-kind="trial"></i>Trials</span><span><i data-kind="regulatory"></i>Regulatory</span><span><i data-kind="integrity"></i>Integrity</span>
+      </div>
+      <div id="graphFallback" class="graph-fallback"></div>
     </section>
 
     <section class="source-section" id="sourceSection" hidden>

@@ -23,7 +23,9 @@ The membership backend is deployed as Supabase Edge Functions. Database state an
 - `claim-daily`: authenticated claim eligibility and atomic 20-hour reward claim.
 - `delete-member`: authenticated, atomic account deletion.
 
-The existing newsletter functions (`subscribe`, `confirm`, `unsubscribe`, and `get-news`) are deployed separately and are not defined in this repository.
+The existing newsletter functions (`subscribe`, `confirm`, and `unsubscribe`) are deployed separately. `get-news` is defined here and serves the project-owned, migration-seeded development log.
+
+`sync-intelligence` runs the literature, trial registry, Crossref retraction, EMA, and SÚKL ingestion jobs. `member-intelligence` provides signed-session watchlists and private briefing access. `generate-briefings` is called by the database scheduler every Monday and idempotently generates one briefing per opted-in member and period.
 
 ## Required secrets
 

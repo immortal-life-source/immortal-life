@@ -92,6 +92,36 @@ const intelligencePages = [
     PAGE_KICKER: 'Immortal Index',
     PAGE_HEADING: 'Follow the evidence, not the noise.',
   },
+  {
+    filename: 'regulatory.html',
+    PAGE_TITLE: 'EU & Czech Regulatory Watch — immortal.life',
+    PAGE_DESCRIPTION: 'Automatically monitored official notices from European and Czech medicines regulators, with source provenance and topic matching.',
+    CANONICAL_URL: 'https://immortal.life/regulatory',
+    PAGE_VIEW: 'regulatory',
+    TOPIC_SLUG: '',
+    PAGE_KICKER: 'EU and Czech official-source monitoring',
+    PAGE_HEADING: 'Regulatory watch.',
+  },
+  {
+    filename: 'integrity.html',
+    PAGE_TITLE: 'Retractions & Research Integrity — immortal.life',
+    PAGE_DESCRIPTION: 'Crossref and Retraction Watch-linked integrity signals for research indexed by immortal.life.',
+    CANONICAL_URL: 'https://immortal.life/integrity',
+    PAGE_VIEW: 'integrity',
+    TOPIC_SLUG: '',
+    PAGE_KICKER: 'Crossref-linked post-publication updates',
+    PAGE_HEADING: 'Evidence changes. We track it.',
+  },
+  {
+    filename: 'evidence-graph.html',
+    PAGE_TITLE: 'Visual Longevity Evidence Graph — immortal.life',
+    PAGE_DESCRIPTION: 'An automatically updated visual map connecting longevity topics, research, trials, regulatory notices, and integrity events.',
+    CANONICAL_URL: 'https://immortal.life/evidence-graph',
+    PAGE_VIEW: 'graph',
+    TOPIC_SLUG: '',
+    PAGE_KICKER: 'A living map of the evidence',
+    PAGE_HEADING: 'See how the field connects.',
+  },
 ];
 
 for (const page of intelligencePages) {

@@ -24,6 +24,13 @@
     researchList: document.getElementById('researchList'),
     trialsSection: document.getElementById('trialsSection'),
     trialList: document.getElementById('trialList'),
+    regulatorySection: document.getElementById('regulatorySection'),
+    regulatoryList: document.getElementById('regulatoryList'),
+    integritySection: document.getElementById('integritySection'),
+    integrityList: document.getElementById('integrityList'),
+    graphSection: document.getElementById('graphSection'),
+    graph: document.getElementById('evidenceGraph'),
+    graphFallback: document.getElementById('graphFallback'),
     sourceSection: document.getElementById('sourceSection'),
     sourceList: document.getElementById('sourceList'),
   };
@@ -46,6 +53,12 @@
   function formatDate(value) {
     if (!value) return 'Date unavailable';
     const parsed = new Date(`${value}T00:00:00Z`);
+    return Number.isNaN(parsed.getTime()) ? 'Date unavailable' : dateFormatter.format(parsed);
+  }
+
+  function formatTimestamp(value) {
+    if (!value) return 'Date unavailable';
+    const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? 'Date unavailable' : dateFormatter.format(parsed);
   }
 
@@ -150,6 +163,99 @@
     elements.trialsSection.hidden = false;
   }
 
+  function renderRegulatory(records) {
+    elements.regulatoryList.replaceChildren();
+    if (!records.length) elements.regulatoryList.append(el('p', 'empty-list', 'Official feeds are current; no notices have been indexed yet.'));
+    records.forEach((record) => {
+      const card = el('article', 'record-card');
+      const meta = el('div', 'record-meta');
+      meta.append(el('div', '', record.jurisdiction));
+      meta.append(el('div', '', formatTimestamp(record.published_at)));
+      if (record.content_sources?.name) meta.append(el('div', '', record.content_sources.name));
+      const main = el('div', 'record-main');
+      main.append(el('h3', '', record.title));
+      main.append(el('p', '', record.summary));
+      const tags = el('div', 'record-tags');
+      (record.matched_topics || []).forEach((slug) => tags.append(link('record-tag', slug.replace(/-/g, ' '), `/topics/${encodeURIComponent(slug)}`)));
+      main.append(tags);
+      const action = el('div', 'record-action');
+      action.append(el('span', 'record-status', record.category));
+      const source = link('source-link', 'Open official notice', record.source_url);
+      source.target = '_blank'; source.rel = 'noopener noreferrer'; action.append(source);
+      card.append(meta, main, action); elements.regulatoryList.append(card);
+    });
+    elements.regulatorySection.hidden = false;
+  }
+
+  function renderIntegrity(records) {
+    elements.integrityList.replaceChildren();
+    if (!records.length) elements.integrityList.append(el('p', 'empty-list', 'No Crossref-linked integrity events currently match the indexed research. Monitoring continues automatically.'));
+    records.forEach((record) => {
+      const card = el('article', 'record-card integrity-card');
+      const meta = el('div', 'record-meta');
+      meta.append(el('div', '', formatDate(record.announced_on)));
+      meta.append(el('div', '', 'Detected ' + formatTimestamp(record.detected_at)));
+      const main = el('div', 'record-main');
+      main.append(el('h3', '', record.title));
+      main.append(el('p', '', record.summary));
+      if (record.research_items?.title) main.append(el('p', 'integrity-linked', `Indexed record: ${record.research_items.title}`));
+      const action = el('div', 'record-action');
+      action.append(el('span', 'record-status record-status--alert', record.event_type));
+      const source = link('source-link', 'Open integrity notice', record.source_url);
+      source.target = '_blank'; source.rel = 'noopener noreferrer'; action.append(source);
+      card.append(meta, main, action); elements.integrityList.append(card);
+    });
+    elements.integritySection.hidden = false;
+  }
+
+  function renderGraph(data) {
+    const svg = elements.graph;
+    svg.replaceChildren(svg.querySelector('title'), svg.querySelector('desc'));
+    const width = 1200, height = 720, centerX = width / 2, centerY = height / 2;
+    const layerPositions = {
+      'layer:research': { x: 165, y: 140 }, 'layer:trials': { x: 1035, y: 140 },
+      'layer:regulatory': { x: 1035, y: 580 }, 'layer:integrity': { x: 165, y: 580 },
+    };
+    const topicNodes = (data.nodes || []).filter((node) => node.kind === 'topic');
+    const positions = {};
+    topicNodes.forEach((node, index) => {
+      const angle = -Math.PI / 2 + index * Math.PI * 2 / Math.max(topicNodes.length, 1);
+      positions[node.id] = { x: centerX + Math.cos(angle) * 245, y: centerY + Math.sin(angle) * 245 };
+    });
+    Object.assign(positions, layerPositions);
+    const ns = 'http://www.w3.org/2000/svg';
+    (data.links || []).forEach((edge) => {
+      const from = positions[edge.source], to = positions[edge.target];
+      if (!from || !to || edge.weight <= 0) return;
+      const line = document.createElementNS(ns, 'line');
+      line.setAttribute('x1', from.x); line.setAttribute('y1', from.y); line.setAttribute('x2', to.x); line.setAttribute('y2', to.y);
+      line.setAttribute('class', `graph-link graph-link--${edge.kind}`);
+      line.setAttribute('stroke-width', String(Math.min(8, 0.8 + Math.log2(edge.weight + 1))));
+      svg.append(line);
+    });
+    (data.nodes || []).forEach((node) => {
+      const point = positions[node.id]; if (!point) return;
+      const group = document.createElementNS(ns, node.kind === 'topic' ? 'a' : 'g');
+      if (node.kind === 'topic') group.setAttribute('href', `/topics/${encodeURIComponent(node.slug)}`);
+      group.setAttribute('class', `graph-node graph-node--${node.kind}`);
+      const circle = document.createElementNS(ns, 'circle');
+      circle.setAttribute('cx', point.x); circle.setAttribute('cy', point.y);
+      circle.setAttribute('r', String(node.kind === 'topic' ? Math.min(35, 18 + Math.log2(Number(node.weight || 0) + 1) * 2) : 48));
+      const label = document.createElementNS(ns, 'text');
+      label.setAttribute('x', point.x); label.setAttribute('y', point.y + (node.kind === 'topic' ? 50 : 70));
+      label.setAttribute('text-anchor', 'middle'); label.textContent = node.label;
+      const count = document.createElementNS(ns, 'text');
+      count.setAttribute('x', point.x); count.setAttribute('y', point.y + 4); count.setAttribute('text-anchor', 'middle');
+      count.setAttribute('class', 'graph-count'); count.textContent = numberFormatter.format(Number(node.weight || 0));
+      group.append(circle, count, label); svg.append(group);
+    });
+    elements.graphFallback.replaceChildren();
+    const fallbackTitle = el('h3', '', 'Evidence by topic'); elements.graphFallback.append(fallbackTitle);
+    const fallbackList = el('ul', 'graph-fallback-list');
+    topicNodes.forEach((node) => { const item = el('li'); item.append(link('', node.label, `/topics/${encodeURIComponent(node.slug)}`), el('span', '', numberFormatter.format(Number(node.weight || 0)))); fallbackList.append(item); });
+    elements.graphFallback.append(fallbackList); elements.graphSection.hidden = false;
+  }
+
   function renderSources(sources) {
     elements.sourceList.replaceChildren();
     sources.forEach((source) => {
@@ -227,6 +333,18 @@
           elements.topicCount.textContent = '1';
           elements.statsSection.hidden = false;
         }
+      } else if (view === 'regulatory') {
+        const data = await request('regulatory', 80);
+        renderRegulatory(data.regulatory || []);
+        renderSources(data.sources || []);
+      } else if (view === 'integrity') {
+        const data = await request('integrity', 80);
+        renderIntegrity(data.integrity || []);
+        renderSources(data.sources || []);
+      } else if (view === 'graph') {
+        const data = await request('graph', 100);
+        renderGraph(data);
+        renderSources(data.sources || []);
       }
       elements.loading.hidden = true;
     } catch (error) {

@@ -1246,3 +1246,8 @@ h1 {
   color: rgba(237, 233, 224, 0.75);
   line-height: 1.7;
 }
+
+.news-modal-entry-title {
+  color: #ede9e0;
+  font: 300 21px/1.2 'Cormorant', Georgia, serif;
+}

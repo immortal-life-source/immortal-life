@@ -20,7 +20,8 @@ type Topic = {
 type Job = {
   id: number
   source_id: string
-  topic_slug: string
+  topic_slug: string | null
+  job_key: string
   attempts: number
 }
 
@@ -68,6 +69,130 @@ async function fetchJson(url: URL): Promise<any> {
   } finally {
     clearTimeout(timeout)
   }
+}
+
+async function fetchText(url: URL): Promise<string> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 25_000)
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: 'application/rss+xml, application/atom+xml, text/xml', 'User-Agent': USER_AGENT },
+      signal: controller.signal,
+    })
+    if (!response.ok) throw new Error(`Upstream ${response.status} from ${url.hostname}`)
+    return await response.text()
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+function xmlText(block: string, tag: string): string {
+  const match = block.match(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`, 'i'))
+  return cleanText((match?.[1] ?? '')
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'"), 1200)
+}
+
+async function stableId(value: string): Promise<string> {
+  const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))
+  return [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('').slice(0, 40)
+}
+
+const TOPIC_KEYWORDS: Record<string, RegExp> = {
+  rapamycin: /\b(rapamycin|sirolimus|everolimus|mTOR)\b/i,
+  senolytics: /\b(senolytic|senescence|senescent)\b/i,
+  'partial-reprogramming': /\b(partial reprogramming|epigenetic reprogramming|Yamanaka)\b/i,
+  metformin: /\bmetformin\b/i,
+  'glp-1-therapies': /\b(GLP-?1|semaglutide|tirzepatide|liraglutide)\b/i,
+  exercise: /\b(exercise|physical activity|fitness)\b/i,
+  'caloric-restriction': /\b(calori(?:c|e) restriction|intermittent fasting)\b/i,
+  sleep: /\bsleep\b/i,
+  'epigenetic-clocks': /\b(epigenetic clock|DNA methylation age|biological age)\b/i,
+  'plasma-exchange': /\b(plasma exchange|plasmapheresis|plasma dilution)\b/i,
+  'stem-cells': /\b(stem cell|progenitor cell)\b/i,
+  'gene-therapy': /\b(gene therap|genome edit|CRISPR)\b/i,
+}
+
+async function syncCrossref(supabase: any): Promise<{ seen: number; written: number }> {
+  const from = new Date(Date.now() - 45 * 86400000).toISOString().slice(0, 10)
+  const url = new URL('https://api.crossref.org/works')
+  url.searchParams.set('filter', `update-type:retraction,from-update-date:${from}`)
+  url.searchParams.set('rows', '200')
+  url.searchParams.set('sort', 'updated')
+  url.searchParams.set('order', 'desc')
+  url.searchParams.set('mailto', 'research@immortal.life')
+  const payload = await fetchJson(url)
+  const notices = Array.isArray(payload?.message?.items) ? payload.message.items : []
+  const { data: localItems, error: localError } = await supabase.from('research_items').select('id,doi,title').not('doi', 'is', null)
+  if (localError) throw localError
+  const localByDoi = new Map((localItems ?? []).map((item: any) => [String(item.doi).toLowerCase(), item]))
+  const events: any[] = []
+  for (const notice of notices) {
+    const relations = Array.isArray(notice?.['update-to']) ? notice['update-to'] : []
+    for (const relation of relations) {
+      const originalDoi = cleanText(relation?.DOI, 240).toLowerCase()
+      const local = localByDoi.get(originalDoi)
+      if (!local) continue
+      const noticeDoi = cleanText(notice?.DOI, 240)
+      const title = cleanText(Array.isArray(notice?.title) ? notice.title[0] : notice?.title, 500) || `Retraction notice for ${local.title}`
+      events.push({
+        source_id: 'crossref',
+        external_id: `${noticeDoi || await stableId(title)}:${local.id}`,
+        research_item_id: local.id,
+        event_type: 'retraction',
+        title,
+        summary: 'Crossref identifies a retraction update linked to this indexed research record. Follow the publisher record for the authoritative notice.',
+        source_url: noticeDoi ? `https://doi.org/${encodeURIComponent(noticeDoi)}` : `https://api.crossref.org/works/${encodeURIComponent(originalDoi)}`,
+        announced_on: dateOnly(notice?.created?.['date-time'] ?? notice?.issued?.['date-parts']?.[0]?.join('-')),
+        metadata: { notice_doi: noticeDoi || null, original_doi: originalDoi, source: 'Crossref REST API / Retraction Watch metadata' },
+      })
+      await supabase.from('research_items').update({ status: 'retracted', integrity_checked_at: new Date().toISOString() }).eq('id', local.id)
+    }
+  }
+  if (events.length) {
+    const { error } = await supabase.from('research_integrity_events').upsert(events, { onConflict: 'source_id,external_id', defaultToNull: false })
+    if (error) throw error
+  }
+  await supabase.from('research_items').update({ integrity_checked_at: new Date().toISOString() }).not('doi', 'is', null)
+  return { seen: notices.length, written: events.length }
+}
+
+async function syncRegulatoryFeed(supabase: any, sourceId: 'ema' | 'sukl'): Promise<{ seen: number; written: number }> {
+  const source = sourceId === 'ema'
+    ? { url: 'https://www.ema.europa.eu/en/news.xml', jurisdiction: 'European Union', name: 'European Medicines Agency' }
+    : { url: 'https://sukl.gov.cz/feed/', jurisdiction: 'Czech Republic', name: 'SÚKL' }
+  const xml = await fetchText(new URL(source.url))
+  const blocks = xml.match(/<item\b[\s\S]*?<\/item>/gi) ?? xml.match(/<entry\b[\s\S]*?<\/entry>/gi) ?? []
+  const records: any[] = []
+  for (const block of blocks.slice(0, 50)) {
+    const title = xmlText(block, 'title')
+    let link = xmlText(block, 'link')
+    if (!link) link = block.match(/<link[^>]+href=["']([^"']+)["']/i)?.[1] ?? ''
+    if (!title || !/^https?:\/\//i.test(link)) continue
+    const rawSummary = xmlText(block, 'description') || xmlText(block, 'summary') || xmlText(block, 'content')
+    const publishedRaw = xmlText(block, 'pubDate') || xmlText(block, 'published') || xmlText(block, 'updated')
+    const parsedDate = new Date(publishedRaw)
+    const haystack = `${title} ${rawSummary}`
+    const matchedTopics = Object.entries(TOPIC_KEYWORDS).filter(([, pattern]) => pattern.test(haystack)).map(([slug]) => slug)
+    records.push({
+      source_id: sourceId,
+      external_id: await stableId(link),
+      jurisdiction: source.jurisdiction,
+      category: matchedTopics.length ? 'Monitored-topic update' : 'Regulatory update',
+      title,
+      summary: rawSummary || `Official update published by ${source.name}. Open the source record for full context.`,
+      published_at: Number.isNaN(parsedDate.getTime()) ? null : parsedDate.toISOString(),
+      source_url: link,
+      matched_topics: matchedTopics,
+      last_seen_at: new Date().toISOString(),
+      metadata: { source_language: sourceId === 'sukl' ? 'cs' : 'en' },
+    })
+  }
+  if (!records.length) return { seen: blocks.length, written: 0 }
+  const { error } = await supabase.from('regulatory_events').upsert(records, { onConflict: 'source_id,external_id', defaultToNull: false })
+  if (error) throw error
+  return { seen: blocks.length, written: records.length }
 }
 
 function sourceDateWindow(days: number): { from: string; to: string } {
@@ -269,12 +394,15 @@ Deno.serve(async (req) => {
     if (!sources?.length) throw new Error('No enabled source matched the request')
 
     const slot = new Date(Math.floor(Date.now() / SIX_HOURS_MS) * SIX_HOURS_MS).toISOString()
-    const queued = sources.flatMap((source: { id: string }) =>
-      (topics ?? []).map((topic: Topic) => ({ source_id: source.id, topic_slug: topic.slug, window_start: slot }))
-    )
+    const queued = sources.flatMap((source: { id: string }) => {
+      if (source.id === 'europe-pmc' || source.id === 'clinicaltrials-gov') {
+        return (topics ?? []).map((topic: Topic) => ({ source_id: source.id, topic_slug: topic.slug, job_key: topic.slug, window_start: slot }))
+      }
+      return [{ source_id: source.id, topic_slug: null, job_key: source.id === 'crossref' ? 'retractions' : 'official-feed', window_start: slot }]
+    })
     const { error: queueError } = await supabase
       .from('ingestion_jobs')
-      .upsert(queued, { onConflict: 'source_id,topic_slug,window_start', ignoreDuplicates: true })
+      .upsert(queued, { onConflict: 'source_id,job_key,window_start', ignoreDuplicates: true })
     if (queueError) throw queueError
 
     const abandonedBefore = new Date(Date.now() - 45 * 60 * 1000).toISOString()
@@ -286,7 +414,7 @@ Deno.serve(async (req) => {
 
     const { data: jobs, error: jobsError } = await supabase
       .from('ingestion_jobs')
-      .select('id,source_id,topic_slug,attempts')
+      .select('id,source_id,topic_slug,job_key,attempts')
       .in('status', ['pending', 'retry'])
       .lte('available_at', new Date().toISOString())
       .order('created_at')
@@ -301,8 +429,8 @@ Deno.serve(async (req) => {
     const successfulSources = new Set<string>()
 
     for (const job of (jobs ?? []) as Job[]) {
-      const topic = topicBySlug.get(job.topic_slug)
-      if (!topic) continue
+      const topic = job.topic_slug ? topicBySlug.get(job.topic_slug) : null
+      if ((job.source_id === 'europe-pmc' || job.source_id === 'clinicaltrials-gov') && !topic) continue
       const attempt = job.attempts + 1
       const lockedAt = new Date().toISOString()
       const { data: locked } = await supabase
@@ -316,9 +444,12 @@ Deno.serve(async (req) => {
 
       await supabase.from('content_sources').update({ last_attempt_at: lockedAt }).eq('id', job.source_id)
       try {
-        const outcome = job.source_id === 'europe-pmc'
-          ? await syncEuropePmc(supabase, topic)
-          : await syncClinicalTrials(supabase, topic)
+        let outcome: { seen: number; written: number }
+        if (job.source_id === 'europe-pmc') outcome = await syncEuropePmc(supabase, topic as Topic)
+        else if (job.source_id === 'clinicaltrials-gov') outcome = await syncClinicalTrials(supabase, topic as Topic)
+        else if (job.source_id === 'crossref') outcome = await syncCrossref(supabase)
+        else if (job.source_id === 'ema' || job.source_id === 'sukl') outcome = await syncRegulatoryFeed(supabase, job.source_id)
+        else throw new Error(`Unsupported source ${job.source_id}`)
         seen += outcome.seen
         written += outcome.written
         successfulSources.add(job.source_id)

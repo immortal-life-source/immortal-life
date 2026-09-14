@@ -146,8 +146,25 @@
           </section>
 
           <section class="dash-section">
+            <div class="dash-intel-head">
+              <div>
+                <p class="dash-section-label">Your evidence watchlist</p>
+                <p class="m-muted dash-intel-copy">Choose topics. A private briefing is generated automatically every Monday from newly indexed evidence and official notices.</p>
+              </div>
+              <a href="/evidence-graph" class="m-link-gold">Open evidence graph →</a>
+            </div>
+            <div id="dashWatchTopics" class="dash-watch-topics" aria-live="polite">Loading watchlist…</div>
+            <label class="dash-briefing-toggle">
+              <input type="checkbox" id="dashBriefingsEnabled" checked />
+              <span>Generate my automatic weekly briefing</span>
+            </label>
+            <p id="dashWatchStatus" class="dash-watch-status" role="status" aria-live="polite"></p>
+            <div id="dashBriefings" class="dash-briefings"></div>
+          </section>
+
+          <section class="dash-section">
             <button type="button" class="dash-news-trigger" data-news-trigger>
-              <span class="dash-section-label" style="margin:0">News</span>
+              <span class="dash-section-label" style="margin:0">Project News</span>
               <span class="dash-news-arrow">→</span>
             </button>
           </section>
@@ -184,7 +201,7 @@
   <div class="news-modal" id="newsModal" hidden>
     <div class="news-modal-box">
       <div class="news-modal-header">
-        <span class="news-modal-title">NEWS</span>
+        <span class="news-modal-title">PROJECT NEWS</span>
         <button type="button" class="news-modal-close" id="btnNewsClose">×</button>
       </div>
       <ul class="news-modal-list" id="newsModalList"></ul>

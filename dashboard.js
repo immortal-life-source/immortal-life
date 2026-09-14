@@ -4,6 +4,7 @@
   var SESSION_KEY = 'il_session';
   var FN = window.IL_FN_BASE + '/get-dashboard';
   var CLAIM_FN = window.IL_FN_BASE + '/claim-daily';
+  var MEMBER_INTELLIGENCE_FN = window.IL_FN_BASE + '/member-intelligence';
 
   var ACTION_LABELS = {
     signup: 'Account created',
@@ -142,6 +143,102 @@
     flame.setAttribute('aria-hidden', 'true');
     flame.textContent = '🔥';
     streakEl.appendChild(flame);
+  }
+
+  function setupMemberIntelligence(sessionToken) {
+    var topicsRoot = document.getElementById('dashWatchTopics');
+    var briefingsRoot = document.getElementById('dashBriefings');
+    var enabledInput = document.getElementById('dashBriefingsEnabled');
+    var status = document.getElementById('dashWatchStatus');
+    if (!topicsRoot || !briefingsRoot || !enabledInput) return;
+
+    function headers() {
+      return Object.assign({}, window.ilFnHeaders(), { Authorization: 'Bearer ' + sessionToken });
+    }
+
+    function post(action, values) {
+      status.textContent = 'Saving…';
+      return fetch(MEMBER_INTELLIGENCE_FN, {
+        method: 'POST', headers: headers(), body: JSON.stringify(Object.assign({ action: action }, values || {})),
+      }).then(function (response) {
+        if (response.status === 401) {
+          sessionStorage.removeItem(SESSION_KEY); window.location.replace('/join'); throw new Error('Unauthorized');
+        }
+        if (!response.ok) throw new Error('Save failed');
+        return response.json();
+      }).then(function (data) {
+        status.textContent = 'Saved. Your next briefing will use this watchlist.';
+        render(data);
+      }).catch(function (error) {
+        if (error.message !== 'Unauthorized') status.textContent = 'Could not save. Please try again.';
+      });
+    }
+
+    function renderBriefings(briefings) {
+      briefingsRoot.replaceChildren();
+      var heading = document.createElement('p');
+      heading.className = 'dash-section-label dash-briefing-heading';
+      heading.textContent = 'Weekly briefings';
+      briefingsRoot.appendChild(heading);
+      if (!briefings.length) {
+        var empty = document.createElement('p');
+        empty.className = 'm-muted dash-intel-copy';
+        empty.textContent = 'Your first briefing will appear after the next Monday generation cycle.';
+        briefingsRoot.appendChild(empty);
+        return;
+      }
+      briefings.forEach(function (briefing, index) {
+        var details = document.createElement('details');
+        details.className = 'dash-briefing-card';
+        if (index === 0) details.open = true;
+        var summary = document.createElement('summary');
+        summary.textContent = briefing.title;
+        var body = document.createElement('div');
+        body.className = 'dash-briefing-body';
+        var overview = document.createElement('p'); overview.textContent = briefing.summary; body.appendChild(overview);
+        var payload = briefing.payload || {};
+        ['integrity', 'regulatory', 'research', 'trials'].forEach(function (kind) {
+          var records = Array.isArray(payload[kind]) ? payload[kind] : [];
+          if (!records.length) return;
+          var title = document.createElement('h4'); title.textContent = kind.charAt(0).toUpperCase() + kind.slice(1); body.appendChild(title);
+          var list = document.createElement('ul');
+          records.slice(0, 5).forEach(function (record) {
+            var item = document.createElement('li');
+            var anchor = document.createElement('a'); anchor.href = record.source_url || '/research'; anchor.target = '_blank'; anchor.rel = 'noopener noreferrer'; anchor.textContent = record.title || 'Source record';
+            item.appendChild(anchor); list.appendChild(item);
+          });
+          body.appendChild(list);
+        });
+        details.append(summary, body); briefingsRoot.appendChild(details);
+      });
+    }
+
+    function render(data) {
+      var watched = new Set(data.watched_topics || []);
+      topicsRoot.replaceChildren();
+      (data.topics || []).forEach(function (topic) {
+        var button = document.createElement('button');
+        button.type = 'button'; button.className = 'dash-watch-chip' + (watched.has(topic.slug) ? ' is-watched' : '');
+        button.setAttribute('aria-pressed', watched.has(topic.slug) ? 'true' : 'false');
+        button.textContent = topic.name;
+        button.addEventListener('click', function () {
+          button.disabled = true;
+          post(watched.has(topic.slug) ? 'unwatch_topic' : 'watch_topic', { topic: topic.slug });
+        });
+        topicsRoot.appendChild(button);
+      });
+      enabledInput.checked = data.briefings_enabled !== false;
+      renderBriefings(data.briefings || []);
+    }
+
+    enabledInput.addEventListener('change', function () { post('set_briefings', { enabled: enabledInput.checked }); });
+    fetch(MEMBER_INTELLIGENCE_FN, { method: 'GET', headers: headers() })
+      .then(function (response) {
+        if (response.status === 401) { sessionStorage.removeItem(SESSION_KEY); window.location.replace('/join'); throw new Error('Unauthorized'); }
+        if (!response.ok) throw new Error('Load failed'); return response.json();
+      })
+      .then(render)
+      .catch(function (error) { if (error.message !== 'Unauthorized') topicsRoot.textContent = 'Watchlist is temporarily unavailable.'; });
   }
 
   function setupDailyClaim(sessionToken, pointsEl, initialStreak, lastDailyClaimIso) {
@@ -435,6 +532,7 @@
       });
 
       setupDailyClaim(session, pointsEl, m.login_streak ?? 0, m.last_daily_claim);
+      setupMemberIntelligence(session);
 
       var btnDeleteAccount = document.getElementById('btnDeleteAccount');
       var deleteModal = document.getElementById('deleteModal');

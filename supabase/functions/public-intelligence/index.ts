@@ -101,6 +101,86 @@ Deno.serve(async (req) => {
       return response(req, { trials: data ?? [], sources: (sources ?? []).map(publicSourceState) })
     }
 
+    if (view === 'integrity') {
+      let query = supabase
+        .from('research_integrity_events')
+        .select('id,event_type,title,summary,source_url,announced_on,detected_at,research_items(id,title,doi,status,research_item_topics(topic_slug,intelligence_topics(name,slug)))')
+        .order('detected_at', { ascending: false })
+        .limit(limit)
+      if (topic) query = query.eq('research_items.research_item_topics.topic_slug', topic)
+      const [{ data, error }, { data: sources, error: sourcesError }] = await Promise.all([query, sourcesPromise])
+      if (error) throw error
+      if (sourcesError) throw sourcesError
+      return response(req, { integrity: data ?? [], sources: (sources ?? []).map(publicSourceState) })
+    }
+
+    if (view === 'regulatory') {
+      let query = supabase
+        .from('regulatory_events')
+        .select('id,jurisdiction,category,title,summary,published_at,source_url,matched_topics,content_sources(name)')
+        .order('published_at', { ascending: false, nullsFirst: false })
+        .order('id', { ascending: false })
+        .limit(limit)
+      if (topic) query = query.contains('matched_topics', [topic])
+      const [{ data, error }, { data: sources, error: sourcesError }] = await Promise.all([query, sourcesPromise])
+      if (error) throw error
+      if (sourcesError) throw sourcesError
+      return response(req, { regulatory: data ?? [], sources: (sources ?? []).map(publicSourceState) })
+    }
+
+    if (view === 'graph') {
+      const [topicsResult, researchLinks, trialLinks, regulatoryResult, integrityResult, sourcesResult] = await Promise.all([
+        supabase.rpc('get_intelligence_topic_counts'),
+        supabase.from('research_item_topics').select('research_item_id,topic_slug').limit(5000),
+        supabase.from('clinical_trial_topics').select('clinical_trial_id,topic_slug').limit(5000),
+        supabase.from('regulatory_events').select('matched_topics').limit(1000),
+        supabase.from('research_integrity_events').select('research_items(research_item_topics(topic_slug))').limit(1000),
+        sourcesPromise,
+      ])
+      for (const result of [topicsResult, researchLinks, trialLinks, regulatoryResult, integrityResult, sourcesResult]) if (result.error) throw result.error
+      const topics = topicsResult.data ?? []
+      const nodes = topics.map((item: any) => ({ id: `topic:${item.slug}`, slug: item.slug, label: item.name, kind: 'topic', weight: Number(item.research_count) + Number(item.trial_count) }))
+      nodes.push(
+        { id: 'layer:research', label: 'Research', kind: 'evidence', weight: researchLinks.data?.length ?? 0 },
+        { id: 'layer:trials', label: 'Trials', kind: 'evidence', weight: trialLinks.data?.length ?? 0 },
+        { id: 'layer:regulatory', label: 'Regulatory', kind: 'evidence', weight: regulatoryResult.data?.length ?? 0 },
+        { id: 'layer:integrity', label: 'Integrity', kind: 'evidence', weight: integrityResult.data?.length ?? 0 },
+      )
+      const links: Array<{ source: string; target: string; kind: string; weight: number }> = []
+      for (const item of topics) {
+        links.push({ source: `topic:${item.slug}`, target: 'layer:research', kind: 'research', weight: Number(item.research_count) })
+        links.push({ source: `topic:${item.slug}`, target: 'layer:trials', kind: 'trial', weight: Number(item.trial_count) })
+      }
+      const regulatoryCounts = new Map<string, number>()
+      for (const item of regulatoryResult.data ?? []) for (const slug of item.matched_topics ?? []) regulatoryCounts.set(slug, (regulatoryCounts.get(slug) ?? 0) + 1)
+      for (const [slug, weight] of regulatoryCounts) links.push({ source: `topic:${slug}`, target: 'layer:regulatory', kind: 'regulatory', weight })
+      const integrityCounts = new Map<string, number>()
+      for (const item of integrityResult.data ?? []) {
+        const relations = item.research_items?.research_item_topics ?? []
+        for (const relation of relations) integrityCounts.set(relation.topic_slug, (integrityCounts.get(relation.topic_slug) ?? 0) + 1)
+      }
+      for (const [slug, weight] of integrityCounts) links.push({ source: `topic:${slug}`, target: 'layer:integrity', kind: 'integrity', weight })
+
+      const memberships = new Map<string, Set<string>>()
+      for (const row of [...(researchLinks.data ?? []).map((item: any) => ({ key: `r:${item.research_item_id}`, topic: item.topic_slug })), ...(trialLinks.data ?? []).map((item: any) => ({ key: `t:${item.clinical_trial_id}`, topic: item.topic_slug }))]) {
+        if (!memberships.has(row.key)) memberships.set(row.key, new Set())
+        memberships.get(row.key)?.add(row.topic)
+      }
+      const pairs = new Map<string, number>()
+      for (const topicSet of memberships.values()) {
+        const values = [...topicSet].sort()
+        for (let left = 0; left < values.length; left++) for (let right = left + 1; right < values.length; right++) {
+          const key = `${values[left]}|${values[right]}`
+          pairs.set(key, (pairs.get(key) ?? 0) + 1)
+        }
+      }
+      for (const [pair, weight] of [...pairs].filter(([, count]) => count >= 2).sort((a, b) => b[1] - a[1]).slice(0, 30)) {
+        const [left, right] = pair.split('|')
+        links.push({ source: `topic:${left}`, target: `topic:${right}`, kind: 'overlap', weight })
+      }
+      return response(req, { generated_at: new Date().toISOString(), nodes, links, sources: (sourcesResult.data ?? []).map(publicSourceState) })
+    }
+
     const [topicsResult, researchResult, trialsResult, sourcesResult, researchCount, trialsCount] = await Promise.all([
       supabase.rpc('get_intelligence_topic_counts'),
       supabase

@@ -26,3 +26,12 @@ verify_jwt = false
 
 [functions.sync-intelligence]
 verify_jwt = false
+
+[functions.member-intelligence]
+verify_jwt = false
+
+[functions.generate-briefings]
+verify_jwt = false
+
+[functions.get-news]
+verify_jwt = false

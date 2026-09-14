@@ -29,6 +29,9 @@ const edgeScripts = [
   'supabase/functions/validate-invite/index.ts',
   'supabase/functions/public-intelligence/index.ts',
   'supabase/functions/sync-intelligence/index.ts',
+  'supabase/functions/member-intelligence/index.ts',
+  'supabase/functions/generate-briefings/index.ts',
+  'supabase/functions/get-news/index.ts',
 ];
 
 for (const file of browserScripts) {
@@ -50,6 +53,8 @@ const requiredFiles = [
   'supabase/migrations/20260914000200_membership_rpcs.sql',
   'supabase/migrations/20260914000400_intelligence_portal.sql',
   'supabase/migrations/20260914000500_normalize_intelligence_summaries.sql',
+  'supabase/migrations/20260914000600_intelligence_tranche_two.sql',
+  'supabase/migrations/20260914000700_publish_project_news.sql',
   'supabase/audits/membership-integrity.sql',
   'intelligence-template.html',
   'intelligence-topics.json',
