@@ -108,7 +108,7 @@
   function evidenceLabel(level, status) {
     if (status === 'retracted') return 'Retracted record';
     const labels = {
-      'human-synthesis': 'Human evidence synthesis',
+      'human-synthesis': 'Evidence synthesis',
       'randomized-human': 'Randomized human study',
       'human-study': 'Human study',
       preclinical: 'Preclinical research',

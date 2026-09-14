@@ -47,7 +47,7 @@ export function classifyEvidence(publicationType: unknown, title: unknown, sourc
 
 export function evidenceLabel(level: EvidenceLevel): string {
   const labels: Record<EvidenceLevel, string> = {
-    'human-synthesis': 'Human evidence synthesis',
+    'human-synthesis': 'Evidence synthesis',
     'randomized-human': 'Randomized human study',
     'human-study': 'Human study',
     preclinical: 'Preclinical research',
@@ -57,10 +57,10 @@ export function evidenceLabel(level: EvidenceLevel): string {
   return labels[level]
 }
 
-export function researchEditorialSummary(level: EvidenceLevel, topicName: string, journal: unknown): string {
+export function researchEditorialSummary(level: EvidenceLevel, journal: unknown): string {
   const venue = cleanText(journal, 120)
   const published = venue ? ` published by ${venue}` : ''
-  return `${evidenceLabel(level)} relevant to ${cleanText(topicName, 80)}${published}. Inclusion in this index does not establish that an intervention is effective or safe.`
+  return `${evidenceLabel(level)}${published}, indexed because it matched monitored longevity research terms. Inclusion in this index does not establish that an intervention is effective or safe.`
 }
 
 export function normalizeTrialStatus(value: unknown): string {
@@ -69,14 +69,15 @@ export function normalizeTrialStatus(value: unknown): string {
   return raw.replace(/(^|\s)\S/g, (letter) => letter.toUpperCase())
 }
 
-export function trialEditorialSummary(topicName: string, status: unknown, phases: unknown): string {
-  const phaseList = Array.isArray(phases) ? phases.map((phase) => cleanText(phase, 40)).filter(Boolean) : []
+export function trialEditorialSummary(status: unknown, phases: unknown): string {
+  const phaseList = Array.isArray(phases)
+    ? phases.map((phase) => cleanText(phase, 40)).filter((phase) => phase && phase !== 'NA')
+    : []
   const phaseText = phaseList.length ? `${phaseList.join(', ')} ` : ''
-  return `A registered ${phaseText}study relevant to ${cleanText(topicName, 80)}. Registry status: ${normalizeTrialStatus(status)}. Registration does not establish safety or effectiveness.`
+  return `A registered ${phaseText}study indexed because it matched monitored longevity research terms. Registry status: ${normalizeTrialStatus(status)}. Registration does not establish safety or effectiveness.`
 }
 
 export function uniqueStrings(values: unknown, maxItems = 30): string[] {
   if (!Array.isArray(values)) return []
   return [...new Set(values.map((value) => cleanText(value, 120)).filter(Boolean))].slice(0, maxItems)
 }
-

@@ -33,10 +33,11 @@ test('evidence classification avoids treating unknown records as human evidence'
 });
 
 test('automated summaries retain explicit non-endorsement language', () => {
-  const research = researchEditorialSummary('human-study', 'Metformin', 'Example Journal');
-  const trial = trialEditorialSummary('Rapamycin', 'RECRUITING', ['PHASE2']);
+  const research = researchEditorialSummary('human-study', 'Example Journal');
+  const trial = trialEditorialSummary('RECRUITING', ['PHASE2']);
   assert.match(research, /does not establish.*effective or safe/i);
   assert.match(trial, /registration does not establish safety or effectiveness/i);
+  assert.doesNotMatch(trialEditorialSummary('RECRUITING', ['NA']), /registered NA study/i);
   assert.equal(normalizeTrialStatus('ACTIVE_NOT_RECRUITING'), 'Active Not Recruiting');
 });
 

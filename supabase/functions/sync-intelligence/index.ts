@@ -117,7 +117,7 @@ async function syncEuropePmc(supabase: any, topic: Topic): Promise<{ seen: numbe
         cited_by_count: item?.citedByCount != null && Number.isSafeInteger(Number(item.citedByCount))
           ? Number(item.citedByCount)
           : null,
-        editorial_summary: researchEditorialSummary(level, topic.name, item?.journalTitle),
+        editorial_summary: researchEditorialSummary(level, item?.journalTitle),
         source_updated_at: now,
         last_seen_at: now,
         status,
@@ -178,7 +178,7 @@ async function syncClinicalTrials(supabase: any, topic: Topic): Promise<{ seen: 
       const externalId = cleanText(identification?.nctId, 40)
       const title = cleanText(identification?.briefTitle ?? identification?.officialTitle, 500)
       if (!externalId || !title) return null
-      const phases = uniqueStrings(design?.phases, 8)
+      const phases = uniqueStrings(design?.phases, 8).filter((phase) => phase !== 'NA')
       const rawStatus = cleanText(statusModule?.overallStatus, 80)
       const countries = uniqueStrings(locations.map((location: any) => location?.country), 40)
       const enrollment = Number(design?.enrollmentInfo?.count)
@@ -198,7 +198,7 @@ async function syncClinicalTrials(supabase: any, topic: Topic): Promise<{ seen: 
         completion_date: trialDate(statusModule?.completionDateStruct),
         last_update_date: trialDate(statusModule?.lastUpdatePostDateStruct ?? statusModule?.studyFirstPostDateStruct),
         source_url: `https://clinicaltrials.gov/study/${encodeURIComponent(externalId)}`,
-        editorial_summary: trialEditorialSummary(topic.name, rawStatus, phases),
+        editorial_summary: trialEditorialSummary(rawStatus, phases),
         last_seen_at: now,
         metadata: {
           acronym: cleanText(identification?.acronym, 80) || null,

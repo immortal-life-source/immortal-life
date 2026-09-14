@@ -49,6 +49,7 @@ const requiredFiles = [
   'supabase/migrations/20260914000100_membership_schema.sql',
   'supabase/migrations/20260914000200_membership_rpcs.sql',
   'supabase/migrations/20260914000400_intelligence_portal.sql',
+  'supabase/migrations/20260914000500_normalize_intelligence_summaries.sql',
   'supabase/audits/membership-integrity.sql',
   'intelligence-template.html',
   'intelligence-topics.json',
