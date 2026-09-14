@@ -12,12 +12,14 @@ const browserScripts = [
   'join.js',
   'leaderboard.js',
   'main.js',
+  'intelligence.js',
   'news-modal.js',
   'spread-copy.js',
 ];
 
 const edgeScripts = [
   'supabase/functions/_shared/security.ts',
+  'supabase/functions/_shared/intelligence.ts',
   'supabase/functions/auth-x-callback/index.ts',
   'supabase/functions/award-points/index.ts',
   'supabase/functions/claim-daily/index.ts',
@@ -25,6 +27,8 @@ const edgeScripts = [
   'supabase/functions/get-dashboard/index.ts',
   'supabase/functions/get-leaderboard/index.ts',
   'supabase/functions/validate-invite/index.ts',
+  'supabase/functions/public-intelligence/index.ts',
+  'supabase/functions/sync-intelligence/index.ts',
 ];
 
 for (const file of browserScripts) {
@@ -44,7 +48,10 @@ const requiredFiles = [
   'supabase/functions/_shared/security.ts',
   'supabase/migrations/20260914000100_membership_schema.sql',
   'supabase/migrations/20260914000200_membership_rpcs.sql',
+  'supabase/migrations/20260914000400_intelligence_portal.sql',
   'supabase/audits/membership-integrity.sql',
+  'intelligence-template.html',
+  'intelligence-topics.json',
 ];
 
 for (const file of requiredFiles) {

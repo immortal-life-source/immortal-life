@@ -1,0 +1,14 @@
+[
+  { "slug": "rapamycin", "name": "Rapamycin", "description": "Research concerning mTOR inhibition, rapalogs, ageing biology, and human translation." },
+  { "slug": "senolytics", "name": "Senolytics", "description": "Compounds and strategies intended to target senescent cells." },
+  { "slug": "partial-reprogramming", "name": "Partial reprogramming", "description": "Transient cellular reprogramming and epigenetic rejuvenation research." },
+  { "slug": "metformin", "name": "Metformin", "description": "Human and preclinical research connecting metformin with ageing-related outcomes." },
+  { "slug": "glp-1-therapies", "name": "GLP-1 therapies", "description": "Research on GLP-1 receptor agonists and ageing-related health outcomes." },
+  { "slug": "exercise", "name": "Exercise", "description": "Evidence on physical activity, fitness, healthspan, and ageing outcomes." },
+  { "slug": "caloric-restriction", "name": "Caloric restriction", "description": "Research on energy restriction, fasting, dietary patterns, and ageing biology." },
+  { "slug": "sleep", "name": "Sleep", "description": "Research connecting sleep duration, quality, timing, and ageing-related outcomes." },
+  { "slug": "epigenetic-clocks", "name": "Epigenetic clocks", "description": "Biological-age measurements based on DNA methylation and related signals." },
+  { "slug": "plasma-exchange", "name": "Plasma exchange", "description": "Research involving plasma exchange, plasma dilution, and ageing-related outcomes." },
+  { "slug": "stem-cells", "name": "Stem cells", "description": "Research involving stem cells and ageing-related outcomes." },
+  { "slug": "gene-therapy", "name": "Gene therapy", "description": "Research involving gene-based interventions and ageing-related outcomes." }
+]

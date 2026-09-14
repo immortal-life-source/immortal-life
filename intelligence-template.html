@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{PAGE_TITLE}}</title>
+  <meta name="description" content="{{PAGE_DESCRIPTION}}" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="{{CANONICAL_URL}}" />
+  <meta property="og:title" content="{{PAGE_TITLE}}" />
+  <meta property="og:description" content="{{PAGE_DESCRIPTION}}" />
+  <meta property="og:url" content="{{CANONICAL_URL}}" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://immortal.life/og-image.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,300&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+  <link rel="stylesheet" href="/intelligence.css" />
+</head>
+<body data-view="{{PAGE_VIEW}}" data-topic="{{TOPIC_SLUG}}">
+  <header class="intel-header">
+    <a class="intel-logo" href="/">immortal.life</a>
+    <nav class="intel-nav" aria-label="Primary navigation">
+      <a href="/research" data-nav="research">Research</a>
+      <a href="/trials" data-nav="trials">Trial Radar</a>
+      <a href="/topics" data-nav="topics">Topics</a>
+      <a href="/join">Members</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="intel-hero">
+      <div class="intel-kicker">{{PAGE_KICKER}}</div>
+      <h1>{{PAGE_HEADING}}</h1>
+      <p class="intel-lede">{{PAGE_DESCRIPTION}}</p>
+      <div class="freshness" id="freshness" role="status" aria-live="polite">
+        <span class="freshness-dot" aria-hidden="true"></span>
+        <span id="freshnessText">Checking source freshness…</span>
+      </div>
+    </section>
+
+    <section class="intel-stats" id="statsSection" aria-label="Index statistics" hidden>
+      <div><strong id="researchCount">0</strong><span>Research records</span></div>
+      <div><strong id="trialCount">0</strong><span>Clinical trials</span></div>
+      <div><strong id="topicCount">0</strong><span>Tracked topics</span></div>
+    </section>
+
+    <section class="intel-section" id="topicsSection" hidden>
+      <div class="section-heading">
+        <div><span class="section-index">Index</span><h2>Tracked topics</h2></div>
+        <a href="/topics" class="section-link">Explore all topics</a>
+      </div>
+      <div class="topic-grid" id="topicGrid"></div>
+    </section>
+
+    <section class="intel-section" id="researchSection" hidden>
+      <div class="section-heading">
+        <div><span class="section-index">Literature</span><h2>Latest research</h2></div>
+        <a href="/research" class="section-link" id="researchAllLink">View research feed</a>
+      </div>
+      <div class="filter-row" id="researchFilters" hidden></div>
+      <div class="record-list" id="researchList"></div>
+    </section>
+
+    <section class="intel-section" id="trialsSection" hidden>
+      <div class="section-heading">
+        <div><span class="section-index">Registry</span><h2>Trial Radar</h2></div>
+        <a href="/trials" class="section-link" id="trialsAllLink">View all trials</a>
+      </div>
+      <div class="filter-row" id="trialFilters" hidden></div>
+      <div class="record-list" id="trialList"></div>
+    </section>
+
+    <section class="source-section" id="sourceSection" hidden>
+      <div>
+        <span class="section-index">Provenance</span>
+        <h2>Official sources, continuously checked</h2>
+      </div>
+      <div class="source-list" id="sourceList"></div>
+    </section>
+
+    <div class="loading-state" id="loadingState" role="status">Building the latest evidence view…</div>
+    <div class="error-state" id="errorState" hidden>
+      <h2>The intelligence feed is temporarily unavailable.</h2>
+      <p>No uncited fallback content has been substituted. Please try again shortly.</p>
+      <button type="button" id="retryButton">Retry</button>
+    </div>
+  </main>
+
+  <footer class="intel-footer">
+    <p><strong>Research information only.</strong> Nothing on this website is medical advice, diagnosis, or treatment guidance. Trial registration does not establish safety or effectiveness.</p>
+    <div>
+      <a href="/">Home</a>
+      <a href="mailto:research@immortal.life">Report a correction</a>
+      <span>© 2026 immortal.life</span>
+    </div>
+  </footer>
+
+  <script src="/il-config.js"></script>
+  <script src="/intelligence.js"></script>
+</body>
+</html>

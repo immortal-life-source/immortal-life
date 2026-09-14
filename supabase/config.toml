@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.award-points]
 verify_jwt = false
+
+[functions.public-intelligence]
+verify_jwt = false
+
+[functions.sync-intelligence]
+verify_jwt = false

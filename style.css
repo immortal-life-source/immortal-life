@@ -431,6 +431,64 @@ h1 {
 }
 
 /* ============================================================
+   AUTONOMOUS INTELLIGENCE PORTAL PREVIEW
+   ============================================================ */
+.portal-preview {
+  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(360px, .95fr);
+  gap: 90px;
+  padding: 110px var(--pad-x);
+  background: var(--bg2);
+}
+
+.portal-preview-kicker {
+  color: var(--gold);
+  font-size: 10px;
+  letter-spacing: .23em;
+  text-transform: uppercase;
+  margin-bottom: 26px;
+}
+
+.portal-preview h2 {
+  font: 200 clamp(48px, 7vw, 94px)/.94 var(--font-serif);
+  letter-spacing: -.035em;
+  max-width: 780px;
+}
+
+.portal-preview-copy p {
+  color: var(--off);
+  font-size: 14px;
+  line-height: 1.85;
+  max-width: 600px;
+  margin-top: 28px;
+}
+
+.portal-preview-link {
+  display: inline-block;
+  color: var(--gold);
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  font-size: 10px;
+  margin-top: 36px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--gold-mid);
+}
+
+.portal-preview-list { border-top: 1px solid var(--border-mid); }
+.portal-preview-list > div {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 10px 16px;
+  padding: 28px 0;
+  border-bottom: 1px solid var(--border);
+}
+.portal-preview-list span { color: var(--gold); font: 200 12px var(--font-serif); }
+.portal-preview-list strong { font: 200 28px var(--font-serif); }
+.portal-preview-list small { grid-column: 2; color: var(--off); font-size: 12px; line-height: 1.6; }
+
+/* ============================================================
    SECTION 4 — EMAIL CAPTURE
    ============================================================ */
 .s4 {
@@ -1019,6 +1077,12 @@ h1 {
     padding: 80px 28px 60px;
     overflow-x: hidden;
     overflow-y: visible;
+  }
+
+  .portal-preview {
+    grid-template-columns: 1fr;
+    gap: 56px;
+    padding: 80px 28px;
   }
 
   .s4-headline {
