@@ -62,6 +62,7 @@ const requiredFiles = [
   'supabase/audits/membership-integrity.sql',
   'intelligence-template.html',
   'intelligence-topics.json',
+  'privacy.html',
 ];
 
 for (const file of requiredFiles) {

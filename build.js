@@ -18,6 +18,7 @@ const staticAssets = [
   'leaderboard.html',
   'confirmed.html',
   'unsubscribed.html',
+  'privacy.html',
   'style.css',
   'members.css',
   'main.js',

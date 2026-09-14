@@ -132,6 +132,11 @@ main { min-height: 70vh; }
 .intel-footer div { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 20px; }
 .intel-footer a { text-decoration: none; }
 .intel-footer a:hover { color: var(--gold); }
+.legal-copy { max-width: 920px; margin: 0 auto; }
+.legal-copy h2 { margin: 42px 0 12px; font: 300 32px var(--serif); }
+.legal-copy h2:first-child { margin-top: 0; }
+.legal-copy p { color: var(--muted); line-height: 1.8; }
+.legal-copy a { color: var(--gold); }
 
 @media (max-width: 860px) {
   .intel-header { position: static; align-items: flex-start; flex-direction: column; padding-top: 24px; padding-bottom: 20px; }
