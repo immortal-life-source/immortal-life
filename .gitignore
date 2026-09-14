@@ -1,1 +1,9 @@
 immortal-life.zip
+.env
+.env.*
+!.env.example
+il-config.js
+node_modules/
+dist/
+.vercel/
+.vercel-auth-immortal/

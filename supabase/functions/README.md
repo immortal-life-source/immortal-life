@@ -1,59 +1,61 @@
-# Supabase Edge Functions
+# Supabase backend
 
-Source lives in this repo; **deployment is done in your Supabase project**.
+The membership backend is deployed as Supabase Edge Functions. Database state and privileged mutations are defined in `supabase/migrations`; do not recreate the schema manually from the product brief.
+
+## Security model
+
+- X OAuth uses Authorization Code + PKCE and a random browser-bound state value.
+- `auth-x-callback` returns a signed, expiring HMAC session token. The browser stores the opaque token in `sessionStorage` and sends it as a bearer token.
+- `get-dashboard`, `claim-daily`, and `delete-member` verify the token signature, expiry, member ID, and X ID before using service-role access.
+- `award-points` accepts only the Supabase service-role key in the `apikey` header. Point values are selected inside `award_member_points`; callers cannot provide arbitrary values.
+- Registration, invite consumption, referral awards, daily claims, threshold unlocks, and account deletion run in database transactions through security-definer RPCs.
+- RLS is enabled with no client policies. The static frontend never queries membership tables directly.
+
+`verify_jwt = false` in `supabase/config.toml` is intentional: public functions and the custom HMAC bearer token cannot use Supabase Auth JWT verification. Each privileged function performs the appropriate application-level verification.
 
 ## Functions
 
-| Slug | Folder | Purpose |
-|------|--------|---------|
-| `validate-invite` | `validate-invite/` | POST JSON `{ code }` — validate unused invite |
-| `award-points` | `award-points/` | POST JSON `{ member_id, action, base_points, meta }` |
-| `get-leaderboard` | `get-leaderboard/` | GET `?limit=&offset=` — public leaderboard slice |
-| `auth-x-callback` | `auth-x-callback/` | X OAuth: **POST** JSON `{ code, state, code_verifier }` returns `{ ok, session }`; **GET** redirects + `Set-Cookie` (legacy; cookie won’t land on immortal.life when the response is from `*.supabase.co`) |
-| `get-dashboard` | `get-dashboard/` | **GET** with `Authorization: Bearer <base64 session payload>` — member row, rank, invite codes, points log (see `dashboard.html`) |
-| `claim-daily` | `claim-daily/` | **GET** `?member_id=&check_only=true` and **POST** `{ member_id }` — same `Authorization` as `get-dashboard`; JWT verification **off** — uses **`members.last_daily_claim`** (UTC date) for eligibility; **`last_login`** is OAuth-only |
+- `validate-invite`: validates one eight-character invite code.
+- `auth-x-callback`: exchanges an X authorization code, registers or updates the member atomically, and issues a signed session.
+- `award-points`: internal-only adapter for the `award_member_points` RPC.
+- `get-dashboard`: authenticated member profile, deterministic rank, invite codes, and recent point activity.
+- `get-leaderboard`: public, deterministic leaderboard with bounded pagination.
+- `claim-daily`: authenticated claim eligibility and atomic 20-hour reward claim.
+- `delete-member`: authenticated, atomic account deletion.
 
-For **auth-x-callback**, set **`X_REDIRECT_URI`** to **`https://immortal.life/auth/x`** so it matches the X Developer Portal and `join.html`.
+The existing newsletter functions (`subscribe`, `confirm`, `unsubscribe`, and `get-news`) are deployed separately and are not defined in this repository.
 
-## Secrets (Edge Functions → Secrets)
+## Required secrets
 
-- `SERVICE_ROLE_KEY`, `SUPABASE_URL` (auto)
-- `X_CLIENT_ID`, `X_CLIENT_SECRET`, `X_REDIRECT_URI` (`https://immortal.life/auth/x`)
+Set these in Supabase Edge Function secrets:
 
-## Deploy via Dashboard (“Via Editor”)
+- `SUPABASE_URL` (normally provided automatically)
+- `SUPABASE_SERVICE_ROLE_KEY` (normally provided automatically; `SERVICE_ROLE_KEY` remains a supported legacy alias)
+- `X_CLIENT_ID`
+- `X_CLIENT_SECRET`
+- `X_REDIRECT_URI=https://immortal.life/auth/x`
+- `SESSION_SECRET` containing at least 32 random characters
+- `ALLOWED_ORIGINS` only when additional trusted origins are required
 
-For each function:
+Vercel needs only the public `SUPABASE_PUBLISHABLE_KEY` used by `build.js` to generate `il-config.js`. The legacy `SUPABASE_ANON_KEY` name remains supported.
 
-1. **Edge Functions → Deploy new function → Via Editor**
-2. Name the function exactly (each as its own function):  
-   `validate-invite`, `award-points`, `get-leaderboard`, `auth-x-callback`, **`get-dashboard`**, **`claim-daily`**
-3. Paste the contents of the matching `index.ts` file from this repo.
-4. Deploy.
-5. Open **that function’s Settings** and turn **OFF** **“Verify JWT with legacy secret”** (as you requested).
+## Deployment order
 
-## Deploy via CLI (optional)
-
-From repo root, with [Supabase CLI](https://supabase.com/docs/guides/cli) linked:
+From a linked Supabase CLI project:
 
 ```bash
-supabase functions deploy validate-invite --no-verify-jwt
-supabase functions deploy award-points --no-verify-jwt
-supabase functions deploy get-leaderboard --no-verify-jwt
-supabase functions deploy auth-x-callback --no-verify-jwt
-supabase functions deploy get-dashboard --no-verify-jwt
-supabase functions deploy claim-daily --no-verify-jwt
+supabase db push
+supabase functions deploy validate-invite
+supabase functions deploy auth-x-callback
+supabase functions deploy award-points
+supabase functions deploy get-dashboard
+supabase functions deploy get-leaderboard
+supabase functions deploy claim-daily
+supabase functions deploy delete-member
 ```
 
-(`--no-verify-jwt` matches turning off JWT verification in the dashboard.)
+Before deploying the OAuth function, configure the X Developer Portal callback URL exactly as `https://immortal.life/auth/x`.
 
-## Frontend session note
+Run `npm test` before deployment. Then verify invalid and valid invites, new signup, existing-member login, referral awards, 20-hour claim enforcement, leaderboard ordering, session expiry, and account deletion in a non-production Supabase project.
 
-The browser **cannot** send an `HttpOnly` cookie set by `*.supabase.co` to `immortal.life`. **POST `/auth-x-callback`** returns `{ session }`; `auth-x.html` stores it in **`sessionStorage`** as `il_session` and `dashboard.html` sends it as **`Authorization: Bearer …`** to **`get-dashboard`** and **`claim-daily`** (decoded `member_id` must match the request).
-
-## `claim-daily` JWT off
-
-`supabase/config.toml` sets **`[functions.claim-daily] verify_jwt = false`**. Deploy with:
-
-```bash
-supabase functions deploy claim-daily --no-verify-jwt
-```
+After migrating production, run the read-only checks in `supabase/audits/membership-integrity.sql`. Investigate any returned rows before reopening onboarding; the former public point-award path means historical totals cannot be assumed trustworthy.

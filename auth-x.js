@@ -8,9 +8,19 @@
   var code = params.get('code');
   var state = params.get('state');
   var verifier = sessionStorage.getItem('oauth_code_verifier');
+  var expectedState = sessionStorage.getItem('oauth_state');
+  var inviteCode = sessionStorage.getItem('oauth_invite_code');
 
-  if (!code || !state) {
-    window.location.replace('/join?error=no_code');
+  function clearOAuthAttempt() {
+    sessionStorage.removeItem('oauth_code_verifier');
+    sessionStorage.removeItem('oauth_invite_code');
+    sessionStorage.removeItem('oauth_state');
+    sessionStorage.removeItem('oauth_mode');
+  }
+
+  if (!code || !state || !verifier || !expectedState) {
+    clearOAuthAttempt();
+    window.location.replace('/join?error=invalid_state');
     return;
   }
 
@@ -20,7 +30,9 @@
     body: JSON.stringify({
       code: code,
       state: state,
-      code_verifier: verifier || '',
+      expected_state: expectedState,
+      code_verifier: verifier,
+      invite_code: inviteCode || '',
     }),
   })
     .then(function (r) {
@@ -31,15 +43,16 @@
     .then(function (data) {
       if (data && data.ok === true && data.session) {
         sessionStorage.setItem('il_session', data.session);
-        sessionStorage.removeItem('oauth_code_verifier');
-        sessionStorage.removeItem('oauth_invite_code');
+        clearOAuthAttempt();
         window.location.replace('/dashboard');
         return;
       }
+      clearOAuthAttempt();
       if (msg) msg.textContent = 'Something went wrong. Redirecting…';
-      window.location.replace('/join?error=auth_failed');
+      window.location.replace('/join?error=' + encodeURIComponent(data.error || 'auth_failed'));
     })
     .catch(function () {
+      clearOAuthAttempt();
       if (msg) msg.textContent = 'Something went wrong. Redirecting…';
       window.location.replace('/join?error=auth_failed');
     });

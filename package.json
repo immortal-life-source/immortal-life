@@ -1,0 +1,14 @@
+{
+  "name": "immortal-life",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static immortal.life site and Supabase Edge Functions",
+  "scripts": {
+    "build": "node build.js",
+    "check": "node scripts/check.js",
+    "test": "node --experimental-strip-types --test tests/*.test.js && node scripts/check.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -2,3 +2,21 @@
 
 [functions.claim-daily]
 verify_jwt = false
+
+[functions.delete-member]
+verify_jwt = false
+
+[functions.validate-invite]
+verify_jwt = false
+
+[functions.auth-x-callback]
+verify_jwt = false
+
+[functions.get-dashboard]
+verify_jwt = false
+
+[functions.get-leaderboard]
+verify_jwt = false
+
+[functions.award-points]
+verify_jwt = false

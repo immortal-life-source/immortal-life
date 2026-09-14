@@ -13,6 +13,9 @@
     chain_signup_depth3: 'Network signup (depth 3)',
     codes_unlocked: 'Invite codes unlocked',
     streak_bonus: 'Streak bonus',
+    streak_bonus_7: '7-day streak bonus',
+    streak_bonus_30: '30-day streak bonus',
+    streak_bonus_100: '100-day streak bonus',
   };
 
   function getSession() {
@@ -49,24 +52,10 @@
     return pad2(h) + ':' + pad2(m) + ':' + pad2(sec);
   }
 
-  function nextMidnightUtcIso() {
-    var now = new Date();
-    var next = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0)
-    );
-    return next.toISOString();
-  }
-
-  /** Same UTC calendar day as now — aligns with claim-daily */
-  function alreadyClaimedTodayUtc(iso) {
-    if (!iso) return false;
-    try {
-      var last = new Date(iso);
-      var now = new Date();
-      return last.toISOString().slice(0, 10) === now.toISOString().slice(0, 10);
-    } catch {
-      return false;
-    }
+  function nextClaimAt(iso) {
+    if (!iso) return 0;
+    var last = new Date(iso).getTime();
+    return Number.isFinite(last) ? last + 20 * 60 * 60 * 1000 : 0;
   }
 
   function animatePoints(el, fromVal, toVal, durationMs, onDone) {
@@ -155,7 +144,7 @@
     streakEl.appendChild(flame);
   }
 
-  function setupDailyClaim(memberId, sessionToken, pointsEl, initialStreak, lastDailyClaimIso) {
+  function setupDailyClaim(sessionToken, pointsEl, initialStreak, lastDailyClaimIso) {
     var btn = document.getElementById('btnClaimDaily');
     var statusEl = document.getElementById('dashClaimStatus');
     var countdownEl = document.getElementById('dashClaimCountdown');
@@ -191,7 +180,7 @@
           countdownTimer = null;
           return;
         }
-        countdownEl.textContent = 'Next claim in ' + formatHms(left) + ' (UTC)';
+        countdownEl.textContent = 'Next claim in ' + formatHms(left);
       }
       tick();
       countdownTimer = setInterval(tick, 1000);
@@ -199,7 +188,7 @@
 
     function setClaimedUi(nextClaimIso) {
       btn.disabled = true;
-      btn.textContent = '✓ Claimed · come back tomorrow';
+      btn.textContent = '✓ Claimed · available again in 20 hours';
       btn.classList.add('dash-btn-daily--inactive');
       statusEl.hidden = true;
       statusEl.textContent = '';
@@ -215,8 +204,9 @@
       statusEl.textContent = '';
     }
 
-    if (alreadyClaimedTodayUtc(lastDailyClaimIso)) {
-      setClaimedUi(nextMidnightUtcIso());
+    var initialNextClaim = nextClaimAt(lastDailyClaimIso);
+    if (initialNextClaim > Date.now()) {
+      setClaimedUi(new Date(initialNextClaim).toISOString());
     } else {
       setClaimableUi();
     }
@@ -229,15 +219,20 @@
       fetch(CLAIM_FN, {
         method: 'POST',
         headers: headers(),
-        body: JSON.stringify({ member_id: memberId }),
+        body: '{}',
       })
         .then(function (r) {
           return r.json().then(function (j) {
-            return { ok: r.ok, j: j };
+            return { ok: r.ok, status: r.status, j: j };
           });
         })
         .then(function (pack) {
           var data = pack.j;
+          if (pack.status === 401) {
+            sessionStorage.removeItem(SESSION_KEY);
+            window.location.replace('/join');
+            return;
+          }
           if (!pack.ok || data.error) {
             btn.disabled = false;
             return;
@@ -248,9 +243,9 @@
               var streakBonus = Number(data.streak_bonus);
               setStreakLine(streakEl, data.login_streak ?? 0);
               btn.disabled = true;
-              btn.textContent = '✓ Claimed · come back tomorrow';
+              btn.textContent = '✓ Claimed · available again in 20 hours';
               btn.classList.add('dash-btn-daily--inactive');
-              startCountdown(nextMidnightUtcIso());
+              startCountdown(data.next_claim_at);
 
               var logEl = document.getElementById('dashPointsLog');
               var li = document.createElement('li');
@@ -335,7 +330,7 @@
       document.getElementById('dashAvatar').alt = '@' + m.x_username;
       document.getElementById('dashDisplay').textContent = m.x_display_name || '';
       document.getElementById('dashUser').textContent = '@' + (m.x_username || '');
-      document.getElementById('dashTier').textContent = data.tier || 'Mortal';
+      document.getElementById('dashTier').textContent = data.tier || 'Member';
       var ogBadge = document.getElementById('dashOgBadge');
       if (ogBadge) {
         ogBadge.hidden = !(m.is_og === true || m.is_og === 1 || m.is_og === 'true');
@@ -357,7 +352,7 @@
 
       var refCode = data.referral_code || '';
       var refUrl = refCode
-        ? 'https://immortal.life/join?code=' + encodeURIComponent(refCode)
+        ? 'https://immortal.life/invite/' + encodeURIComponent(refCode)
         : 'https://immortal.life/join';
       document.getElementById('dashReferralUrl').textContent = refUrl;
 
@@ -368,7 +363,7 @@
       });
 
       var tweet =
-        'The founding circle at immortal.life is forming — I\'m in. Join me before it closes: https://immortal.life/join?code=' +
+        'The founding circle at immortal.life is forming — I\'m in. Join me before it closes: https://immortal.life/invite/' +
         encodeURIComponent(refCode);
       document.getElementById('btnShareX').href =
         'https://twitter.com/intent/tweet?text=' + encodeURIComponent(tweet);
@@ -439,7 +434,7 @@
         logEl.appendChild(li);
       });
 
-      setupDailyClaim(m.id, session, pointsEl, m.login_streak ?? 0, m.last_daily_claim);
+      setupDailyClaim(session, pointsEl, m.login_streak ?? 0, m.last_daily_claim);
 
       var btnDeleteAccount = document.getElementById('btnDeleteAccount');
       var deleteModal = document.getElementById('deleteModal');
@@ -472,12 +467,20 @@
             headers: Object.assign({}, window.ilFnHeaders(), {
               Authorization: 'Bearer ' + session,
             }),
-            body: JSON.stringify({ member_id: m.id }),
+            body: '{}',
           })
             .then(function (r) {
-              return r.json();
+              return r.json().then(function (data) {
+                return { status: r.status, data: data };
+              });
             })
-            .then(function (data) {
+            .then(function (result) {
+              var data = result.data;
+              if (result.status === 401) {
+                sessionStorage.removeItem(SESSION_KEY);
+                window.location.replace('/join');
+                return;
+              }
               if (data.error) {
                 deleteError.textContent = data.error;
                 deleteError.hidden = false;

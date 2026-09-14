@@ -2,7 +2,7 @@
   'use strict';
 
   var X_CLIENT_ID = 'YV9iTTY1WnB0OVFHY25kaTFZVXo6MTpjaQ';
-  var REDIRECT = 'https://immortal.life/auth-x';
+  var REDIRECT = 'https://immortal.life/auth/x';
   var FN = window.IL_FN_BASE + '/validate-invite';
 
   function base64url(buffer) {
@@ -21,6 +21,12 @@
     var out = '';
     for (var i = 0; i < len; i++) out += chars[arr[i] % chars.length];
     return out;
+  }
+
+  function randomState() {
+    var bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    return base64url(bytes);
   }
 
   function pkceChallenge(verifier) {
@@ -43,12 +49,11 @@
 
     var verifier = randomVerifier(64);
     pkceChallenge(verifier).then(function (challenge) {
+      var state = randomState();
       sessionStorage.setItem('oauth_code_verifier', verifier);
       sessionStorage.setItem('oauth_invite_code', code);
+      sessionStorage.setItem('oauth_state', state);
       sessionStorage.removeItem('oauth_mode');
-
-      var stateObj = { invite_code: code, code_verifier: verifier };
-      var stateB64 = btoa(JSON.stringify(stateObj));
 
       var url =
         'https://x.com/i/oauth2/authorize?response_type=code' +
@@ -57,9 +62,9 @@
         '&redirect_uri=' +
         encodeURIComponent(REDIRECT) +
         '&scope=' +
-        encodeURIComponent('users.read tweet.read offline.access') +
+        encodeURIComponent('users.read tweet.read') +
         '&state=' +
-        encodeURIComponent(stateB64) +
+        encodeURIComponent(state) +
         '&code_challenge=' +
         encodeURIComponent(challenge) +
         '&code_challenge_method=S256';
@@ -71,12 +76,11 @@
   function loginWithX() {
     var verifier = randomVerifier(64);
     pkceChallenge(verifier).then(function (challenge) {
+      var state = randomState();
       sessionStorage.setItem('oauth_code_verifier', verifier);
+      sessionStorage.setItem('oauth_state', state);
       sessionStorage.setItem('oauth_mode', 'login');
       sessionStorage.removeItem('oauth_invite_code');
-
-      var stateObj = { code_verifier: verifier };
-      var stateB64 = btoa(JSON.stringify(stateObj));
 
       var url =
         'https://x.com/i/oauth2/authorize?response_type=code' +
@@ -85,9 +89,9 @@
         '&redirect_uri=' +
         encodeURIComponent(REDIRECT) +
         '&scope=' +
-        encodeURIComponent('users.read tweet.read offline.access') +
+        encodeURIComponent('users.read tweet.read') +
         '&state=' +
-        encodeURIComponent(stateB64) +
+        encodeURIComponent(state) +
         '&code_challenge=' +
         encodeURIComponent(challenge) +
         '&code_challenge_method=S256';
@@ -131,6 +135,10 @@
   }
   if (urlParams.get('error') === 'invalid_code') {
     showError('This code is not valid.');
+  } else if (urlParams.get('error') === 'invalid_state') {
+    showError('Your login attempt expired. Please try again.');
+  } else if (urlParams.has('error')) {
+    showError('Could not complete login. Please try again.');
   }
 
   btnContinue.addEventListener('click', function () {

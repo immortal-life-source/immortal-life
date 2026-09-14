@@ -151,20 +151,20 @@ Network size = direct invitees + their invitees + chain depth 3.
 
 ## 5. X OAuth flow
 
-Use X OAuth 2.0 (PKCE flow). Required scopes: `tweet.read users.read offline.access`
+Use X OAuth 2.0 (PKCE flow). Required scopes: `tweet.read users.read`
 
 ### Flow steps:
 1. User visits `/join`, enters valid invite code
 2. Code validated against `invite_codes` table — must exist and `is_used = false`
-3. Code stored in session/cookie temporarily
+3. Invite code, random OAuth state, and PKCE verifier stored temporarily in browser `sessionStorage`
 4. User clicks "Continue with X" → redirected to X OAuth
 5. X redirects to `/auth/x?code=...&state=...`
 6. Server exchanges code for access token
 7. Server fetches user profile from X API (`/2/users/me`)
 8. Check if `x_id` already exists in `members` table
-   - If yes: log them in, update `last_login`, award daily login points if eligible
+   - If yes: log them in and update `last_login`; daily points remain an explicit dashboard claim
    - If no: create new member, mark invite code as used, award signup points, trigger chain points up the referral tree
-9. Set secure HTTP-only session cookie
+9. Return a signed, expiring HMAC session token; store the opaque token in `sessionStorage`
 10. Redirect to `/dashboard`
 
 ### X API fields to store:
@@ -187,7 +187,7 @@ When member C signs up using a code owned by member B, who was invited by member
 5. Recalculate multiplier for all affected members
 6. Log all transactions in `points_log`
 
-This logic runs in a Supabase Edge Function called `award-points`.
+This logic runs atomically in the `register_x_member` database RPC. The internal `award-points` Edge Function is retained for trusted future triggers.
 
 ---
 
@@ -209,19 +209,19 @@ This logic runs in a Supabase Edge Function called `award-points`.
 - Handles X OAuth callback
 - Exchanges code for token, fetches profile, creates/updates member
 - Awards signup points, triggers chain points
-- Sets session cookie
+- Returns a signed, expiring member session token
 - Returns redirect to `/dashboard`
 
 **`award-points`**
-- Internal function called by auth-x-callback and other triggers
+- Internal-only function for trusted server-side triggers
 - Input: `{ member_id, action, meta }`
 - Calculates points including multiplier
 - Inserts into points_log
 - Updates members.points
-- Recalculates network_size and multiplier for affected members
+- Delegates point updates and invite-code unlocks to the atomic `award_member_points` RPC
 
 **`get-dashboard`**
-- GET — requires valid session cookie
+- GET — requires a valid signed bearer session
 - Returns member profile, points, rank, invite codes, points_log recent entries
 
 **`get-leaderboard`**
@@ -229,10 +229,10 @@ This logic runs in a Supabase Edge Function called `award-points`.
 - Returns top 100 members sorted by points
 - Fields: rank, x_username, x_display_name, x_avatar_url, points, tier, network_size
 
-**`daily-login`**
-- POST — requires valid session cookie
-- Awards 10 points if last_login was > 20 hours ago
-- Updates last_login and login_streak
+**`claim-daily`**
+- GET checks eligibility and POST claims; both require a valid signed bearer session
+- Awards 10 points if `last_daily_claim` was more than 20 hours ago
+- Updates `last_daily_claim` and `login_streak` atomically
 
 ---
 
@@ -360,9 +360,7 @@ Links to `/join`. Styled as a text link, not a button — secondary to the email
 
 ## 10. Vercel configuration updates
 
-Add to `vercel.json` CSP `connect-src`:
-- `https://api.twitter.com`
-- `https://api.x.com`
+Allow the Supabase project origin in the `vercel.json` CSP `connect-src`. X API calls run server-side and do not need browser CSP access.
 
 Add new routes:
 ```json
@@ -372,7 +370,7 @@ Add new routes:
     { "source": "/dashboard", "destination": "/dashboard.html" },
     { "source": "/leaderboard", "destination": "/leaderboard.html" },
     { "source": "/join", "destination": "/join.html" },
-    { "source": "/invite/:code", "destination": "/join.html?code=:code" }
+    { "source": "/invite/:code", "destination": "/join.html" }
   ]
 }
 ```
@@ -385,19 +383,17 @@ Add to Vercel Environment Variables (Settings → Environment Variables):
 
 | Key | Value |
 |-----|-------|
-| `X_CLIENT_ID` | From X Developer Portal app |
-| `X_CLIENT_SECRET` | From X Developer Portal app |
-| `X_REDIRECT_URI` | `https://immortal.life/auth/x` |
-| `SESSION_SECRET` | Random 32-char string for signing cookies |
+| `SUPABASE_PUBLISHABLE_KEY` | Public Supabase publishable key, injected into `il-config.js` at build time |
 
-Add to Supabase Edge Function Secrets (already have RESEND_API_KEY and SERVICE_ROLE_KEY):
+Add to Supabase Edge Function Secrets:
 
 | Key | Value |
 |-----|-------|
-| `X_CLIENT_ID` | Same as above |
-| `X_CLIENT_SECRET` | Same as above |
-| `X_REDIRECT_URI` | Same as above |
-| `SESSION_SECRET` | Same as above |
+| `X_CLIENT_ID` | From X Developer Portal app |
+| `X_CLIENT_SECRET` | From X Developer Portal app |
+| `X_REDIRECT_URI` | `https://immortal.life/auth/x` |
+| `SESSION_SECRET` | At least 32 random characters for signing member sessions |
+| `SUPABASE_SERVICE_ROLE_KEY` | Normally provided automatically by Supabase |
 
 ---
 
@@ -411,7 +407,7 @@ Before any code is written, complete this setup:
 4. Set redirect URI to: `https://immortal.life/auth/x`
 5. Set app permissions to: Read
 6. Copy Client ID and Client Secret
-7. Add both to Vercel environment variables and Supabase secrets
+7. Add both to Supabase Edge Function secrets
 
 ---
 
@@ -420,9 +416,9 @@ Before any code is written, complete this setup:
 Cursor should implement in this exact sequence. Do not proceed to next step until previous is confirmed working.
 
 **Phase 1 — Database**
-1. Run all SQL from Section 3 in Supabase SQL Editor
-2. Enable RLS on all new tables
-3. Add insert/select policies for Edge Functions
+1. Run `supabase db push` to apply the versioned schema and RPC migrations
+2. Confirm RLS is enabled on all membership tables
+3. Confirm membership tables and RPCs are accessible only to `service_role`
 
 **Phase 2 — Edge Functions**
 4. Deploy `validate-invite` function
@@ -430,7 +426,7 @@ Cursor should implement in this exact sequence. Do not proceed to next step unti
 6. Deploy `auth-x-callback` function
 7. Deploy `get-dashboard` function
 8. Deploy `get-leaderboard` function
-9. Deploy `daily-login` function
+9. Deploy `claim-daily` and `delete-member` functions
 
 **Phase 3 — Pages**
 10. Build `/join` page
@@ -479,5 +475,5 @@ Before going live verify:
 - Do not implement X post verification yet (Phase 2 feature)
 - Do not store X access tokens in the database (security risk)
 - Do not expose SERVICE_ROLE_KEY in any frontend code
-- Do not use localStorage or sessionStorage (not supported in artifacts)
+- Do not store X access tokens, service credentials, or unsigned identity data in browser storage
 - Do not add any frameworks — keep vanilla JS + Supabase Edge Functions architecture

@@ -1,28 +1,24 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders, isAllowedOrigin, jsonResponse, serviceRoleKey } from '../_shared/security.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    if (!isAllowedOrigin(req)) return jsonResponse(req, { error: 'Origin not allowed' }, 403, 'POST, OPTIONS')
+    return new Response('ok', { headers: corsHeaders(req, 'POST, OPTIONS') })
   }
+  if (req.method !== 'POST') return jsonResponse(req, { error: 'Method not allowed' }, 405, 'POST, OPTIONS')
+  if (!isAllowedOrigin(req)) return jsonResponse(req, { error: 'Origin not allowed' }, 403, 'POST, OPTIONS')
 
   try {
     const { code } = await req.json()
 
-    if (!code) {
-      return new Response(
-        JSON.stringify({ valid: false, error: 'No code provided' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    if (typeof code !== 'string' || !/^[A-Z2-9]{8}$/i.test(code)) {
+      return jsonResponse(req, { valid: false, error: 'Invalid code format' }, 400, 'POST, OPTIONS')
     }
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SERVICE_ROLE_KEY') ?? ''
+      serviceRoleKey()
     )
 
     const { data, error } = await supabase
@@ -32,17 +28,11 @@ Deno.serve(async (req) => {
       .single()
 
     if (error || !data) {
-      return new Response(
-        JSON.stringify({ valid: false }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return jsonResponse(req, { valid: false }, 200, 'POST, OPTIONS')
     }
 
     if (data.is_used) {
-      return new Response(
-        JSON.stringify({ valid: false, reason: 'already_used' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return jsonResponse(req, { valid: false, reason: 'already_used' }, 200, 'POST, OPTIONS')
     }
 
     const ownerRel = data.members as { x_username?: string } | { x_username?: string }[] | null
@@ -50,18 +40,9 @@ Deno.serve(async (req) => {
       ? (ownerRel[0]?.x_username ?? 'unknown')
       : (ownerRel?.x_username ?? 'unknown')
 
-    return new Response(
-      JSON.stringify({
-        valid: true,
-        owner_username,
-      }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return jsonResponse(req, { valid: true, owner_username }, 200, 'POST, OPTIONS')
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    return new Response(
-      JSON.stringify({ valid: false, error: message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    console.error('validate-invite error:', err instanceof Error ? err.message : String(err))
+    return jsonResponse(req, { valid: false, error: 'server_error' }, 500, 'POST, OPTIONS')
   }
 })

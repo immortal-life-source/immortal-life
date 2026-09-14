@@ -1,16 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { corsHeaders, isAllowedOrigin, jsonResponse, serviceRoleKey, sessionFromRequest } from '../_shared/security.ts'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-}
-
-function tierFromPoints(points: number): string {
-  if (points <= 999) return 'Mortal'
-  if (points <= 4999) return 'Awakened'
-  if (points <= 19999) return 'Ascendant'
-  return 'Immortal'
+function tierFromRank(rank: number): string {
+  if (rank <= 10) return 'Founding Circle'
+  if (rank <= 100) return 'Builder'
+  if (rank <= 1000) return 'Early'
+  return 'Member'
 }
 
 function entitledMaxCodes(points: number): number {
@@ -29,113 +24,61 @@ function nextCodeUnlockInfo(points: number): { pointsNeeded: number; codesAtNext
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    if (!isAllowedOrigin(req)) return jsonResponse(req, { error: 'Origin not allowed' }, 403, 'GET, OPTIONS')
+    return new Response('ok', { headers: corsHeaders(req, 'GET, OPTIONS') })
   }
-
-  if (req.method !== 'GET') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  }
+  if (req.method !== 'GET') return jsonResponse(req, { error: 'Method not allowed' }, 405, 'GET, OPTIONS')
+  if (!isAllowedOrigin(req)) return jsonResponse(req, { error: 'Origin not allowed' }, 403, 'GET, OPTIONS')
 
   try {
-    const auth = req.headers.get('Authorization') ?? ''
-    const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : ''
-    if (!bearer) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    let payload: { member_id?: number }
-    try {
-      payload = JSON.parse(atob(bearer))
-    } catch {
-      return new Response(JSON.stringify({ error: 'Invalid session' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    const memberId = payload.member_id
-    if (memberId == null || typeof memberId !== 'number') {
-      return new Response(JSON.stringify({ error: 'Invalid session' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    const session = await sessionFromRequest(req)
+    if (!session) return jsonResponse(req, { error: 'Unauthorized' }, 401, 'GET, OPTIONS')
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SERVICE_ROLE_KEY') ?? ''
+      serviceRoleKey(),
+      { auth: { persistSession: false, autoRefreshToken: false } }
     )
 
-    const { data: member, error: memErr } = await supabase
+    const { data: member, error: memberError } = await supabase
       .from('members')
-      .select(
-        'id, created_at, x_id, x_username, x_display_name, x_avatar_url, x_follower_count, points, is_og, invited_by, referral_chain_depth, network_size, multiplier, last_login, last_daily_claim, login_streak'
-      )
-      .eq('id', memberId)
+      .select('id, created_at, x_id, x_username, x_display_name, x_avatar_url, x_follower_count, points, is_og, invited_by, referral_chain_depth, network_size, multiplier, last_login, last_daily_claim, login_streak')
+      .eq('id', session.member_id)
+      .eq('x_id', session.x_id)
       .single()
 
-    if (memErr || !member) {
-      return new Response(JSON.stringify({ error: 'Member not found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    if (memberError || !member) return jsonResponse(req, { error: 'Member not found' }, 404, 'GET, OPTIONS')
 
-    const { count: rankAhead } = await supabase
-      .from('members')
-      .select('*', { count: 'exact', head: true })
-      .gt('points', member.points)
+    const [{ data: rankData, error: rankError }, { data: inviteCodes, error: codesError }, { data: pointsLog, error: logError }] = await Promise.all([
+      supabase.rpc('get_member_rank', { p_member_id: session.member_id }),
+      supabase.from('invite_codes').select('id, code, is_used, used_at, created_at').eq('owner_id', session.member_id).order('created_at'),
+      supabase.from('points_log').select('id, created_at, action, points, meta').eq('member_id', session.member_id).order('created_at', { ascending: false }).limit(10),
+    ])
+    if (rankError || codesError || logError) throw rankError ?? codesError ?? logError
 
-    const rank = (rankAhead ?? 0) + 1
-
-    const { data: inviteCodes } = await supabase
-      .from('invite_codes')
-      .select('id, code, is_used, used_at, created_at')
-      .eq('owner_id', memberId)
-      .order('created_at', { ascending: true })
-
-    const { data: pointsLog } = await supabase
-      .from('points_log')
-      .select('id, created_at, action, points, meta')
-      .eq('member_id', memberId)
-      .order('created_at', { ascending: false })
-      .limit(10)
-
+    const rank = Number(rankData) || 1
+    const points = Number(member.points) || 0
     const codes = inviteCodes ?? []
-    const issued = codes.length
-    const maxEntitled = entitledMaxCodes(member.points)
-    const nextUnlock = nextCodeUnlockInfo(member.points)
-    const unusedCodes = codes.filter((c) => !c.is_used)
-    const firstUnusedCode = unusedCodes[0]?.code ?? codes[0]?.code ?? ''
+    const maxEntitled = entitledMaxCodes(points)
+    const nextUnlock = nextCodeUnlockInfo(points)
+    const unusedCodes = codes.filter((code) => !code.is_used)
 
-    return new Response(
-      JSON.stringify({
-        member,
-        rank,
-        tier: tierFromPoints(Number(member.points) || 0),
-        invite_codes: codes,
-        points_log: pointsLog ?? [],
-        codes_progress: {
-          issued,
-          entitled_max: maxEntitled,
-          points_needed_for_next_codes: nextUnlock?.pointsNeeded ?? 0,
-          codes_at_next_tier: nextUnlock?.codesAtNext ?? maxEntitled,
-        },
-        referral_code: firstUnusedCode,
-      }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return jsonResponse(req, {
+      member,
+      rank,
+      tier: tierFromRank(rank),
+      invite_codes: codes,
+      points_log: pointsLog ?? [],
+      codes_progress: {
+        issued: codes.length,
+        entitled_max: maxEntitled,
+        points_needed_for_next_codes: nextUnlock?.pointsNeeded ?? 0,
+        codes_at_next_tier: nextUnlock?.codesAtNext ?? maxEntitled,
+      },
+      referral_code: unusedCodes[0]?.code ?? '',
+    }, 200, 'GET, OPTIONS')
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    console.error('get-dashboard error:', err instanceof Error ? err.message : String(err))
+    return jsonResponse(req, { error: 'server_error' }, 500, 'GET, OPTIONS')
   }
 })
