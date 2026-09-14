@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Connecting LinkedIn — immortal.life</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant:wght@300&family=Instrument+Sans:wght@300;400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/members.css" />
+  <style>
+    .auth-provider-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px; text-align: center; }
+    .auth-provider-inner { max-width: 400px; }
+    .auth-provider-logo { margin-bottom: 32px; display: inline-block; text-decoration: none; }
+    .auth-provider-msg { font-size: 15px; color: var(--off); line-height: 1.75; }
+  </style>
+</head>
+<body>
+  <div class="m-shell auth-provider-wrap">
+    <div class="auth-provider-inner">
+      <a href="/" class="m-logo auth-provider-logo">immortal.life</a>
+      <p class="auth-provider-msg" id="linkedinAuthMsg">Connecting your LinkedIn account…</p>
+    </div>
+  </div>
+  <script src="/il-config.js"></script>
+  <script src="/auth-linkedin.js"></script>
+</body>
+</html>

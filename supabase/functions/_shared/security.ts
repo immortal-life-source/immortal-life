@@ -1,9 +1,11 @@
 const encoder = new TextEncoder()
 
 export type MemberSession = {
-  v: 1
+  v: 1 | 2
   member_id: number
-  x_id: string
+  provider: 'x' | 'linkedin'
+  subject: string
+  x_id?: string
   iat: number
   exp: number
 }
@@ -47,12 +49,16 @@ function timingSafeEqual(left: Uint8Array, right: Uint8Array): boolean {
   return mismatch === 0
 }
 
-export async function createMemberSession(memberId: number, xId: string): Promise<string> {
+export async function createMemberSession(memberId: number, providerOrSubject: string, subjectValue?: string): Promise<string> {
   const now = Math.floor(Date.now() / 1000)
+  const provider = subjectValue == null ? 'x' : providerOrSubject
+  const subject = subjectValue == null ? providerOrSubject : subjectValue
+  if (!['x', 'linkedin'].includes(provider) || !subject) throw new Error('Invalid session identity')
   const payload: MemberSession = {
-    v: 1,
+    v: 2,
     member_id: memberId,
-    x_id: xId,
+    provider: provider as 'x' | 'linkedin',
+    subject,
     iat: now,
     exp: now + DEFAULT_SESSION_TTL_SECONDS,
   }
@@ -70,7 +76,10 @@ export async function verifyMemberSession(token: string): Promise<MemberSession 
   let payload: MemberSession
   try {
     suppliedSignature = base64UrlDecode(parts[1])
-    payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(parts[0])))
+    const raw = JSON.parse(new TextDecoder().decode(base64UrlDecode(parts[0])))
+    payload = raw?.v === 1
+      ? { ...raw, provider: 'x', subject: raw.x_id }
+      : raw
   } catch {
     return null
   }
@@ -80,11 +89,12 @@ export async function verifyMemberSession(token: string): Promise<MemberSession 
 
   const now = Math.floor(Date.now() / 1000)
   if (
-    payload.v !== 1 ||
+    ![1, 2].includes(payload.v) ||
     !Number.isSafeInteger(payload.member_id) ||
     payload.member_id <= 0 ||
-    typeof payload.x_id !== 'string' ||
-    payload.x_id.length === 0 ||
+    !['x', 'linkedin'].includes(payload.provider) ||
+    typeof payload.subject !== 'string' ||
+    payload.subject.length === 0 || payload.subject.length > 500 ||
     !Number.isSafeInteger(payload.iat) ||
     !Number.isSafeInteger(payload.exp) ||
     payload.iat > now + 60 ||
@@ -101,6 +111,31 @@ export async function sessionFromRequest(req: Request): Promise<MemberSession | 
   const authorization = req.headers.get('Authorization') ?? ''
   if (!authorization.startsWith('Bearer ')) return null
   return verifyMemberSession(authorization.slice(7).trim())
+}
+
+export async function createOAuthState(provider: 'linkedin'): Promise<string> {
+  const nonce = crypto.getRandomValues(new Uint8Array(32))
+  const payload = base64UrlEncode(encoder.encode(JSON.stringify({
+    provider,
+    exp: Math.floor(Date.now() / 1000) + 10 * 60,
+    nonce: base64UrlEncode(nonce),
+  })))
+  return `${payload}.${base64UrlEncode(await hmac(payload))}`
+}
+
+export async function verifyOAuthState(value: string, provider: 'linkedin'): Promise<boolean> {
+  if (value.length > 1024) return false
+  const parts = value.split('.')
+  if (parts.length !== 2) return false
+  try {
+    const supplied = base64UrlDecode(parts[1])
+    const expected = await hmac(parts[0])
+    if (!timingSafeEqual(supplied, expected)) return false
+    const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(parts[0])))
+    return payload?.provider === provider && Number.isSafeInteger(payload?.exp) && payload.exp > Math.floor(Date.now() / 1000)
+  } catch {
+    return false
+  }
 }
 
 function allowedOrigins(): Set<string> {

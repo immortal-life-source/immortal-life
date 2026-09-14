@@ -56,6 +56,7 @@ test('required clean routes are configured', () => {
   assert.equal(config.outputDirectory, 'dist');
   const routes = new Map(config.rewrites.map((route) => [route.source, route.destination]));
   assert.equal(routes.get('/auth/x'), '/auth-x');
+  assert.equal(routes.get('/auth/linkedin'), '/auth-linkedin');
   assert.equal(routes.get('/invite/:code'), '/join');
 });
 
@@ -76,6 +77,30 @@ test('database mutations use atomic RPCs and service-role-only execution', () =>
   const emptySearchPathCount = (migration.match(/SET search_path = ''/g) || []).length;
   assert.equal(emptySearchPathCount, definerCount);
   assert.match(migration, /FOR UPDATE/g);
+});
+
+test('LinkedIn uses minimal OIDC scopes and the same atomic invite gate', () => {
+  const start = read('supabase/functions/start-linkedin-auth/index.ts');
+  const callback = read('supabase/functions/auth-linkedin-callback/index.ts');
+  const migration = read('supabase/migrations/20260914000800_multi_provider_members.sql');
+  assert.match(start, /scope', 'openid profile'/);
+  assert.doesNotMatch(start, /openid profile email/);
+  assert.match(callback, /https:\/\/api\.linkedin\.com\/v2\/userinfo/);
+  assert.match(callback, /verifyOAuthState\(state, 'linkedin'\)/);
+  assert.match(callback, /register_social_member/);
+  assert.match(migration, /where upper\(ic\.code\).*ic\.is_used = false/is);
+  assert.match(migration, /for update/ig);
+  assert.match(migration, /used_by = v_member_id/);
+  assert.match(migration, /revoke all on function public\.register_social_member/);
+});
+
+test('provider-neutral sessions authorize private member endpoints', () => {
+  for (const file of ['get-dashboard', 'claim-daily', 'delete-member', 'member-intelligence']) {
+    const source = read(`supabase/functions/${file}/index.ts`);
+    assert.match(source, /session\.provider/);
+    assert.match(source, /session\.subject/);
+    assert.doesNotMatch(source, /session\.x_id/);
+  }
 });
 
 test('legacy invite records are classified without destructive cleanup', () => {

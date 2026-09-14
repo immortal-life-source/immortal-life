@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
   })
 
   try {
-    const { data: member } = await supabase.from('members').select('id').eq('id', session.member_id).eq('x_id', session.x_id).maybeSingle()
+    const { data: member } = await supabase.from('members').select('id').eq('id', session.member_id).eq('auth_provider', session.provider).eq('auth_subject', session.subject).maybeSingle()
     if (!member) return jsonResponse(req, { error: 'Unauthorized' }, 401, METHODS)
 
     const { error: defaultPreferenceError } = await supabase.from('member_briefing_preferences').upsert({

@@ -423,10 +423,12 @@
 
       var m = data.member;
       var pointsEl = document.getElementById('dashPoints');
-      document.getElementById('dashAvatar').src = m.x_avatar_url || '';
-      document.getElementById('dashAvatar').alt = '@' + m.x_username;
-      document.getElementById('dashDisplay').textContent = m.x_display_name || '';
-      document.getElementById('dashUser').textContent = '@' + (m.x_username || '');
+      document.getElementById('dashAvatar').src = m.profile_avatar_url || '';
+      document.getElementById('dashAvatar').alt = m.profile_display_name || '';
+      document.getElementById('dashDisplay').textContent = m.profile_display_name || '';
+      document.getElementById('dashUser').textContent = m.auth_provider === 'linkedin'
+        ? 'LinkedIn member'
+        : '@' + (m.profile_handle || '');
       document.getElementById('dashTier').textContent = data.tier || 'Member';
       var ogBadge = document.getElementById('dashOgBadge');
       if (ogBadge) {

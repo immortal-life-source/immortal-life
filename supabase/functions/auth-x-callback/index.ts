@@ -99,12 +99,14 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false, autoRefreshToken: false } }
     )
 
-    const { data, error } = await supabase.rpc('register_x_member', {
-      p_x_id: String(profile.id),
-      p_x_username: String(profile.username),
-      p_x_display_name: String(profile.name),
-      p_x_avatar_url: profile.profile_image_url ? String(profile.profile_image_url) : null,
-      p_x_follower_count: Number(profile.public_metrics?.followers_count) || 0,
+    const { data, error } = await supabase.rpc('register_social_member', {
+      p_provider: 'x',
+      p_subject: String(profile.id),
+      p_display_name: String(profile.name),
+      p_avatar_url: profile.profile_image_url ? String(profile.profile_image_url) : null,
+      p_profile_handle: String(profile.username),
+      p_profile_url: `https://x.com/${encodeURIComponent(String(profile.username))}`,
+      p_follower_count: Number(profile.public_metrics?.followers_count) || 0,
       p_invite_code: inviteCode,
     })
 
@@ -119,7 +121,7 @@ Deno.serve(async (req) => {
     const memberId = Number(result?.member_id)
     if (!Number.isSafeInteger(memberId) || memberId <= 0) throw new Error('Member registration returned no member')
 
-    const session = await createMemberSession(memberId, String(profile.id))
+    const session = await createMemberSession(memberId, 'x', String(profile.id))
     return jsonResponse(req, { ok: true, session }, 200, 'POST, OPTIONS')
   } catch (err) {
     console.error('Auth callback error:', err instanceof Error ? err.message : String(err))

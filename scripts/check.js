@@ -7,6 +7,7 @@ const { join } = require('node:path');
 const root = join(__dirname, '..');
 const browserScripts = [
   'auth-x.js',
+  'auth-linkedin.js',
   'build.js',
   'dashboard.js',
   'join.js',
@@ -32,6 +33,8 @@ const edgeScripts = [
   'supabase/functions/member-intelligence/index.ts',
   'supabase/functions/generate-briefings/index.ts',
   'supabase/functions/get-news/index.ts',
+  'supabase/functions/start-linkedin-auth/index.ts',
+  'supabase/functions/auth-linkedin-callback/index.ts',
 ];
 
 for (const file of browserScripts) {
@@ -55,6 +58,7 @@ const requiredFiles = [
   'supabase/migrations/20260914000500_normalize_intelligence_summaries.sql',
   'supabase/migrations/20260914000600_intelligence_tranche_two.sql',
   'supabase/migrations/20260914000700_publish_project_news.sql',
+  'supabase/migrations/20260914000800_multi_provider_members.sql',
   'supabase/audits/membership-integrity.sql',
   'intelligence-template.html',
   'intelligence-topics.json',

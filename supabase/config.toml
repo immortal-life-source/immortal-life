@@ -35,3 +35,9 @@ verify_jwt = false
 
 [functions.get-news]
 verify_jwt = false
+
+[functions.start-linkedin-auth]
+verify_jwt = false
+
+[functions.auth-linkedin-callback]
+verify_jwt = false

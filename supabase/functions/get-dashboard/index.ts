@@ -42,9 +42,10 @@ Deno.serve(async (req) => {
 
     const { data: member, error: memberError } = await supabase
       .from('members')
-      .select('id, created_at, x_id, x_username, x_display_name, x_avatar_url, x_follower_count, points, is_og, invited_by, referral_chain_depth, network_size, multiplier, last_login, last_daily_claim, login_streak')
+      .select('id, created_at, auth_provider, profile_handle, profile_url, profile_display_name, profile_avatar_url, x_follower_count, points, is_og, invited_by, referral_chain_depth, network_size, multiplier, last_login, last_daily_claim, login_streak')
       .eq('id', session.member_id)
-      .eq('x_id', session.x_id)
+      .eq('auth_provider', session.provider)
+      .eq('auth_subject', session.subject)
       .single()
 
     if (memberError || !member) return jsonResponse(req, { error: 'Member not found' }, 404, 'GET, OPTIONS')

@@ -24,9 +24,10 @@ Deno.serve(async (req) => {
     if (req.method === 'GET') {
       const { data: member, error } = await supabase
         .from('members')
-        .select('id, x_id, last_daily_claim')
+        .select('id, auth_provider, auth_subject, last_daily_claim')
         .eq('id', session.member_id)
-        .eq('x_id', session.x_id)
+        .eq('auth_provider', session.provider)
+        .eq('auth_subject', session.subject)
         .single()
       if (error || !member) return jsonResponse(req, { error: 'Member not found' }, 404, 'GET, POST, OPTIONS')
 

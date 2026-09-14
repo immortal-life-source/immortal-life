@@ -22,7 +22,8 @@ Deno.serve(async (req) => {
       .from('members')
       .select('id')
       .eq('id', session.member_id)
-      .eq('x_id', session.x_id)
+      .eq('auth_provider', session.provider)
+      .eq('auth_subject', session.subject)
       .single()
     if (memberError || !member) return jsonResponse(req, { error: 'Member not found' }, 404, 'POST, OPTIONS')
 

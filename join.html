@@ -161,7 +161,7 @@
       margin-bottom: 12px;
       letter-spacing: 0.06em;
     }
-    .join-btn-login-x {
+    .join-btn-social {
       width: 100%;
       box-sizing: border-box;
       min-height: 44px;
@@ -177,10 +177,13 @@
       cursor: pointer;
       transition: border-color 0.2s, color 0.2s;
     }
-    .join-btn-login-x:hover {
+    .join-btn-social:hover {
       border-color: var(--gold-mid);
       color: var(--white);
     }
+    .join-provider-choice { display: grid; gap: 10px; margin-top: 14px; }
+    .join-provider-choice[hidden] { display: none; }
+    .join-btn-social--linkedin { border-color: #79a7c7; color: #9dc5df; }
     .join-request-section {
       margin-top: 32px;
       border-top: 1px solid rgba(201, 162, 39, 0.2);
@@ -322,11 +325,18 @@
         <p id="inviteError" class="m-error" hidden role="alert"></p>
         <div id="successWrap" hidden>Code accepted.</div>
         <button type="button" class="m-btn-primary" id="btnContinue">Continue</button>
+        <div class="join-provider-choice" id="signupProviderChoice" hidden>
+          <button type="button" class="join-btn-social" id="btnSignupX">Continue with X →</button>
+          <button type="button" class="join-btn-social join-btn-social--linkedin" id="btnSignupLinkedIn" hidden>Continue with LinkedIn →</button>
+        </div>
       </div>
 
       <div class="join-login-section">
         <p class="join-login-label">Already a member?</p>
-        <button type="button" class="join-btn-login-x" id="btnLoginX">Continue with X →</button>
+        <div class="join-provider-choice">
+          <button type="button" class="join-btn-social" id="btnLoginX">Continue with X →</button>
+          <button type="button" class="join-btn-social join-btn-social--linkedin" id="btnLoginLinkedIn" hidden>Continue with LinkedIn →</button>
+        </div>
       </div>
 
       <div class="join-request-section">

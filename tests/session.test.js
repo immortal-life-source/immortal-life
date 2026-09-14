@@ -25,7 +25,13 @@ test('signed sessions reject tampering, the wrong secret, and expired tokens', a
   const token = await createMemberSession(42, 'x-user-42');
   const payload = await verifyMemberSession(token);
   assert.equal(payload.member_id, 42);
-  assert.equal(payload.x_id, 'x-user-42');
+  assert.equal(payload.provider, 'x');
+  assert.equal(payload.subject, 'x-user-42');
+
+  const linkedInToken = await createMemberSession(84, 'linkedin', 'linkedin-subject-84');
+  const linkedInPayload = await verifyMemberSession(linkedInToken);
+  assert.equal(linkedInPayload.provider, 'linkedin');
+  assert.equal(linkedInPayload.subject, 'linkedin-subject-84');
 
   const [encoded, signature] = token.split('.');
   const replacement = encoded[0] === 'a' ? 'b' : 'a';

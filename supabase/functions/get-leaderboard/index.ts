@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     )
     const { data, error } = await supabase
       .from('members')
-      .select('id, x_username, x_display_name, x_avatar_url, points, network_size, created_at, is_og')
+      .select('id, auth_provider, profile_handle, profile_url, profile_display_name, profile_avatar_url, points, network_size, created_at, is_og')
       .order('points', { ascending: false })
       .order('created_at', { ascending: true })
       .order('id', { ascending: true })

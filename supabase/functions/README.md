@@ -27,6 +27,8 @@ The existing newsletter functions (`subscribe`, `confirm`, and `unsubscribe`) ar
 
 `sync-intelligence` runs the literature, trial registry, Crossref retraction, EMA, and SÚKL ingestion jobs. `member-intelligence` provides signed-session watchlists and private briefing access. `generate-briefings` is called by the database scheduler every Monday and idempotently generates one briefing per opted-in member and period.
 
+LinkedIn login uses `start-linkedin-auth` and `auth-linkedin-callback` with the OpenID Connect `openid profile` scopes. Configure `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, and `LINKEDIN_REDIRECT_URI=https://immortal.life/auth/linkedin` as Edge Function secrets after enabling the LinkedIn “Sign in with LinkedIn using OpenID Connect” product.
+
 ## Required secrets
 
 Set these in Supabase Edge Function secrets:

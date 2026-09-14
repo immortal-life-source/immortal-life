@@ -34,6 +34,7 @@
   ],
   "rewrites": [
     { "source": "/auth/x", "destination": "/auth-x" },
+    { "source": "/auth/linkedin", "destination": "/auth-linkedin" },
     { "source": "/invite/:code", "destination": "/join" }
   ]
 }

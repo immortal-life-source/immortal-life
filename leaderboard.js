@@ -68,9 +68,17 @@
     );
   }
 
+  function profileLine(m, rowClass) {
+    var label = m.auth_provider === 'linkedin' ? 'LinkedIn' : '@' + (m.profile_handle || '');
+    var cls = rowClass || 'lb-handle';
+    if (m.profile_url && /^https:\/\//.test(m.profile_url)) {
+      return '<a class="' + cls + '" href="' + esc(m.profile_url) + '" target="_blank" rel="noopener">' + esc(label) + '</a>';
+    }
+    return '<span class="' + cls + '">' + esc(label) + '</span>';
+  }
+
   function cardHtml(m, featured) {
     var cls = 'lb-card' + (featured ? ' lb-card-rank1' : '');
-    var xLink = 'https://x.com/' + encodeURIComponent(m.x_username || '');
     return (
       '<article class="' +
       cls +
@@ -79,17 +87,13 @@
       esc(m.rank) +
       '</div>' +
       '<img class="lb-av" src="' +
-      esc(m.x_avatar_url || '') +
+      esc(m.profile_avatar_url || '') +
       '" alt="" width="56" height="56" loading="lazy" />' +
       '<div class="lb-meta">' +
       '<div class="lb-name">' +
-      esc(m.x_display_name || '') +
+      esc(m.profile_display_name || '') +
       '</div>' +
-      '<a class="lb-handle" href="' +
-      esc(xLink) +
-      '" target="_blank" rel="noopener">' +
-      esc('@' + (m.x_username || '')) +
-      '</a>' +
+      profileLine(m, 'lb-handle') +
       '<div class="lb-points">' +
       esc(m.points) +
       ' pts</div>' +
@@ -99,24 +103,19 @@
   }
 
   function rowHtml(m) {
-    var xLink = 'https://x.com/' + encodeURIComponent(m.x_username || '');
     return (
       '<div class="lb-row">' +
       '<span class="lb-row-rank">' +
       esc(m.rank) +
       '</span>' +
       '<img class="lb-row-av" src="' +
-      esc(m.x_avatar_url || '') +
+      esc(m.profile_avatar_url || '') +
       '" alt="" width="32" height="32" loading="lazy" />' +
       '<div class="lb-row-meta">' +
       '<span class="lb-row-name">' +
-      esc(m.x_display_name || '') +
+      esc(m.profile_display_name || '') +
       '</span>' +
-      '<a href="' +
-      esc(xLink) +
-      '" target="_blank" rel="noopener" class="lb-row-handle">' +
-      esc('@' + (m.x_username || '')) +
-      '</a>' +
+      profileLine(m, 'lb-row-handle') +
       '</div>' +
       '<span class="lb-row-pts">' +
       esc(m.points) +

@@ -4,6 +4,7 @@
   var X_CLIENT_ID = 'YV9iTTY1WnB0OVFHY25kaTFZVXo6MTpjaQ';
   var REDIRECT = 'https://immortal.life/auth/x';
   var FN = window.IL_FN_BASE + '/validate-invite';
+  var LINKEDIN_START_FN = window.IL_FN_BASE + '/start-linkedin-auth';
 
   function base64url(buffer) {
     var bytes = new Uint8Array(buffer);
@@ -40,6 +41,7 @@
   var errEl = document.getElementById('inviteError');
   var successWrap = document.getElementById('successWrap');
   var formCard = document.getElementById('formCard');
+  var signupProviderChoice = document.getElementById('signupProviderChoice');
 
   var inviteValidated = false;
 
@@ -141,9 +143,34 @@
     showError('Could not complete login. Please try again.');
   }
 
+  function startLinkedInOAuth(inviteCode, mode) {
+    clearError();
+    fetch(LINKEDIN_START_FN, {
+      method: 'POST',
+      headers: window.ilFnHeaders(),
+      body: JSON.stringify({ invite_code: inviteCode || '' }),
+    })
+      .then(function (response) {
+        return response.json().then(function (data) { return { ok: response.ok, data: data }; });
+      })
+      .then(function (result) {
+        if (!result.ok || !result.data.url || !result.data.state) {
+          if (result.data.error === 'linkedin_not_configured') showError('LinkedIn login is being configured. Please use X for now.');
+          else if (result.data.error === 'invalid_code') showError('This code is no longer available.');
+          else showError('Could not start LinkedIn login. Please try again.');
+          return;
+        }
+        sessionStorage.setItem('linkedin_oauth_state', result.data.state);
+        if (inviteCode) sessionStorage.setItem('linkedin_oauth_invite_code', inviteCode);
+        else sessionStorage.removeItem('linkedin_oauth_invite_code');
+        sessionStorage.setItem('linkedin_oauth_mode', mode || 'login');
+        window.location.href = result.data.url;
+      })
+      .catch(function () { showError('Could not start LinkedIn login. Please try again.'); });
+  }
+
   btnContinue.addEventListener('click', function () {
     if (inviteValidated) {
-      startXOAuth();
       return;
     }
 
@@ -170,7 +197,8 @@
           input.classList.add('invite-input-valid');
           input.readOnly = true;
           successWrap.hidden = false;
-          btnContinue.textContent = 'Continue with X →';
+          btnContinue.hidden = true;
+          signupProviderChoice.hidden = false;
           formCard.classList.add('join-card-success');
         } else {
           showError('This code is not valid.');
@@ -188,6 +216,30 @@
       loginWithX();
     });
   }
+
+
+  var btnSignupX = document.getElementById('btnSignupX');
+  if (btnSignupX) btnSignupX.addEventListener('click', startXOAuth);
+
+  var btnSignupLinkedIn = document.getElementById('btnSignupLinkedIn');
+  if (btnSignupLinkedIn) btnSignupLinkedIn.addEventListener('click', function () {
+    startLinkedInOAuth(normalizeCode(input.value), 'signup');
+  });
+
+  var btnLoginLinkedIn = document.getElementById('btnLoginLinkedIn');
+  if (btnLoginLinkedIn) btnLoginLinkedIn.addEventListener('click', function () {
+    startLinkedInOAuth('', 'login');
+  });
+
+  fetch(LINKEDIN_START_FN, { method: 'GET', headers: window.ilFnHeaders() })
+    .then(function (response) { return response.ok ? response.json() : { enabled: false }; })
+    .then(function (data) {
+      if (data.enabled === true) {
+        if (btnLoginLinkedIn) btnLoginLinkedIn.hidden = false;
+        if (btnSignupLinkedIn) btnSignupLinkedIn.hidden = false;
+      }
+    })
+    .catch(function () { /* X login remains available if provider status is unavailable. */ });
 
   var btnRequestAccess = document.getElementById('btnRequestAccess');
   var joinRequestForm = document.getElementById('joinRequestForm');
