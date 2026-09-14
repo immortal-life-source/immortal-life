@@ -7,3 +7,5 @@ node_modules/
 dist/
 .vercel/
 .vercel-auth-immortal/
+supabase/.temp/
+og-image.png.png
