@@ -451,8 +451,8 @@
 
       var refCode = data.referral_code || '';
       var refUrl = refCode
-        ? 'https://immortal.life/invite/' + encodeURIComponent(refCode)
-        : 'https://immortal.life/join';
+        ? 'https://www.immortal.life/invite/' + encodeURIComponent(refCode)
+        : 'https://www.immortal.life/join';
       document.getElementById('dashReferralUrl').textContent = refUrl;
 
       document.getElementById('btnCopyLink').addEventListener('click', function () {
@@ -462,7 +462,7 @@
       });
 
       var tweet =
-        'The founding circle at immortal.life is forming — I\'m in. Join me before it closes: https://immortal.life/invite/' +
+        'The founding circle at immortal.life is forming — I\'m in. Join me before it closes: https://www.immortal.life/invite/' +
         encodeURIComponent(refCode);
       document.getElementById('btnShareX').href =
         'https://twitter.com/intent/tweet?text=' + encodeURIComponent(tweet);

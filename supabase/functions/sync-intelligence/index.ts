@@ -1,10 +1,14 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
+  assessTopicMatch,
   classifyEvidence,
   cleanText,
   dateOnly,
+  duplicateClusterKey,
+  freshnessScore,
   normalizeTrialStatus,
   researchEditorialSummary,
+  sourceQualityScore,
   trialEditorialSummary,
   uniqueStrings,
 } from '../_shared/intelligence.ts'
@@ -124,7 +128,7 @@ async function syncCrossref(supabase: any): Promise<{ seen: number; written: num
   url.searchParams.set('mailto', 'research@immortal.life')
   const payload = await fetchJson(url)
   const notices = Array.isArray(payload?.message?.items) ? payload.message.items : []
-  const { data: localItems, error: localError } = await supabase.from('research_items').select('id,doi,title').not('doi', 'is', null)
+  const { data: localItems, error: localError } = await supabase.from('research_items').select('id,doi,title,publication_state').not('doi', 'is', null)
   if (localError) throw localError
   const localByDoi = new Map((localItems ?? []).map((item: any) => [String(item.doi).toLowerCase(), item]))
   const events: any[] = []
@@ -146,6 +150,12 @@ async function syncCrossref(supabase: any): Promise<{ seen: number; written: num
         source_url: noticeDoi ? `https://doi.org/${encodeURIComponent(noticeDoi)}` : `https://api.crossref.org/works/${encodeURIComponent(originalDoi)}`,
         announced_on: dateOnly(notice?.created?.['date-time'] ?? notice?.issued?.['date-parts']?.[0]?.join('-')),
         metadata: { notice_doi: noticeDoi || null, original_doi: originalDoi, source: 'Crossref REST API / Retraction Watch metadata' },
+        relevance_confidence: 100,
+        source_quality_score: sourceQualityScore('crossref'),
+        freshness_score: freshnessScore(dateOnly(notice?.created?.['date-time'] ?? notice?.issued?.['date-parts']?.[0]?.join('-'))),
+        publication_state: local.publication_state === 'published' ? 'published' : 'quarantined',
+        match_explanation: 'Published automatically because Crossref supplied a retraction relationship to an indexed research record.',
+        quality_checked_at: new Date().toISOString(),
       })
       await supabase.from('research_items').update({ status: 'retracted', integrity_checked_at: new Date().toISOString() }).eq('id', local.id)
     }
@@ -174,7 +184,17 @@ async function syncRegulatoryFeed(supabase: any, sourceId: 'ema' | 'sukl'): Prom
     const publishedRaw = xmlText(block, 'pubDate') || xmlText(block, 'published') || xmlText(block, 'updated')
     const parsedDate = new Date(publishedRaw)
     const haystack = `${title} ${rawSummary}`
-    const matchedTopics = Object.entries(TOPIC_KEYWORDS).filter(([, pattern]) => pattern.test(haystack)).map(([slug]) => slug)
+    const candidateTopics = Object.entries(TOPIC_KEYWORDS).filter(([, pattern]) => pattern.test(haystack)).map(([slug]) => slug)
+    const assessments = candidateTopics.map((slug) => ({ slug, assessment: assessTopicMatch(slug, {
+      title,
+      abstract: rawSummary,
+      sourceId,
+      sourceDate: Number.isNaN(parsedDate.getTime()) ? null : parsedDate.toISOString(),
+      studyType: 'Official regulatory notice',
+    }) }))
+    const matchedTopics = assessments.filter((item) => item.assessment.publish).map((item) => item.slug)
+    const best = assessments.sort((left, right) => right.assessment.relevanceScore - left.assessment.relevanceScore)[0]?.assessment
+    const confidence = best?.relevanceScore ?? 0
     records.push({
       source_id: sourceId,
       external_id: await stableId(link),
@@ -187,6 +207,13 @@ async function syncRegulatoryFeed(supabase: any, sourceId: 'ema' | 'sukl'): Prom
       matched_topics: matchedTopics,
       last_seen_at: new Date().toISOString(),
       metadata: { source_language: sourceId === 'sukl' ? 'cs' : 'en' },
+      relevance_confidence: confidence,
+      source_quality_score: sourceQualityScore(sourceId),
+      freshness_score: freshnessScore(Number.isNaN(parsedDate.getTime()) ? null : parsedDate.toISOString()),
+      publication_state: matchedTopics.length ? 'published' : 'quarantined',
+      match_explanation: best?.explanation ?? 'Quarantined automatically because no controlled longevity topic term matched this official notice.',
+      quality_checked_at: new Date().toISOString(),
+      duplicate_cluster_key: duplicateClusterKey(title, link),
     })
   }
   if (!records.length) return { seen: blocks.length, written: 0 }
@@ -212,6 +239,7 @@ async function syncEuropePmc(supabase: any, topic: Topic): Promise<{ seen: numbe
   const payload = await fetchJson(url)
   const results = Array.isArray(payload?.resultList?.result) ? payload.resultList.result : []
   const now = new Date().toISOString()
+  const assessments = new Map<string, ReturnType<typeof assessTopicMatch>>()
   const records = results
     .map((item: any) => {
       const externalId = cleanText(item?.id ?? item?.pmid ?? item?.pmcid, 120)
@@ -224,6 +252,21 @@ async function syncEuropePmc(supabase: any, topic: Topic): Promise<{ seen: numbe
       const status = /(retraction of publication|retracted publication)/i.test(publicationType)
         ? 'retracted'
         : 'published'
+      const abstractText = cleanText(item?.abstractText, 5000) || null
+      const meshTerms = Array.isArray(item?.meshHeadingList?.meshHeading)
+        ? item.meshHeadingList.meshHeading.flatMap((heading: any) => [heading?.descriptorName, ...(Array.isArray(heading?.qualifierName) ? heading.qualifierName : [])])
+        : []
+      const keywordTerms = Array.isArray(item?.keywordList?.keyword) ? item.keywordList.keyword : []
+      const controlledTerms = uniqueStrings([...meshTerms, ...keywordTerms], 80)
+      const assessment = assessTopicMatch(topic.slug, {
+        title,
+        abstract: abstractText,
+        controlledTerms,
+        studyType: publicationType,
+        sourceId: 'europe-pmc',
+        sourceDate: dateOnly(item?.firstPublicationDate ?? item?.electronicPublicationDate ?? item?.pubYear),
+      })
+      assessments.set(externalId, assessment)
 
       return {
         source_id: 'europe-pmc',
@@ -234,6 +277,8 @@ async function syncEuropePmc(supabase: any, topic: Topic): Promise<{ seen: numbe
         published_on: dateOnly(item?.firstPublicationDate ?? item?.electronicPublicationDate ?? item?.pubYear),
         doi,
         publication_type: publicationType || null,
+        abstract_text: abstractText,
+        controlled_terms: controlledTerms,
         evidence_level: level,
         source_url: `https://europepmc.org/article/${encodeURIComponent(source)}/${encodeURIComponent(externalId)}`,
         is_open_access: typeof item?.isOpenAccess === 'string'
@@ -246,6 +291,13 @@ async function syncEuropePmc(supabase: any, topic: Topic): Promise<{ seen: numbe
         source_updated_at: now,
         last_seen_at: now,
         status,
+        relevance_confidence: assessment.relevanceScore,
+        source_quality_score: assessment.sourceQualityScore,
+        freshness_score: assessment.freshnessScore,
+        publication_state: assessment.publish ? 'published' : 'quarantined',
+        match_explanation: assessment.explanation,
+        quality_checked_at: now,
+        duplicate_cluster_key: duplicateClusterKey(title, doi),
         metadata: {
           pmid: cleanText(item?.pmid, 40) || null,
           pmcid: cleanText(item?.pmcid, 40) || null,
@@ -260,19 +312,29 @@ async function syncEuropePmc(supabase: any, topic: Topic): Promise<{ seen: numbe
   const { data, error } = await supabase
     .from('research_items')
     .upsert(records, { onConflict: 'source_id,external_id', defaultToNull: false })
-    .select('id')
+    .select('id,external_id')
   if (error) throw error
 
-  const topicLinks = (data ?? []).map((record: { id: number }) => ({
-    research_item_id: record.id,
-    topic_slug: topic.slug,
-    matched_by: 'source-query',
-  }))
+  const topicLinks = (data ?? []).map((record: { id: number; external_id: string }) => {
+    const assessment = assessments.get(record.external_id) ?? assessTopicMatch(topic.slug, { title: '', sourceId: 'europe-pmc' })
+    return {
+      research_item_id: record.id,
+      topic_slug: topic.slug,
+      matched_by: 'source-query',
+      relevance_score: assessment.relevanceScore,
+      match_reasons: assessment.reasons,
+      matched_fields: assessment.matchedFields,
+      is_published: assessment.publish,
+      evaluated_at: now,
+    }
+  })
   if (topicLinks.length) {
     const { error: linkError } = await supabase
       .from('research_item_topics')
-      .upsert(topicLinks, { onConflict: 'research_item_id,topic_slug', ignoreDuplicates: true })
+      .upsert(topicLinks, { onConflict: 'research_item_id,topic_slug', defaultToNull: false })
     if (linkError) throw linkError
+    const { error: qualityError } = await supabase.rpc('refresh_research_quality', { record_ids: topicLinks.map((link) => link.research_item_id) })
+    if (qualityError) throw qualityError
   }
   return { seen: results.length, written: records.length }
 }
@@ -291,6 +353,7 @@ async function syncClinicalTrials(supabase: any, topic: Topic): Promise<{ seen: 
   const payload = await fetchJson(url)
   const studies = Array.isArray(payload?.studies) ? payload.studies : []
   const now = new Date().toISOString()
+  const assessments = new Map<string, ReturnType<typeof assessTopicMatch>>()
   const records = studies
     .map((study: any) => {
       const protocol = study?.protocolSection ?? {}
@@ -307,24 +370,47 @@ async function syncClinicalTrials(supabase: any, topic: Topic): Promise<{ seen: 
       const rawStatus = cleanText(statusModule?.overallStatus, 80)
       const countries = uniqueStrings(locations.map((location: any) => location?.country), 40)
       const enrollment = Number(design?.enrollmentInfo?.count)
+      const briefSummary = cleanText(description?.briefSummary, 3000) || null
+      const conditions = uniqueStrings(protocol?.conditionsModule?.conditions, 40)
+      const interventions = uniqueStrings((protocol?.armsInterventionsModule?.interventions ?? []).map((item: any) => item?.name), 40)
+      const controlledTerms = uniqueStrings([...conditions, ...interventions], 80)
+      const studyType = cleanText(design?.studyType, 100).replace(/_/g, ' ') || null
+      const lastUpdateDate = trialDate(statusModule?.lastUpdatePostDateStruct ?? statusModule?.studyFirstPostDateStruct)
+      const assessment = assessTopicMatch(topic.slug, {
+        title,
+        abstract: briefSummary,
+        controlledTerms,
+        studyType,
+        sourceId: 'clinicaltrials-gov',
+        sourceDate: lastUpdateDate,
+      })
+      assessments.set(externalId, assessment)
 
       return {
         source_id: 'clinicaltrials-gov',
         external_id: externalId,
         title,
-        brief_summary: cleanText(description?.briefSummary, 900) || null,
+        brief_summary: briefSummary,
         overall_status: normalizeTrialStatus(rawStatus),
         phases,
-        study_type: cleanText(design?.studyType, 100).replace(/_/g, ' ') || null,
+        study_type: studyType,
+        controlled_terms: controlledTerms,
         sponsor: cleanText(sponsors?.leadSponsor?.name, 240) || null,
         enrollment: Number.isSafeInteger(enrollment) && enrollment >= 0 ? enrollment : null,
         countries,
         start_date: trialDate(statusModule?.startDateStruct),
         completion_date: trialDate(statusModule?.completionDateStruct),
-        last_update_date: trialDate(statusModule?.lastUpdatePostDateStruct ?? statusModule?.studyFirstPostDateStruct),
+        last_update_date: lastUpdateDate,
         source_url: `https://clinicaltrials.gov/study/${encodeURIComponent(externalId)}`,
         editorial_summary: trialEditorialSummary(rawStatus, phases),
         last_seen_at: now,
+        relevance_confidence: assessment.relevanceScore,
+        source_quality_score: assessment.sourceQualityScore,
+        freshness_score: assessment.freshnessScore,
+        publication_state: assessment.publish ? 'published' : 'quarantined',
+        match_explanation: assessment.explanation,
+        quality_checked_at: now,
+        duplicate_cluster_key: duplicateClusterKey(title, externalId),
         metadata: {
           acronym: cleanText(identification?.acronym, 80) || null,
           organization: cleanText(identification?.organization?.fullName, 240) || null,
@@ -338,19 +424,29 @@ async function syncClinicalTrials(supabase: any, topic: Topic): Promise<{ seen: 
   const { data, error } = await supabase
     .from('clinical_trials')
     .upsert(records, { onConflict: 'source_id,external_id', defaultToNull: false })
-    .select('id')
+    .select('id,external_id')
   if (error) throw error
 
-  const topicLinks = (data ?? []).map((record: { id: number }) => ({
-    clinical_trial_id: record.id,
-    topic_slug: topic.slug,
-    matched_by: 'source-query',
-  }))
+  const topicLinks = (data ?? []).map((record: { id: number; external_id: string }) => {
+    const assessment = assessments.get(record.external_id) ?? assessTopicMatch(topic.slug, { title: '', sourceId: 'clinicaltrials-gov' })
+    return {
+      clinical_trial_id: record.id,
+      topic_slug: topic.slug,
+      matched_by: 'source-query',
+      relevance_score: assessment.relevanceScore,
+      match_reasons: assessment.reasons,
+      matched_fields: assessment.matchedFields,
+      is_published: assessment.publish,
+      evaluated_at: now,
+    }
+  })
   if (topicLinks.length) {
     const { error: linkError } = await supabase
       .from('clinical_trial_topics')
-      .upsert(topicLinks, { onConflict: 'clinical_trial_id,topic_slug', ignoreDuplicates: true })
+      .upsert(topicLinks, { onConflict: 'clinical_trial_id,topic_slug', defaultToNull: false })
     if (linkError) throw linkError
+    const { error: qualityError } = await supabase.rpc('refresh_trial_quality', { record_ids: topicLinks.map((link) => link.clinical_trial_id) })
+    if (qualityError) throw qualityError
   }
   return { seen: studies.length, written: records.length }
 }
@@ -501,6 +597,9 @@ Deno.serve(async (req) => {
         updated_at: new Date().toISOString(),
       }).eq('id', sourceId)
     }
+
+    const { error: entityRefreshError } = await supabase.rpc('refresh_intelligence_entities')
+    if (entityRefreshError) throw entityRefreshError
 
     const processed = (jobs ?? []).length
     const finalStatus = errors === 0 ? 'succeeded' : errors < processed ? 'partial' : 'failed'

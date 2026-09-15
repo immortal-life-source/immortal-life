@@ -52,10 +52,10 @@ Deno.serve(async (req) => {
       if (!slugs.length) continue
 
       const [researchLinks, trialLinks, regulatory, integrity] = await Promise.all([
-        supabase.from('research_item_topics').select('topic_slug,research_items(id,title,published_on,source_url,first_seen_at,status)').in('topic_slug', slugs).gte('research_items.first_seen_at', period.since).limit(40),
-        supabase.from('clinical_trial_topics').select('topic_slug,clinical_trials(id,title,overall_status,last_update_date,source_url,first_seen_at)').in('topic_slug', slugs).gte('clinical_trials.first_seen_at', period.since).limit(40),
-        supabase.from('regulatory_events').select('id,title,jurisdiction,published_at,source_url,matched_topics').overlaps('matched_topics', slugs).gte('first_seen_at', period.since).order('published_at', { ascending: false }).limit(20),
-        supabase.from('research_integrity_events').select('id,title,event_type,detected_at,source_url,research_items!inner(research_item_topics!inner(topic_slug))').in('research_items.research_item_topics.topic_slug', slugs).gte('detected_at', period.since).order('detected_at', { ascending: false }).limit(20),
+        supabase.from('research_item_topics').select('topic_slug,relevance_score,research_items!inner(id,title,published_on,source_url,first_seen_at,status,relevance_confidence,publication_state)').eq('is_published', true).eq('research_items.publication_state', 'published').in('topic_slug', slugs).gte('research_items.first_seen_at', period.since).limit(40),
+        supabase.from('clinical_trial_topics').select('topic_slug,relevance_score,clinical_trials!inner(id,title,overall_status,last_update_date,source_url,first_seen_at,relevance_confidence,publication_state)').eq('is_published', true).eq('clinical_trials.publication_state', 'published').in('topic_slug', slugs).gte('clinical_trials.first_seen_at', period.since).limit(40),
+        supabase.from('regulatory_events').select('id,title,jurisdiction,published_at,source_url,matched_topics,relevance_confidence').eq('publication_state', 'published').overlaps('matched_topics', slugs).gte('first_seen_at', period.since).order('published_at', { ascending: false }).limit(20),
+        supabase.from('research_integrity_events').select('id,title,event_type,detected_at,source_url,relevance_confidence,research_items!inner(research_item_topics!inner(topic_slug,is_published))').eq('publication_state', 'published').eq('research_items.research_item_topics.is_published', true).in('research_items.research_item_topics.topic_slug', slugs).gte('detected_at', period.since).order('detected_at', { ascending: false }).limit(20),
       ])
       for (const result of [researchLinks, trialLinks, regulatory, integrity]) if (result.error) throw result.error
       const research = (researchLinks.data ?? []).map((row: any) => row.research_items).filter(Boolean)

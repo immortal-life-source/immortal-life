@@ -11,7 +11,7 @@
       const heading = document.createElement('h2'); heading.textContent = this.getAttribute('heading') || 'Latest longevity intelligence'; root.append(heading);
       const list = document.createElement('ol'); root.append(list);
       try {
-        const response = await fetch('https://immortal.life/feed.json');
+        const response = await fetch('https://www.immortal.life/feed.json');
         if (!response.ok) throw new Error('feed unavailable');
         const feed = await response.json();
         const limit = Math.min(Math.max(Number(this.getAttribute('limit')) || 5, 1), 10);
@@ -24,7 +24,7 @@
       } catch (_) {
         const note = document.createElement('p'); note.textContent = 'The live feed is temporarily unavailable.'; root.append(note);
       }
-      const brand = document.createElement('a'); brand.className = 'brand'; brand.href = 'https://immortal.life'; brand.target = '_blank'; brand.rel = 'noopener noreferrer'; brand.textContent = 'Powered by immortal.life · automated, source-linked'; root.append(brand);
+      const brand = document.createElement('a'); brand.className = 'brand'; brand.href = 'https://www.immortal.life'; brand.target = '_blank'; brand.rel = 'noopener noreferrer'; brand.textContent = 'Powered by immortal.life · automated, source-linked'; root.append(brand);
     }
   }
   window.customElements.define('immortal-life-feed', ImmortalLifeFeed);

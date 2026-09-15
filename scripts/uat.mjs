@@ -11,12 +11,19 @@ const artifacts = join(tmpdir(), 'immortal-life-uat-artifacts');
 mkdirSync(artifacts, { recursive: true });
 
 const defaultRoutes = [
-  '/', '/research', '/research/2872', '/trials', '/topics', '/topics/rapamycin',
+  '/', '/research', '/trials', '/topics', '/topics/rapamycin',
   '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/methodology',
-  '/automation', '/publication-policy', '/corrections', '/data', '/join',
+  '/entities', '/entities/topic/rapamycin', '/quality', '/automation', '/publication-policy', '/corrections', '/data', '/join',
   '/auth/x', '/auth/linkedin', '/leaderboard', '/privacy',
 ];
 const routes = process.env.UAT_ROUTES ? process.env.UAT_ROUTES.split(',').map((route) => route.trim()).filter(Boolean) : defaultRoutes;
+if (!process.env.UAT_ROUTES) {
+  try {
+    const sitemap = await (await fetch(`${baseUrl}/sitemap.xml`)).text();
+    const sample = sitemap.match(/<loc>https?:\/\/[^<]+(\/research\/\d+)<\/loc>/)?.[1];
+    if (sample) routes.splice(2, 0, sample);
+  } catch (_) { /* Dynamic record discovery is best-effort for local previews. */ }
+}
 
 const browser = spawn(chromePath, [
   '--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
@@ -151,7 +158,7 @@ try {
   await Promise.all([cdp.call('Page.enable'), cdp.call('Runtime.enable'), cdp.call('Network.enable')]);
   const desktop = await runViewport(cdp, 'desktop', 1440, 1000, false);
   const mobile = await runViewport(cdp, 'mobile', 390, 844, true);
-  const endpointChecks = await Promise.all(['/sitemap.xml', '/feed.xml', '/feed.atom', '/feed.json'].map(async (route) => {
+  const endpointChecks = await Promise.all(['/sitemap.xml', '/feed.xml', '/feed.atom', '/feed.json', '/social-card/entity/topic-rapamycin.png'].map(async (route) => {
     const response = await fetch(`${baseUrl}${route}`);
     return { route, status: response.status, contentType: response.headers.get('content-type'), ok: response.ok };
   }));

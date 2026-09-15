@@ -39,6 +39,8 @@ const edgeScripts = [
   'supabase/functions/public-pages/index.ts',
   'supabase/functions/generate-public-briefing/index.ts',
   'supabase/functions/notify-indexnow/index.ts',
+  'supabase/functions/distribute-public-briefing/index.ts',
+  'supabase/functions/social-card/index.ts',
 ];
 
 for (const file of browserScripts) {
@@ -67,6 +69,7 @@ const requiredFiles = [
   'supabase/migrations/20260914000700_publish_project_news.sql',
   'supabase/migrations/20260914000800_multi_provider_members.sql',
   'supabase/migrations/20260915000100_publication_and_discovery.sql',
+  'supabase/migrations/20260915000200_relevance_quality_entities_distribution.sql',
   'supabase/audits/membership-integrity.sql',
   'intelligence-template.html',
   'content-template.html',

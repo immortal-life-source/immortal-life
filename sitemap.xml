@@ -1,40 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://immortal.life/</loc>
+    <loc>https://www.immortal.life/</loc>
     <lastmod>2026-09-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://immortal.life/join</loc>
+    <loc>https://www.immortal.life/join</loc>
     <lastmod>2026-09-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://immortal.life/leaderboard</loc>
+    <loc>https://www.immortal.life/leaderboard</loc>
     <lastmod>2026-09-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-  <url><loc>https://immortal.life/research</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
-  <url><loc>https://immortal.life/trials</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
-  <url><loc>https://immortal.life/topics</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
-  <url><loc>https://immortal.life/regulatory</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
-  <url><loc>https://immortal.life/integrity</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
-  <url><loc>https://immortal.life/evidence-graph</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
-  <url><loc>https://immortal.life/privacy</loc><lastmod>2026-09-14</lastmod><changefreq>monthly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://immortal.life/topics/rapamycin</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://immortal.life/topics/senolytics</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://immortal.life/topics/partial-reprogramming</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://immortal.life/topics/metformin</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://immortal.life/topics/glp-1-therapies</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://immortal.life/topics/exercise</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://immortal.life/topics/caloric-restriction</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://immortal.life/topics/sleep</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://immortal.life/topics/epigenetic-clocks</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://immortal.life/topics/plasma-exchange</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://immortal.life/topics/stem-cells</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://immortal.life/topics/gene-therapy</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.immortal.life/research</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://www.immortal.life/trials</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://www.immortal.life/topics</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://www.immortal.life/regulatory</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://www.immortal.life/integrity</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://www.immortal.life/evidence-graph</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://www.immortal.life/privacy</loc><lastmod>2026-09-14</lastmod><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://www.immortal.life/topics/rapamycin</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.immortal.life/topics/senolytics</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.immortal.life/topics/partial-reprogramming</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.immortal.life/topics/metformin</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.immortal.life/topics/glp-1-therapies</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.immortal.life/topics/exercise</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.immortal.life/topics/caloric-restriction</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.immortal.life/topics/sleep</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.immortal.life/topics/epigenetic-clocks</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.immortal.life/topics/plasma-exchange</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.immortal.life/topics/stem-cells</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.immortal.life/topics/gene-therapy</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
 </urlset>

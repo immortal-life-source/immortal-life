@@ -31,6 +31,10 @@
     graphSection: document.getElementById('graphSection'),
     graph: document.getElementById('evidenceGraph'),
     graphFallback: document.getElementById('graphFallback'),
+    entitiesSection: document.getElementById('entitiesSection'),
+    entityGrid: document.getElementById('entityGrid'),
+    qualitySection: document.getElementById('qualitySection'),
+    qualityGrid: document.getElementById('qualityGrid'),
     sourceSection: document.getElementById('sourceSection'),
     sourceList: document.getElementById('sourceList'),
   };
@@ -65,8 +69,23 @@
   function topicLinks(record, relationName) {
     const relations = Array.isArray(record?.[relationName]) ? record[relationName] : [];
     return relations
+      .filter((relation) => relation?.is_published !== false)
       .map((relation) => relation?.intelligence_topics || relation)
       .filter((topic) => topic && topic.slug && topic.name);
+  }
+
+  function appendQualityExplanation(container, record, relationName) {
+    const details = el('details', 'quality-explanation');
+    const summary = el('summary', '', `Why this matched · ${numberFormatter.format(Number(record.relevance_confidence || 0))}% confidence`);
+    details.append(summary, el('p', '', record.match_explanation || 'Matched automatically using controlled terminology and source metadata.'));
+    const relations = Array.isArray(record?.[relationName]) ? record[relationName].filter((item) => item?.is_published !== false) : [];
+    relations.forEach((relation) => {
+      const topic = relation?.intelligence_topics?.name || relation?.topic_slug || 'Tracked topic';
+      const reasons = Array.isArray(relation?.match_reasons) ? relation.match_reasons.join(' ') : '';
+      details.append(el('p', 'quality-reason', `${topic} · ${Number(relation?.relevance_score || 0)}%${reasons ? ` — ${reasons}` : ''}`));
+    });
+    details.append(el('p', 'quality-signal-note', `Source quality ${Number(record.source_quality_score || 0)}% · freshness ${Number(record.freshness_score || 0)}%. Routing signals only—not medical or evidence-strength ratings.`));
+    container.append(details);
   }
 
   function renderTopics(topics, compact) {
@@ -107,6 +126,7 @@
       topicLinks(record, 'research_item_topics').forEach((topic) => tags.append(link('record-tag', topic.name, `/topics/${encodeURIComponent(topic.slug)}`)));
       if (record.is_open_access) tags.append(el('span', 'record-tag', 'Open access'));
       main.append(tags);
+      appendQualityExplanation(main, record, 'research_item_topics');
 
       const action = el('div', 'record-action');
       action.append(el('span', 'record-status', evidenceLabel(record.evidence_level, record.status)));
@@ -154,6 +174,7 @@
       topicLinks(record, 'clinical_trial_topics').forEach((topic) => tags.append(link('record-tag', topic.name, `/topics/${encodeURIComponent(topic.slug)}`)));
       (record.phases || []).forEach((phase) => tags.append(el('span', 'record-tag', phase.replace(/_/g, ' '))));
       main.append(tags);
+      appendQualityExplanation(main, record, 'clinical_trial_topics');
 
       const action = el('div', 'record-action');
       action.append(el('span', 'record-status', record.overall_status));
@@ -184,6 +205,7 @@
       const tags = el('div', 'record-tags');
       (record.matched_topics || []).forEach((slug) => tags.append(link('record-tag', slug.replace(/-/g, ' '), `/topics/${encodeURIComponent(slug)}`)));
       main.append(tags);
+      appendQualityExplanation(main, record, '');
       const action = el('div', 'record-action');
       action.append(el('span', 'record-status', record.category));
       const source = link('source-link', 'Open official notice', record.source_url);
@@ -207,6 +229,7 @@
       main.append(heading);
       main.append(el('p', '', record.summary));
       if (record.research_items?.title) main.append(el('p', 'integrity-linked', `Indexed record: ${record.research_items.title}`));
+      appendQualityExplanation(main, record, '');
       const action = el('div', 'record-action');
       action.append(el('span', 'record-status record-status--alert', record.event_type));
       const source = link('source-link', 'Open integrity notice', record.source_url);
@@ -287,6 +310,41 @@
     else elements.freshnessText.textContent = 'One or more sources are delayed; existing records remain cited and available.';
   }
 
+  function renderEntities(entities) {
+    elements.entityGrid.replaceChildren();
+    if (!entities.length) elements.entityGrid.append(el('p', 'empty-list', 'Entity generation will follow the next source synchronization.'));
+    entities.forEach((entity) => {
+      const card = link('entity-card', '', `/entities/${encodeURIComponent(entity.kind)}/${encodeURIComponent(entity.slug)}`);
+      card.append(el('span', 'section-index', entity.kind));
+      card.append(el('h3', '', entity.name));
+      card.append(el('p', '', entity.description));
+      card.append(el('strong', 'entity-count', `${numberFormatter.format(Number(entity.record_count || 0))} published records`));
+      elements.entityGrid.append(card);
+    });
+    elements.entitiesSection.hidden = false;
+  }
+
+  function renderQuality(telemetry) {
+    elements.qualityGrid.replaceChildren();
+    const groups = [
+      ['Research published', telemetry?.research?.published],
+      ['Research quarantined', telemetry?.research?.quarantined],
+      ['Research confidence', `${Number(telemetry?.research?.average_confidence || 0)}%`],
+      ['Duplicates suppressed', telemetry?.research?.duplicates_suppressed],
+      ['Trials published', telemetry?.trials?.published],
+      ['Trials quarantined', telemetry?.trials?.quarantined],
+      ['Trial confidence', `${Number(telemetry?.trials?.average_confidence || 0)}%`],
+      ['IndexNow notification', telemetry?.indexing?.succeeded === true ? 'Healthy' : telemetry?.indexing?.succeeded === false ? 'Degraded' : 'Pending'],
+      ['Briefing distribution', telemetry?.distribution?.succeeded === true ? 'Healthy' : telemetry?.distribution?.succeeded === false ? 'Degraded' : 'Pending'],
+    ];
+    groups.forEach(([label, value]) => {
+      const card = el('article', 'quality-stat');
+      card.append(el('span', '', label), el('strong', '', typeof value === 'number' ? numberFormatter.format(value) : value ?? '—'));
+      elements.qualityGrid.append(card);
+    });
+    elements.qualitySection.hidden = false;
+  }
+
   async function request(viewName, limit) {
     const url = new URL(endpoint);
     url.searchParams.set('view', viewName);
@@ -352,6 +410,14 @@
       } else if (view === 'graph') {
         const data = await request('graph', 100);
         renderGraph(data);
+        renderSources(data.sources || []);
+      } else if (view === 'entities') {
+        const data = await request('entities', 100);
+        renderEntities(data.entities || []);
+        renderSources(data.sources || []);
+      } else if (view === 'quality') {
+        const data = await request('quality', 100);
+        renderQuality(data.telemetry || {});
         renderSources(data.sources || []);
       }
       elements.loading.hidden = true;

@@ -57,6 +57,31 @@ Deno.serve(async (req) => {
       .eq('enabled', true)
       .order('name')
 
+    if (view === 'quality') {
+      const [{ data: telemetry, error }, { data: sources, error: sourcesError }] = await Promise.all([
+        supabase.rpc('get_intelligence_quality_telemetry'),
+        sourcesPromise,
+      ])
+      if (error) throw error
+      if (sourcesError) throw sourcesError
+      return response(req, { telemetry: telemetry ?? {}, sources: (sources ?? []).map(publicSourceState) })
+    }
+
+    if (view === 'entities') {
+      const kind = cleanText(url.searchParams.get('kind') ?? '', 30)
+      let entityQuery = supabase
+        .from('intelligence_entities')
+        .select('kind,slug,name,description,record_count,last_seen_at,metadata')
+        .order('record_count', { ascending: false })
+        .order('name')
+        .limit(limit)
+      if (kind && ['topic', 'journal', 'sponsor', 'source'].includes(kind)) entityQuery = entityQuery.eq('kind', kind)
+      const [{ data, error }, { data: sources, error: sourcesError }] = await Promise.all([entityQuery, sourcesPromise])
+      if (error) throw error
+      if (sourcesError) throw sourcesError
+      return response(req, { entities: data ?? [], sources: (sources ?? []).map(publicSourceState) })
+    }
+
     if (view === 'topics') {
       const [{ data: topics, error }, { data: sources, error: sourcesError }] = await Promise.all([
         supabase.rpc('get_intelligence_topic_counts'),
@@ -68,16 +93,16 @@ Deno.serve(async (req) => {
     }
 
     if (view === 'research') {
-      const topicRelation = topic
-        ? 'research_item_topics!inner(topic_slug,intelligence_topics(name,slug))'
-        : 'research_item_topics(topic_slug,intelligence_topics(name,slug))'
+      const topicRelation = 'research_item_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
       let query = supabase
         .from('research_items')
-        .select(`id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,source_url,is_open_access,cited_by_count,editorial_summary,status,${topicRelation}`)
+        .select(`id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,${topicRelation}`)
+        .eq('publication_state', 'published')
+        .eq('research_item_topics.is_published', true)
         .order('published_on', { ascending: false, nullsFirst: false })
         .order('id', { ascending: false })
         .limit(limit)
-      if (topic) query = query.eq('research_item_topics.topic_slug', topic)
+      if (topic) query = query.eq('research_item_topics.topic_slug', topic).eq('research_item_topics.is_published', true)
       const [{ data, error }, { data: sources, error: sourcesError }] = await Promise.all([query, sourcesPromise])
       if (error) throw error
       if (sourcesError) throw sourcesError
@@ -85,16 +110,16 @@ Deno.serve(async (req) => {
     }
 
     if (view === 'trials') {
-      const topicRelation = topic
-        ? 'clinical_trial_topics!inner(topic_slug,intelligence_topics(name,slug))'
-        : 'clinical_trial_topics(topic_slug,intelligence_topics(name,slug))'
+      const topicRelation = 'clinical_trial_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
       let query = supabase
         .from('clinical_trials')
-        .select(`id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,source_url,editorial_summary,${topicRelation}`)
+        .select(`id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,source_url,editorial_summary,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,${topicRelation}`)
+        .eq('publication_state', 'published')
+        .eq('clinical_trial_topics.is_published', true)
         .order('last_update_date', { ascending: false, nullsFirst: false })
         .order('id', { ascending: false })
         .limit(limit)
-      if (topic) query = query.eq('clinical_trial_topics.topic_slug', topic)
+      if (topic) query = query.eq('clinical_trial_topics.topic_slug', topic).eq('clinical_trial_topics.is_published', true)
       const [{ data, error }, { data: sources, error: sourcesError }] = await Promise.all([query, sourcesPromise])
       if (error) throw error
       if (sourcesError) throw sourcesError
@@ -104,7 +129,8 @@ Deno.serve(async (req) => {
     if (view === 'integrity') {
       let query = supabase
         .from('research_integrity_events')
-        .select('id,event_type,title,summary,source_url,announced_on,detected_at,research_items(id,title,doi,status,research_item_topics(topic_slug,intelligence_topics(name,slug)))')
+        .select('id,event_type,title,summary,source_url,announced_on,detected_at,relevance_confidence,source_quality_score,freshness_score,match_explanation,research_items(id,title,doi,status,research_item_topics(topic_slug,relevance_score,is_published,intelligence_topics(name,slug)))')
+        .eq('publication_state', 'published')
         .order('detected_at', { ascending: false })
         .limit(limit)
       if (topic) query = query.eq('research_items.research_item_topics.topic_slug', topic)
@@ -117,7 +143,8 @@ Deno.serve(async (req) => {
     if (view === 'regulatory') {
       let query = supabase
         .from('regulatory_events')
-        .select('id,jurisdiction,category,title,summary,published_at,source_url,matched_topics,content_sources(name)')
+        .select('id,jurisdiction,category,title,summary,published_at,source_url,matched_topics,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name)')
+        .eq('publication_state', 'published')
         .order('published_at', { ascending: false, nullsFirst: false })
         .order('id', { ascending: false })
         .limit(limit)
@@ -131,10 +158,10 @@ Deno.serve(async (req) => {
     if (view === 'graph') {
       const [topicsResult, researchLinks, trialLinks, regulatoryResult, integrityResult, sourcesResult] = await Promise.all([
         supabase.rpc('get_intelligence_topic_counts'),
-        supabase.from('research_item_topics').select('research_item_id,topic_slug').limit(5000),
-        supabase.from('clinical_trial_topics').select('clinical_trial_id,topic_slug').limit(5000),
-        supabase.from('regulatory_events').select('matched_topics').limit(1000),
-        supabase.from('research_integrity_events').select('research_items(research_item_topics(topic_slug))').limit(1000),
+        supabase.from('research_item_topics').select('research_item_id,topic_slug,research_items!inner(publication_state)').eq('is_published', true).eq('research_items.publication_state', 'published').limit(5000),
+        supabase.from('clinical_trial_topics').select('clinical_trial_id,topic_slug,clinical_trials!inner(publication_state)').eq('is_published', true).eq('clinical_trials.publication_state', 'published').limit(5000),
+        supabase.from('regulatory_events').select('matched_topics').eq('publication_state', 'published').limit(1000),
+        supabase.from('research_integrity_events').select('research_items(research_item_topics(topic_slug,is_published))').eq('publication_state', 'published').limit(1000),
         sourcesPromise,
       ])
       for (const result of [topicsResult, researchLinks, trialLinks, regulatoryResult, integrityResult, sourcesResult]) if (result.error) throw result.error
@@ -157,7 +184,7 @@ Deno.serve(async (req) => {
       const integrityCounts = new Map<string, number>()
       for (const item of integrityResult.data ?? []) {
         const relations = item.research_items?.research_item_topics ?? []
-        for (const relation of relations) integrityCounts.set(relation.topic_slug, (integrityCounts.get(relation.topic_slug) ?? 0) + 1)
+        for (const relation of relations) if (relation.is_published) integrityCounts.set(relation.topic_slug, (integrityCounts.get(relation.topic_slug) ?? 0) + 1)
       }
       for (const [slug, weight] of integrityCounts) links.push({ source: `topic:${slug}`, target: 'layer:integrity', kind: 'integrity', weight })
 
@@ -185,19 +212,23 @@ Deno.serve(async (req) => {
       supabase.rpc('get_intelligence_topic_counts'),
       supabase
         .from('research_items')
-        .select('id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,source_url,is_open_access,cited_by_count,editorial_summary,status,research_item_topics(topic_slug,intelligence_topics(name,slug))')
+        .select('id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,research_item_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))')
+        .eq('publication_state', 'published')
+        .eq('research_item_topics.is_published', true)
         .order('published_on', { ascending: false, nullsFirst: false })
         .order('id', { ascending: false })
         .limit(Math.min(limit, 12)),
       supabase
         .from('clinical_trials')
-        .select('id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,source_url,editorial_summary,clinical_trial_topics(topic_slug,intelligence_topics(name,slug))')
+        .select('id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,source_url,editorial_summary,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,clinical_trial_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))')
+        .eq('publication_state', 'published')
+        .eq('clinical_trial_topics.is_published', true)
         .order('last_update_date', { ascending: false, nullsFirst: false })
         .order('id', { ascending: false })
         .limit(Math.min(limit, 12)),
       sourcesPromise,
-      supabase.from('research_items').select('*', { count: 'exact', head: true }),
-      supabase.from('clinical_trials').select('*', { count: 'exact', head: true }),
+      supabase.from('research_items').select('*', { count: 'exact', head: true }).eq('publication_state', 'published'),
+      supabase.from('clinical_trials').select('*', { count: 'exact', head: true }).eq('publication_state', 'published'),
     ])
     for (const result of [topicsResult, researchResult, trialsResult, sourcesResult, researchCount, trialsCount]) {
       if (result.error) throw result.error
