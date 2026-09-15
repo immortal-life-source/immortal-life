@@ -3,6 +3,28 @@ import { cleanText } from '../_shared/intelligence.ts'
 import { corsHeaders, serviceRoleKey } from '../_shared/security.ts'
 
 const PUBLIC_METHODS = 'GET, OPTIONS'
+const STRICT_TITLE_CONTEXT_TOPICS = new Set(['glp-1-therapies', 'exercise', 'caloric-restriction', 'sleep', 'plasma-exchange', 'stem-cells', 'gene-therapy'])
+
+function publicRelations(record: any, field: string): any[] {
+  return (record?.[field] ?? []).filter((relation: any) => {
+    if (relation?.is_published === false) return false
+    if (!STRICT_TITLE_CONTEXT_TOPICS.has(relation?.topic_slug)) return true
+    const fields = Array.isArray(relation?.matched_fields) ? relation.matched_fields : []
+    return fields.includes('title') && fields.includes('title context')
+  })
+}
+
+function publicRecords(rows: any[] | null, field: string): any[] {
+  return (rows ?? []).map((record: any) => ({ ...record, [field]: publicRelations(record, field) })).filter((record: any) => record[field].length > 0)
+}
+
+function publicLinkRows(rows: any[] | null): any[] {
+  return (rows ?? []).filter((row: any) => {
+    if (!STRICT_TITLE_CONTEXT_TOPICS.has(row?.topic_slug)) return true
+    const fields = Array.isArray(row?.matched_fields) ? row.matched_fields : []
+    return fields.includes('title') && fields.includes('title context')
+  })
+}
 
 function response(req: Request, body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -172,7 +194,7 @@ Deno.serve(async (req) => {
       const [{ data, error }, { data: sources, error: sourcesError }] = await Promise.all([query, sourcesPromise])
       if (error) throw error
       if (sourcesError) throw sourcesError
-      return response(req, { research: data ?? [], sources: (sources ?? []).map(publicSourceState) })
+      return response(req, { research: publicRecords(data, 'research_item_topics'), sources: (sources ?? []).map(publicSourceState) })
     }
 
     if (view === 'trials') {
@@ -189,7 +211,7 @@ Deno.serve(async (req) => {
       const [{ data, error }, { data: sources, error: sourcesError }] = await Promise.all([query, sourcesPromise])
       if (error) throw error
       if (sourcesError) throw sourcesError
-      return response(req, { trials: data ?? [], sources: (sources ?? []).map(publicSourceState) })
+      return response(req, { trials: publicRecords(data, 'clinical_trial_topics'), sources: (sources ?? []).map(publicSourceState) })
     }
 
     if (view === 'integrity') {
@@ -224,25 +246,31 @@ Deno.serve(async (req) => {
     if (view === 'graph') {
       const [topicsResult, researchLinks, trialLinks, regulatoryResult, integrityResult, sourcesResult] = await Promise.all([
         supabase.rpc('get_intelligence_topic_counts'),
-        supabase.from('research_item_topics').select('research_item_id,topic_slug,research_items!inner(publication_state)').eq('is_published', true).eq('research_items.publication_state', 'published').limit(5000),
-        supabase.from('clinical_trial_topics').select('clinical_trial_id,topic_slug,clinical_trials!inner(publication_state)').eq('is_published', true).eq('clinical_trials.publication_state', 'published').limit(5000),
+        supabase.from('research_item_topics').select('research_item_id,topic_slug,matched_fields,research_items!inner(publication_state)').eq('is_published', true).eq('research_items.publication_state', 'published').limit(5000),
+        supabase.from('clinical_trial_topics').select('clinical_trial_id,topic_slug,matched_fields,clinical_trials!inner(publication_state)').eq('is_published', true).eq('clinical_trials.publication_state', 'published').limit(5000),
         supabase.from('regulatory_events').select('matched_topics').eq('publication_state', 'published').limit(1000),
         supabase.from('research_integrity_events').select('research_items(research_item_topics(topic_slug,is_published))').eq('publication_state', 'published').limit(1000),
         sourcesPromise,
       ])
       for (const result of [topicsResult, researchLinks, trialLinks, regulatoryResult, integrityResult, sourcesResult]) if (result.error) throw result.error
       const topics = topicsResult.data ?? []
-      const nodes = topics.map((item: any) => ({ id: `topic:${item.slug}`, slug: item.slug, label: item.name, kind: 'topic', weight: Number(item.research_count) + Number(item.trial_count) }))
+      const visibleResearchLinks = publicLinkRows(researchLinks.data)
+      const visibleTrialLinks = publicLinkRows(trialLinks.data)
+      const researchTopicCounts = new Map<string, number>()
+      const trialTopicCounts = new Map<string, number>()
+      for (const row of visibleResearchLinks) researchTopicCounts.set(row.topic_slug, (researchTopicCounts.get(row.topic_slug) ?? 0) + 1)
+      for (const row of visibleTrialLinks) trialTopicCounts.set(row.topic_slug, (trialTopicCounts.get(row.topic_slug) ?? 0) + 1)
+      const nodes = topics.map((item: any) => ({ id: `topic:${item.slug}`, slug: item.slug, label: item.name, kind: 'topic', weight: (researchTopicCounts.get(item.slug) ?? 0) + (trialTopicCounts.get(item.slug) ?? 0) }))
       nodes.push(
-        { id: 'layer:research', label: 'Research', kind: 'evidence', weight: researchLinks.data?.length ?? 0 },
-        { id: 'layer:trials', label: 'Trials', kind: 'evidence', weight: trialLinks.data?.length ?? 0 },
+        { id: 'layer:research', label: 'Research', kind: 'evidence', weight: visibleResearchLinks.length },
+        { id: 'layer:trials', label: 'Trials', kind: 'evidence', weight: visibleTrialLinks.length },
         { id: 'layer:regulatory', label: 'Regulatory', kind: 'evidence', weight: regulatoryResult.data?.length ?? 0 },
         { id: 'layer:integrity', label: 'Integrity', kind: 'evidence', weight: integrityResult.data?.length ?? 0 },
       )
       const links: Array<{ source: string; target: string; kind: string; weight: number }> = []
       for (const item of topics) {
-        links.push({ source: `topic:${item.slug}`, target: 'layer:research', kind: 'research', weight: Number(item.research_count) })
-        links.push({ source: `topic:${item.slug}`, target: 'layer:trials', kind: 'trial', weight: Number(item.trial_count) })
+        links.push({ source: `topic:${item.slug}`, target: 'layer:research', kind: 'research', weight: researchTopicCounts.get(item.slug) ?? 0 })
+        links.push({ source: `topic:${item.slug}`, target: 'layer:trials', kind: 'trial', weight: trialTopicCounts.get(item.slug) ?? 0 })
       }
       const regulatoryCounts = new Map<string, number>()
       for (const item of regulatoryResult.data ?? []) for (const slug of item.matched_topics ?? []) regulatoryCounts.set(slug, (regulatoryCounts.get(slug) ?? 0) + 1)
@@ -255,7 +283,7 @@ Deno.serve(async (req) => {
       for (const [slug, weight] of integrityCounts) links.push({ source: `topic:${slug}`, target: 'layer:integrity', kind: 'integrity', weight })
 
       const memberships = new Map<string, Set<string>>()
-      for (const row of [...(researchLinks.data ?? []).map((item: any) => ({ key: `r:${item.research_item_id}`, topic: item.topic_slug })), ...(trialLinks.data ?? []).map((item: any) => ({ key: `t:${item.clinical_trial_id}`, topic: item.topic_slug }))]) {
+      for (const row of [...visibleResearchLinks.map((item: any) => ({ key: `r:${item.research_item_id}`, topic: item.topic_slug })), ...visibleTrialLinks.map((item: any) => ({ key: `t:${item.clinical_trial_id}`, topic: item.topic_slug }))]) {
         if (!memberships.has(row.key)) memberships.set(row.key, new Set())
         memberships.get(row.key)?.add(row.topic)
       }
@@ -309,8 +337,8 @@ Deno.serve(async (req) => {
       },
       sources: (sourcesResult.data ?? []).map(publicSourceState),
       topics: topicsResult.data ?? [],
-      research: researchResult.data ?? [],
-      trials: trialsResult.data ?? [],
+      research: publicRecords(researchResult.data, 'research_item_topics'),
+      trials: publicRecords(trialsResult.data, 'clinical_trial_topics'),
       medical_notice: 'Research information only. Not medical advice, diagnosis, or treatment guidance.',
     })
   } catch (error) {

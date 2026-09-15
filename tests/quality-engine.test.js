@@ -51,6 +51,16 @@ test('broad topics cannot publish from source tags alone', async () => {
   assert.equal(metadataOnly.publish, false);
   assert.ok(metadataOnly.relevanceScore < 60);
 
+  const summaryOnly = assessTopicMatch('exercise', {
+    title: 'Exercise during intensive treatment in pediatric oncology',
+    abstract: 'The study mentions cellular ageing as a secondary laboratory measure.',
+    controlledTerms: ['exercise'],
+    studyType: 'clinical trial',
+    sourceId: 'clinicaltrials-gov',
+  });
+  assert.equal(summaryOnly.publish, false);
+  assert.ok(summaryOnly.relevanceScore < 60);
+
   const explicit = assessTopicMatch('exercise', {
     title: 'Exercise for healthy ageing and frailty prevention',
     abstract: 'Physical activity in older adults with frailty.',

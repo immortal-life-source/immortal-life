@@ -42,7 +42,8 @@ const TOPIC_TERMS: Record<string, { anchors: string[]; requiresAgeingContext?: b
 
 const AGEING_TERMS = [
   'aging', 'ageing', 'longevity', 'lifespan', 'healthspan', 'rejuvenation', 'senescence',
-  'frailty', 'biological age', 'age-related', 'age associated', 'geroscience',
+  'frailty', 'frail', 'biological age', 'age-related', 'age associated', 'geroscience',
+  'older adult', 'older people', 'elderly', 'centenarian', 'geriatric', 'progeria',
 ]
 
 function normaliseForMatch(value: unknown): string {
@@ -125,8 +126,8 @@ export function assessTopicMatch(topicSlug: string, input: MatchInput): QualityA
   const titleContext = containsAny(title, AGEING_TERMS)
   const abstractContext = containsAny(abstract, AGEING_TERMS)
   const controlledContext = containsAny(controlled, AGEING_TERMS)
-  const hasExplicitContext = titleContext.length + abstractContext.length > 0
-  const hasExplicitAnchor = titleAnchors.length + abstractAnchors.length > 0
+  const hasTitleContext = titleContext.length > 0
+  const hasTitleAnchor = titleAnchors.length > 0
   if (titleContext.length) {
     relevanceScore += 20
     matchedFields.push('title context')
@@ -147,9 +148,9 @@ export function assessTopicMatch(topicSlug: string, input: MatchInput): QualityA
     reasons.push(`Study type is explicitly identified as ${cleanText(input.studyType, 80)}.`)
   }
   if (matchedFields.filter((field) => ['title', 'abstract', 'controlled terminology'].includes(field)).length >= 2) relevanceScore += 8
-  if (definition.requiresAgeingContext && (!hasExplicitContext || !hasExplicitAnchor)) {
+  if (definition.requiresAgeingContext && (!hasTitleContext || !hasTitleAnchor)) {
     relevanceScore = Math.min(relevanceScore, 45)
-    reasons.push('A broad topic needs both a topic term and ageing, longevity, healthspan, or frailty context in the title or summary; source tags alone are not enough.')
+    reasons.push('A broad topic needs both its topic term and clear ageing, longevity, healthspan, older-adult, or frailty context in the title; summaries and source tags alone are not enough.')
   }
   if (!titleAnchors.length && !abstractAnchors.length && !controlledAnchors.length) {
     relevanceScore = 0

@@ -3,6 +3,16 @@ import { serviceRoleKey } from '../_shared/security.ts'
 
 const SITE = 'https://www.immortal.life'
 const DISCLOSURE = 'Generated automatically from cited source metadata. No scientist, clinician, researcher, editor, or human reviewer evaluates this publication before release.'
+const STRICT_TITLE_CONTEXT_TOPICS = new Set(['glp-1-therapies', 'exercise', 'caloric-restriction', 'sleep', 'plasma-exchange', 'stem-cells', 'gene-therapy'])
+
+function hasPublicTopicRelation(record: any, field: string, requestedTopic = ''): boolean {
+  return (record?.[field] ?? []).some((relation: any) => {
+    if (relation?.is_published === false || (requestedTopic && relation?.topic_slug !== requestedTopic)) return false
+    if (!STRICT_TITLE_CONTEXT_TOPICS.has(relation?.topic_slug)) return true
+    const fields = Array.isArray(relation?.matched_fields) ? relation.matched_fields : []
+    return fields.includes('title') && fields.includes('title context')
+  })
+}
 
 function escapeHtml(value: unknown): string {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char] ?? char))
@@ -269,8 +279,8 @@ async function entityPage(supabase: any, kind: string, slug: string): Promise<st
   let researchQuery = supabase.from('research_items').select('id,title,published_on,relevance_confidence').eq('publication_state', 'published').limit(50)
   let trialQuery = supabase.from('clinical_trials').select('id,title,last_update_date,relevance_confidence').eq('publication_state', 'published').limit(50)
   if (kind === 'topic') {
-    researchQuery = supabase.from('research_items').select('id,title,published_on,relevance_confidence,research_item_topics!inner(topic_slug,is_published)').eq('publication_state', 'published').eq('research_item_topics.topic_slug', slug).eq('research_item_topics.is_published', true).limit(50)
-    trialQuery = supabase.from('clinical_trials').select('id,title,last_update_date,relevance_confidence,clinical_trial_topics!inner(topic_slug,is_published)').eq('publication_state', 'published').eq('clinical_trial_topics.topic_slug', slug).eq('clinical_trial_topics.is_published', true).limit(50)
+    researchQuery = supabase.from('research_items').select('id,title,published_on,relevance_confidence,research_item_topics!inner(topic_slug,matched_fields,is_published)').eq('publication_state', 'published').eq('research_item_topics.topic_slug', slug).eq('research_item_topics.is_published', true).limit(50)
+    trialQuery = supabase.from('clinical_trials').select('id,title,last_update_date,relevance_confidence,clinical_trial_topics!inner(topic_slug,matched_fields,is_published)').eq('publication_state', 'published').eq('clinical_trial_topics.topic_slug', slug).eq('clinical_trial_topics.is_published', true).limit(50)
   } else if (kind === 'journal') {
     researchQuery = researchQuery.eq('journal', entity.name)
     trialQuery = trialQuery.eq('id', -1)
@@ -295,7 +305,9 @@ async function entityPage(supabase: any, kind: string, slug: string): Promise<st
   if (trials.error) throw trials.error
   const canonical = `${SITE}/entities/${kind}/${slug}`
   const kindLabels: Record<string, string> = { topic: 'Topic', journal: 'Journal', sponsor: 'Trial sponsor', source: 'Scientific source' }
-  const body = `<section class="intel-section entity-detail"><div class="quality-stat"><span>Type</span><strong>${escapeHtml(kindLabels[kind] || kind)}</strong></div><div class="quality-stat"><span>Records in the index</span><strong>${Number(entity.record_count ?? 0)}</strong></div><h2>Research</h2>${entityRecordList(research.data ?? [], 'research')}<h2>Clinical trials</h2>${entityRecordList(trials.data ?? [], 'trials')}<aside class="automation-notice"><strong>Built automatically from source records</strong><p>Names and links come directly from source information. No human reviewer merges identities or evaluates individual records.</p></aside></section>`
+  const visibleResearch = kind === 'topic' ? (research.data ?? []).filter((item: any) => hasPublicTopicRelation(item, 'research_item_topics', slug)) : (research.data ?? [])
+  const visibleTrials = kind === 'topic' ? (trials.data ?? []).filter((item: any) => hasPublicTopicRelation(item, 'clinical_trial_topics', slug)) : (trials.data ?? [])
+  const body = `<section class="intel-section entity-detail"><div class="quality-stat"><span>Type</span><strong>${escapeHtml(kindLabels[kind] || kind)}</strong></div><div class="quality-stat"><span>Records shown below</span><strong>${visibleResearch.length + visibleTrials.length}</strong></div><h2>Research</h2>${entityRecordList(visibleResearch, 'research')}<h2>Clinical trials</h2>${entityRecordList(visibleTrials, 'trials')}<aside class="automation-notice"><strong>Built automatically from source records</strong><p>Names and links come directly from source information. No human reviewer merges identities or evaluates individual records.</p></aside></section>`
   return pageShell({ title: `${entity.name} — immortal.life entity`, description: entity.description, canonical, kicker: kindLabels[kind] || 'Evidence directory', heading: entity.name, body, socialImage: `${SITE}/social-card/entity/${kind}-${slug}.png` })
 }
 
@@ -316,12 +328,12 @@ function compactRecordList(items: any[], kind: string, empty: string): string {
 async function discoveryPage(supabase: any, view: string, countrySlug = ''): Promise<string> {
   const recruitingStatuses = ['Recruiting', 'Not Yet Recruiting', 'Enrolling by Invitation', 'Active Not Recruiting']
   const [trialsResult, regulatoryResult, integrityResult] = await Promise.all([
-    supabase.from('clinical_trials').select('id,title,overall_status,last_update_date,countries,sponsor,relevance_confidence').eq('publication_state', 'published').in('overall_status', recruitingStatuses).order('last_update_date', { ascending: false, nullsFirst: false }).limit(1000),
+    supabase.from('clinical_trials').select('id,title,overall_status,last_update_date,countries,sponsor,relevance_confidence,clinical_trial_topics(topic_slug,matched_fields,is_published)').eq('publication_state', 'published').in('overall_status', recruitingStatuses).order('last_update_date', { ascending: false, nullsFirst: false }).limit(1000),
     supabase.from('regulatory_events').select('id,title,jurisdiction,category,published_at,relevance_confidence').eq('publication_state', 'published').order('published_at', { ascending: false, nullsFirst: false }).limit(300),
     supabase.from('research_integrity_events').select('id,title,event_type,announced_on,detected_at').eq('publication_state', 'published').order('detected_at', { ascending: false }).limit(200),
   ])
   for (const result of [trialsResult, regulatoryResult, integrityResult]) if (result.error) throw result.error
-  const trials = trialsResult.data ?? []
+  const trials = (trialsResult.data ?? []).filter((item: any) => hasPublicTopicRelation(item, 'clinical_trial_topics'))
   const regulatory = regulatoryResult.data ?? []
   const integrity = integrityResult.data ?? []
   const countries = new Map<string, { name: string; count: number }>()
