@@ -108,7 +108,12 @@
       card.append(el('h3', '', topic.name));
       card.append(el('p', '', topic.description));
       const counts = el('span', 'topic-counts');
-      counts.textContent = `${numberFormatter.format(Number(topic.research_count || 0))} papers · ${numberFormatter.format(Number(topic.trial_count || 0))} trials`;
+      const researchCount = Number(topic.research_count || 0);
+      const trialCount = Number(topic.trial_count || 0);
+      const countParts = [];
+      if (researchCount > 0) countParts.push(`${numberFormatter.format(researchCount)} ${researchCount === 1 ? 'paper' : 'papers'}`);
+      if (trialCount > 0) countParts.push(`${numberFormatter.format(trialCount)} ${trialCount === 1 ? 'trial' : 'trials'}`);
+      counts.textContent = countParts.join(' · ') || 'Index building';
       card.append(counts);
       elements.topicGrid.append(card);
     });
@@ -258,7 +263,7 @@
       'layer:research': { x: 165, y: 140 }, 'layer:trials': { x: 1035, y: 140 },
       'layer:regulatory': { x: 1035, y: 580 }, 'layer:integrity': { x: 165, y: 580 },
     };
-    const topicNodes = (data.nodes || []).filter((node) => node.kind === 'topic');
+    const topicNodes = (data.nodes || []).filter((node) => node.kind === 'topic' && Number(node.weight || 0) > 0);
     const positions = {};
     topicNodes.forEach((node, index) => {
       const angle = -Math.PI / 2 + index * Math.PI * 2 / Math.max(topicNodes.length, 1);
@@ -275,7 +280,7 @@
       line.setAttribute('stroke-width', String(Math.min(8, 0.8 + Math.log2(edge.weight + 1))));
       svg.append(line);
     });
-    (data.nodes || []).forEach((node) => {
+    (data.nodes || []).filter((node) => Number(node.weight || 0) > 0).forEach((node) => {
       const point = positions[node.id]; if (!point) return;
       const group = document.createElementNS(ns, node.kind === 'topic' ? 'a' : 'g');
       if (node.kind === 'topic') group.setAttribute('href', `/topics/${encodeURIComponent(node.slug)}`);
@@ -481,11 +486,11 @@
     const groups = [
       ['Research published', telemetry?.research?.published],
       ['Research quarantined', telemetry?.research?.quarantined],
-      ['Research confidence', `${Number(telemetry?.research?.average_confidence || 0)}%`],
+      ['Research confidence', Number(telemetry?.research?.average_confidence || 0) > 0 ? `${Number(telemetry.research.average_confidence)}%` : 'Pending'],
       ['Duplicates suppressed', telemetry?.research?.duplicates_suppressed],
       ['Trials published', telemetry?.trials?.published],
       ['Trials quarantined', telemetry?.trials?.quarantined],
-      ['Trial confidence', `${Number(telemetry?.trials?.average_confidence || 0)}%`],
+      ['Trial confidence', Number(telemetry?.trials?.average_confidence || 0) > 0 ? `${Number(telemetry.trials.average_confidence)}%` : 'Pending'],
       ['IndexNow notification', telemetry?.indexing?.succeeded === true ? 'Healthy' : telemetry?.indexing?.succeeded === false ? 'Degraded' : 'Pending'],
       ['Briefing distribution', telemetry?.distribution?.succeeded === true ? 'Healthy' : telemetry?.distribution?.succeeded === false ? 'Degraded' : 'Pending'],
       ['Search impressions · 28d', telemetry?.search?.last_imported_at ? telemetry.search.impressions : 'Connecting'],
@@ -495,7 +500,8 @@
     ];
     groups.forEach(([label, value]) => {
       const card = el('article', 'quality-stat');
-      card.append(el('span', '', label), el('strong', '', typeof value === 'number' ? numberFormatter.format(value) : value ?? '—'));
+      const displayValue = typeof value === 'number' ? (value === 0 ? 'None' : numberFormatter.format(value)) : value ?? 'Pending';
+      card.append(el('span', '', label), el('strong', '', displayValue));
       elements.qualityGrid.append(card);
     });
     elements.qualitySection.hidden = false;

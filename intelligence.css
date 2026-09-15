@@ -43,9 +43,9 @@ button { font: inherit; }
 .intel-nav a:hover, .intel-nav a[aria-current="page"] { color: var(--gold); }
 
 main { min-height: 70vh; }
-.intel-hero { padding: clamp(58px, 7vw, 96px) clamp(22px, 8vw, 120px) clamp(48px, 6vw, 78px); border-bottom: 1px solid var(--border); }
+.intel-hero { padding: clamp(46px, 5vw, 68px) clamp(22px, 8vw, 120px) clamp(40px, 4.5vw, 60px); border-bottom: 1px solid var(--border); }
 .intel-kicker, .section-index { color: var(--gold); font-size: 10px; letter-spacing: .22em; text-transform: uppercase; }
-.intel-hero h1 { margin: 20px 0 22px; max-width: 1050px; font: 300 clamp(48px, 7.2vw, 96px)/.96 var(--serif); letter-spacing: -.035em; text-wrap: balance; }
+.intel-hero h1 { margin: 18px 0 20px; max-width: 1050px; font: 300 clamp(46px, 6vw, 78px)/.98 var(--serif); letter-spacing: -.03em; text-wrap: balance; }
 .intel-lede { max-width: 720px; color: var(--muted); font-size: clamp(15px, 1.6vw, 19px); line-height: 1.75; }
 .freshness { display: inline-flex; align-items: center; gap: 10px; margin-top: 30px; color: var(--muted); font-size: 11px; letter-spacing: .06em; }
 .freshness-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warning); }
