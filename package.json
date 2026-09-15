@@ -6,7 +6,8 @@
   "scripts": {
     "build": "node build.js",
     "check": "node scripts/check.js",
-    "test": "node --experimental-strip-types --test tests/*.test.js && node scripts/check.js"
+    "test": "node --experimental-strip-types --test tests/*.test.js && node scripts/check.js",
+    "uat": "node scripts/uat.mjs"
   },
   "engines": {
     "node": ">=22"

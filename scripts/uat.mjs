@@ -1,0 +1,163 @@
+import { spawn } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+const baseUrl = process.argv[2] || 'https://www.immortal.life';
+const chromePath = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const port = 9334;
+const profile = mkdtempSync(join(tmpdir(), 'immortal-life-uat-'));
+const artifacts = join(tmpdir(), 'immortal-life-uat-artifacts');
+mkdirSync(artifacts, { recursive: true });
+
+const routes = [
+  '/', '/research', '/research/2872', '/trials', '/topics', '/topics/rapamycin',
+  '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/methodology',
+  '/automation', '/publication-policy', '/corrections', '/data', '/join',
+  '/auth/x', '/auth/linkedin', '/leaderboard', '/privacy',
+];
+
+const browser = spawn(chromePath, [
+  '--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
+  '--no-first-run', '--disable-gpu', '--hide-scrollbars', 'about:blank',
+], { stdio: 'ignore', windowsHide: true });
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function retry(fn, attempts = 40) {
+  let lastError;
+  for (let index = 0; index < attempts; index += 1) {
+    try { return await fn(); } catch (error) { lastError = error; await sleep(125); }
+  }
+  throw lastError;
+}
+
+class Cdp {
+  constructor(url) {
+    this.id = 0;
+    this.pending = new Map();
+    this.events = [];
+    this.socket = new WebSocket(url);
+  }
+  async open() {
+    await new Promise((resolve, reject) => {
+      this.socket.addEventListener('open', resolve, { once: true });
+      this.socket.addEventListener('error', reject, { once: true });
+    });
+    this.socket.addEventListener('message', (event) => {
+      const message = JSON.parse(event.data);
+      if (message.id) {
+        const pending = this.pending.get(message.id);
+        if (!pending) return;
+        this.pending.delete(message.id);
+        if (message.error) pending.reject(new Error(message.error.message));
+        else pending.resolve(message.result);
+      } else {
+        this.events.push(message);
+      }
+    });
+  }
+  call(method, params = {}) {
+    const id = ++this.id;
+    return new Promise((resolve, reject) => {
+      this.pending.set(id, { resolve, reject });
+      this.socket.send(JSON.stringify({ id, method, params }));
+    });
+  }
+  close() { this.socket.close(); }
+}
+
+async function evaluate(cdp, expression) {
+  const result = await cdp.call('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
+  if (result.exceptionDetails) throw new Error(result.exceptionDetails.text || 'Browser evaluation failed');
+  return result.result.value;
+}
+
+async function waitForReady(cdp) {
+  await retry(async () => {
+    const ready = await evaluate(cdp, 'document.readyState === "complete"');
+    if (!ready) throw new Error('not ready');
+  });
+  await sleep(1700);
+}
+
+async function capture(cdp, name) {
+  const shot = await cdp.call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+  const target = join(artifacts, name);
+  writeFileSync(target, Buffer.from(shot.data, 'base64'));
+  return target;
+}
+
+async function runViewport(cdp, profileName, width, height, mobile) {
+  await cdp.call('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: mobile ? 2 : 1, mobile });
+  const results = [];
+  for (const route of routes) {
+    const eventStart = cdp.events.length;
+    await cdp.call('Page.navigate', { url: `${baseUrl}${route}` });
+    await waitForReady(cdp);
+    const state = await evaluate(cdp, `(() => ({
+      url: location.href,
+      title: document.title,
+      h1: Boolean(document.querySelector('h1')),
+      bodyText: (document.body?.innerText || '').trim().length,
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      brokenImages: [...document.images].filter(img => img.complete && img.naturalWidth === 0).map(img => img.src),
+      logoLoaded: [...document.images].filter(img => img.src.includes('linkedin-app-logo.png')).every(img => img.complete && img.naturalWidth > 0),
+      menuButtonVisible: (() => { const el = document.querySelector('.mobile-nav-toggle'); return el ? getComputedStyle(el).display !== 'none' : null; })(),
+      menuVisible: (() => { const el = document.getElementById('primaryNav'); return el ? getComputedStyle(el).display !== 'none' : null; })()
+    }))()`);
+    const recentEvents = cdp.events.slice(eventStart);
+    const exceptions = recentEvents.filter((event) => event.method === 'Runtime.exceptionThrown').map((event) => event.params?.exceptionDetails?.text || 'runtime exception');
+    const consoleErrors = recentEvents.filter((event) => event.method === 'Runtime.consoleAPICalled' && event.params?.type === 'error').map((event) => event.params?.args?.map((arg) => arg.value || arg.description).join(' ') || 'console error');
+    const failures = [];
+    if (!state.title) failures.push('missing title');
+    if (!state.h1) failures.push('missing h1');
+    if (state.bodyText < 80) failures.push('insufficient visible content');
+    if (state.overflow > 2) failures.push(`horizontal overflow ${state.overflow}px`);
+    if (state.brokenImages.length) failures.push(`broken images: ${state.brokenImages.join(', ')}`);
+    if (!state.logoLoaded) failures.push('brand mark failed to load');
+    if (route === '/' && mobile && state.menuButtonVisible !== true) failures.push('mobile menu button hidden');
+    if (route === '/' && !mobile && state.menuButtonVisible !== false) failures.push('desktop menu button visible');
+    failures.push(...exceptions, ...consoleErrors);
+    results.push({ profile: profileName, route, resolvedUrl: state.url, failures });
+
+    if (route === '/') {
+      if (mobile) {
+        const menu = await evaluate(cdp, `(() => { const button = document.querySelector('.mobile-nav-toggle'); button?.click(); const nav = document.getElementById('primaryNav'); return { expanded: button?.getAttribute('aria-expanded'), visible: nav ? getComputedStyle(nav).display !== 'none' : false, links: nav ? [...nav.querySelectorAll('a')].filter(a => { const r=a.getBoundingClientRect(); return r.width >= 1 && r.height >= 40; }).length : 0 }; })()`);
+        if (menu.expanded !== 'true' || !menu.visible || menu.links < 8) results.at(-1).failures.push('mobile menu interaction failed');
+        await capture(cdp, 'mobile-home-menu.png');
+      } else {
+        await capture(cdp, 'desktop-home.png');
+      }
+    }
+  }
+  return results;
+}
+
+let cdp;
+try {
+  const targets = await retry(async () => {
+    const response = await fetch(`http://127.0.0.1:${port}/json/list`);
+    if (!response.ok) throw new Error(`CDP returned ${response.status}`);
+    return response.json();
+  });
+  const page = targets.find((target) => target.type === 'page');
+  if (!page) throw new Error('No headless Chrome page target');
+  cdp = new Cdp(page.webSocketDebuggerUrl);
+  await cdp.open();
+  await Promise.all([cdp.call('Page.enable'), cdp.call('Runtime.enable'), cdp.call('Network.enable')]);
+  const desktop = await runViewport(cdp, 'desktop', 1440, 1000, false);
+  const mobile = await runViewport(cdp, 'mobile', 390, 844, true);
+  const endpointChecks = await Promise.all(['/sitemap.xml', '/feed.xml', '/feed.atom', '/feed.json'].map(async (route) => {
+    const response = await fetch(`${baseUrl}${route}`);
+    return { route, status: response.status, contentType: response.headers.get('content-type'), ok: response.ok };
+  }));
+  const results = [...desktop, ...mobile];
+  const failures = results.filter((result) => result.failures.length);
+  console.log(JSON.stringify({ baseUrl, testedPages: results.length, failures, endpointChecks, artifacts: { desktop: join(artifacts, 'desktop-home.png'), mobile: join(artifacts, 'mobile-home-menu.png') } }, null, 2));
+  if (failures.length || endpointChecks.some((check) => !check.ok)) process.exitCode = 1;
+} finally {
+  cdp?.close();
+  browser.kill();
+  rmSync(profile, { recursive: true, force: true });
+}

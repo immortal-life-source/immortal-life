@@ -107,13 +107,29 @@ body::after {
 }
 
 .logo {
-  font-family: var(--font-serif);
-  font-weight: 200;
+  font-family: var(--font-sans);
+  font-weight: 300;
   font-size: 12px;
-  letter-spacing: 0.35em;
+  letter-spacing: 0.12em;
   color: var(--gold);
   text-transform: lowercase;
   user-select: none;
+}
+
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  color: var(--gold);
+  text-decoration: none;
+}
+
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 0 12px rgba(184, 149, 90, 0.18));
 }
 
 .s1-nav {
@@ -162,6 +178,42 @@ body::after {
   text-transform: uppercase;
   color: #C9A227 !important;
 }
+
+.s1-nav-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+}
+
+.s1-nav-login {
+  display: none;
+}
+
+.mobile-nav-toggle {
+  display: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid rgba(184, 149, 90, 0.34);
+  background: rgba(7, 7, 6, 0.72);
+  color: var(--gold);
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.mobile-nav-toggle span {
+  width: 18px;
+  height: 1px;
+  background: currentColor;
+  transition: transform .2s ease;
+}
+
+.mobile-nav-toggle[aria-expanded="true"] span:first-child { transform: translateY(3.5px) rotate(45deg); }
+.mobile-nav-toggle[aria-expanded="true"] span:last-child { transform: translateY(-3.5px) rotate(-45deg); }
 
 .s1-header .s1-nav a,
 .s1-header .s1-nav a:visited,
@@ -390,6 +442,14 @@ h1 {
 .hero-orbit-core strong {
   font: 200 clamp(27px, 3vw, 43px)/0.72 var(--font-serif);
   color: var(--white);
+}
+
+.hero-orbit-logo {
+  display: block;
+  width: calc(var(--orbit-size) * 0.13);
+  height: calc(var(--orbit-size) * 0.13);
+  object-fit: contain;
+  filter: drop-shadow(0 0 14px rgba(184,149,90,.35));
 }
 
 .hero-orbit-core:hover,
@@ -1243,33 +1303,90 @@ h1 {
     transition: none;
   }
 
+  .s1-header {
+    align-items: center;
+    position: relative;
+    z-index: 30;
+  }
+
   .s1-header .logo {
     min-height: 44px;
     display: inline-flex;
     align-items: center;
   }
 
+  .s1-header .brand-mark { width: 38px; height: 38px; }
+
+  .mobile-nav-toggle { display: inline-flex; position: relative; z-index: 32; }
+
   .s1-header .s1-nav {
-    min-height: 44px;
+    display: none;
+    position: absolute;
+    top: calc(100% + 14px);
+    left: 0;
+    right: 0;
+    z-index: 31;
+    padding: 18px;
+    background: rgba(9, 9, 7, .97);
+    border: 1px solid rgba(184,149,90,.28);
+    box-shadow: 0 26px 70px rgba(0,0,0,.58);
+    backdrop-filter: blur(18px);
+    align-items: stretch;
+    gap: 8px;
   }
 
+  .s1-header .s1-nav[data-open="true"] { display: flex; }
+
   .s1-nav-top {
-    justify-content: flex-end;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
   }
 
   .s1-nav-link {
     min-height: 44px;
     display: inline-flex;
     align-items: center;
+    justify-content: flex-start;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.018);
     box-sizing: border-box;
+    font-size: 10px;
+  }
+
+  .s1-nav-link:hover, .s1-nav-link:focus-visible { border-color: rgba(184,149,90,.5); background: rgba(184,149,90,.06); }
+
+  .s1-nav-sep { display: none; }
+
+  .s1-nav-secondary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    justify-content: stretch;
+    gap: 0 16px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
   }
 
   .s1-nav-leaderboard {
     min-height: 44px;
     display: inline-flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: flex-start;
     box-sizing: border-box;
+    opacity: .72;
+  }
+
+  .s1-nav-login {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    color: var(--gold) !important;
+    text-decoration: none;
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
   }
 
   .s1-sub {
@@ -1304,6 +1421,8 @@ h1 {
   .hero-orbit-node-copy strong { font-size: 9px; }
   .hero-orbit-core span,
   .hero-orbit-core small { font-size: 6px; }
+
+  .hero-orbit-logo { width: 50px; height: 50px; }
 
   .email-input {
     font-size: 16px;

@@ -51,13 +51,18 @@ body::after {
 }
 
 .m-logo {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-weight: 200;
   font-size: 12px;
-  letter-spacing: 0.35em;
+  letter-spacing: 0.12em;
   color: var(--gold);
   text-transform: lowercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
+
+.m-logo img { width: 38px; height: 38px; object-fit: contain; filter: drop-shadow(0 0 12px rgba(184,149,90,.18)); }
 
 .m-muted {
   color: var(--off);

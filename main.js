@@ -5,6 +5,42 @@
 
 'use strict';
 
+/* ── Responsive primary navigation ────────────────────────── */
+(function initMobileNavigation() {
+  const toggle = document.querySelector('.mobile-nav-toggle');
+  const nav = document.getElementById('primaryNav');
+  if (!toggle || !nav) return;
+
+  function closeMenu() {
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.setAttribute('aria-label', 'Open navigation');
+    nav.removeAttribute('data-open');
+  }
+
+  toggle.addEventListener('click', () => {
+    const opening = toggle.getAttribute('aria-expanded') !== 'true';
+    toggle.setAttribute('aria-expanded', String(opening));
+    toggle.setAttribute('aria-label', opening ? 'Close navigation' : 'Open navigation');
+    if (opening) nav.setAttribute('data-open', 'true');
+    else nav.removeAttribute('data-open');
+  });
+
+  nav.addEventListener('click', (event) => {
+    if (event.target.closest('a')) closeMenu();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeMenu();
+      toggle.focus();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) closeMenu();
+  });
+})();
+
 /* ── Scroll reveal ─────────────────────────────────────────── */
 const revealObserver = new IntersectionObserver(
   (entries) => {

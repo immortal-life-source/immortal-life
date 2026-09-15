@@ -30,7 +30,7 @@
 
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
 
-  <link rel="stylesheet" href="/style.css?v=20260915-orbit" />
+  <link rel="stylesheet" href="/style.css?v=20260915-brand-nav" />
 </head>
 
 <body>
@@ -55,17 +55,30 @@
 
     <!-- Header -->
     <header class="s1-header">
-      <a href="/" class="logo" style="color:#b8955a;font-size:13px;letter-spacing:0.08em;text-transform:lowercase;text-decoration:none;font-family:'Instrument Sans',sans-serif;">immortal.life</a>
-      <nav class="s1-nav">
+      <a href="/" class="logo brand-lockup" aria-label="immortal.life home">
+        <img class="brand-mark" src="/linkedin-app-logo.png" width="44" height="44" alt="" fetchpriority="high" decoding="async" />
+        <span>immortal.life</span>
+      </a>
+      <button class="mobile-nav-toggle" type="button" aria-expanded="false" aria-controls="primaryNav" aria-label="Open navigation">
+        <span></span><span></span>
+      </button>
+      <nav class="s1-nav" id="primaryNav" aria-label="Primary navigation">
         <div class="s1-nav-top">
-          <a href="/research" class="s1-nav-link" style="color:#b8955a;text-decoration:none;">Research</a>
-          <span class="s1-nav-sep" aria-hidden="true" style="display:inline-block;width:1px;height:12px;background:#b8955a;opacity:0.5;vertical-align:middle;margin:0 4px;"></span>
-          <a href="/join" class="s1-nav-link" style="color:#b8955a;text-decoration:none;">Log in</a>
-          <span class="s1-nav-sep" aria-hidden="true" style="display:inline-block;width:1px;height:12px;background:#b8955a;opacity:0.5;vertical-align:middle;margin:0 4px;"></span>
-          <a href="/join" class="s1-nav-link s1-nav-join" style="color:#b8955a;text-decoration:none;">Join</a>
+          <a href="/research" class="s1-nav-link">Research</a>
+          <span class="s1-nav-sep" aria-hidden="true"></span>
+          <a href="/trials" class="s1-nav-link">Trial Radar</a>
+          <span class="s1-nav-sep" aria-hidden="true"></span>
+          <a href="/topics" class="s1-nav-link">Topics</a>
+          <span class="s1-nav-sep" aria-hidden="true"></span>
+          <a href="/join" class="s1-nav-link s1-nav-join">Join</a>
         </div>
-        <a href="/leaderboard" class="s1-nav-leaderboard" style="color:#b8955a;text-decoration:none;">Leaderboard</a>
-        <a href="#" class="s1-nav-leaderboard" data-news-trigger style="color:#b8955a;text-decoration:none;">Project News</a>
+        <div class="s1-nav-secondary">
+          <a href="/regulatory" class="s1-nav-leaderboard">Regulatory</a>
+          <a href="/briefings" class="s1-nav-leaderboard">Briefings</a>
+          <a href="/leaderboard" class="s1-nav-leaderboard">Leaderboard</a>
+          <a href="#" class="s1-nav-leaderboard" data-news-trigger>Project News</a>
+          <a href="/join" class="s1-nav-login">Log in</a>
+        </div>
       </nav>
     </header>
 
@@ -96,7 +109,7 @@
 
         <a class="hero-orbit-core" href="/research" aria-label="Open the longevity research intelligence portal">
           <span>Live system</span>
-          <strong aria-hidden="true">∞</strong>
+          <img class="hero-orbit-logo" src="/linkedin-app-logo.png" width="72" height="72" alt="" aria-hidden="true" decoding="async" />
           <small>Evidence intelligence</small>
         </a>
 
@@ -312,7 +325,7 @@
        FOOTER
   ══════════════════════════════════════════ -->
   <footer class="site-footer">
-    <div class="foot-logo" aria-label="immortal.life">immortal.life</div>
+    <a class="foot-logo brand-lockup" href="/" aria-label="immortal.life home"><img class="brand-mark" src="/linkedin-app-logo.png" width="38" height="38" alt="" loading="lazy" decoding="async" /><span>immortal.life</span></a>
     <div class="foot-right">
       <button type="button" class="foot-link">Privacy Policy</button>
       <a class="foot-link" href="/automation">Automation</a>
@@ -424,6 +437,6 @@
 
   <script src="/il-config.js"></script>
   <script src="/news-modal.js"></script>
-  <script src="/main.js?v=20260915-orbit"></script>
+  <script src="/main.js?v=20260915-brand-nav"></script>
 </body>
 </html>

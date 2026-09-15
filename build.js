@@ -35,6 +35,7 @@ const staticAssets = [
   'favicon.ico',
   'favicon.svg',
   'og-image.png',
+  'linkedin-app-logo.png',
   'robots.txt',
   '9f2c4a7e61d84b73a5c901e8f426bd10.txt',
 ];

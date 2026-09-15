@@ -35,7 +35,8 @@ button { font: inherit; }
   backdrop-filter: blur(18px);
 }
 
-.intel-logo { color: var(--gold); text-decoration: none; letter-spacing: .11em; font-size: 13px; }
+.intel-logo { color: var(--gold); text-decoration: none; letter-spacing: .11em; font-size: 13px; display: inline-flex; align-items: center; gap: 10px; }
+.intel-logo img { width: 40px; height: 40px; object-fit: contain; filter: drop-shadow(0 0 12px rgba(184,149,90,.18)); }
 .intel-nav { display: flex; align-items: center; gap: clamp(18px, 3vw, 40px); }
 .intel-nav a { color: var(--muted); text-decoration: none; text-transform: uppercase; letter-spacing: .13em; font-size: 10px; padding: 10px 0; }
 .intel-nav a:hover, .intel-nav a[aria-current="page"] { color: var(--gold); }

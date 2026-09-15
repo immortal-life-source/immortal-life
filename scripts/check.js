@@ -55,6 +55,9 @@ JSON.parse(readFileSync(join(root, 'vercel.json'), 'utf8'));
 JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 
 const requiredFiles = [
+  '.cursor/rules/automated-publication-identity.mdc',
+  'linkedin-app-logo.png',
+  'scripts/uat.mjs',
   'supabase/functions/_shared/security.ts',
   'supabase/migrations/20260914000100_membership_schema.sql',
   'supabase/migrations/20260914000200_membership_rpcs.sql',
