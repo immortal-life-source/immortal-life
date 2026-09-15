@@ -108,6 +108,13 @@
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=300, s-maxage=900" }]
     },
     {
+      "source": "/api/subscribe",
+      "headers": [
+        { "key": "Content-Type", "value": "text/html; charset=utf-8" },
+        { "key": "Cache-Control", "value": "no-store" }
+      ]
+    },
+    {
       "source": "/social-card/:path*",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800" }]
     }
