@@ -15,6 +15,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { background: var(--bg); color-scheme: dark; scroll-behavior: smooth; }
 body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); font-weight: 300; -webkit-font-smoothing: antialiased; }
 a { color: inherit; }
@@ -238,7 +239,8 @@ main { min-height: 70vh; }
 
 @media (max-width: 860px) {
   .intel-header { position: static; align-items: flex-start; flex-direction: column; padding-top: 24px; padding-bottom: 20px; }
-  .intel-nav { width: 100%; overflow-x: auto; padding-bottom: 2px; }
+  .intel-nav { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px 16px; overflow: visible; padding-bottom: 2px; }
+  .intel-nav a { min-width: 0; line-height: 1.35; }
   .intel-hero h1 { font-size: clamp(52px, 16vw, 90px); }
   .intel-stats { grid-template-columns: 1fr; }
   .intel-stats > div { border-right: 0; border-bottom: 1px solid var(--border); }

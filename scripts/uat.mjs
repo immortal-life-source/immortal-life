@@ -140,6 +140,7 @@ async function runViewport(cdp, profileName, width, height, mobile) {
         await capture(cdp, 'desktop-home.png');
       }
     }
+    if (route === '/resources') await capture(cdp, `${profileName}-resources.png`);
   }
   return results;
 }
@@ -164,7 +165,7 @@ try {
   }));
   const results = [...desktop, ...mobile];
   const failures = results.filter((result) => result.failures.length);
-  console.log(JSON.stringify({ baseUrl, testedPages: results.length, failures, endpointChecks, artifacts: { desktop: join(artifacts, 'desktop-home.png'), mobile: join(artifacts, 'mobile-home-menu.png') } }, null, 2));
+  console.log(JSON.stringify({ baseUrl, testedPages: results.length, failures, endpointChecks, artifacts: { desktop: join(artifacts, 'desktop-home.png'), mobile: join(artifacts, 'mobile-home-menu.png'), resourcesDesktop: join(artifacts, 'desktop-resources.png'), resourcesMobile: join(artifacts, 'mobile-resources.png') } }, null, 2));
   if (failures.length || endpointChecks.some((check) => !check.ok)) process.exitCode = 1;
 } finally {
   try { await Promise.race([cdp?.call('Browser.close'), sleep(1000)]); } catch (_) { /* Browser may already be closing. */ }
