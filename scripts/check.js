@@ -74,6 +74,7 @@ const requiredFiles = [
   'supabase/migrations/20260915000300_global_resource_atlas.sql',
   'supabase/migrations/20260915000400_refresh_resource_health.sql',
   'supabase/migrations/20260915000500_link_resource_ingestion_health.sql',
+  'supabase/migrations/20260915000600_repair_resource_links.sql',
   'supabase/audits/membership-integrity.sql',
   'intelligence-template.html',
   'content-template.html',
