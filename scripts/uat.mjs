@@ -10,12 +10,13 @@ const profile = mkdtempSync(join(tmpdir(), 'immortal-life-uat-'));
 const artifacts = join(tmpdir(), 'immortal-life-uat-artifacts');
 mkdirSync(artifacts, { recursive: true });
 
-const routes = [
+const defaultRoutes = [
   '/', '/research', '/research/2872', '/trials', '/topics', '/topics/rapamycin',
   '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/methodology',
   '/automation', '/publication-policy', '/corrections', '/data', '/join',
   '/auth/x', '/auth/linkedin', '/leaderboard', '/privacy',
 ];
+const routes = process.env.UAT_ROUTES ? process.env.UAT_ROUTES.split(',').map((route) => route.trim()).filter(Boolean) : defaultRoutes;
 
 const browser = spawn(chromePath, [
   '--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
@@ -101,8 +102,10 @@ async function runViewport(cdp, profileName, width, height, mobile) {
       h1: Boolean(document.querySelector('h1')),
       bodyText: (document.body?.innerText || '').trim().length,
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      brokenImages: [...document.images].filter(img => img.complete && img.naturalWidth === 0).map(img => img.src),
-      logoLoaded: [...document.images].filter(img => img.src.includes('linkedin-app-logo.png')).every(img => img.complete && img.naturalWidth > 0),
+      brokenImages: [...document.images].filter(img => img.loading !== 'lazy' && img.complete && img.naturalWidth === 0).map(img => img.src),
+      logoLoaded: [...document.images].filter(img => img.src.includes('linkedin-app-logo.png') && img.loading !== 'lazy').every(img => img.complete && img.naturalWidth > 0),
+      overflowing: [...document.querySelectorAll('body *')].map(el => { const r = el.getBoundingClientRect(); return { element: el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().replace(/\\s+/g,'.') : ''), left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width) }; }).filter(item => item.right > innerWidth + 2 || item.left < -2).slice(0, 12),
+      internalOverflow: [document.documentElement, document.body, ...document.querySelectorAll('body *')].map(el => ({ element: el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().replace(/\\s+/g,'.') : ''), scrollWidth: el.scrollWidth, clientWidth: el.clientWidth })).filter(item => item.scrollWidth > item.clientWidth + 2).sort((a,b) => (b.scrollWidth-b.clientWidth) - (a.scrollWidth-a.clientWidth)).slice(0,12),
       menuButtonVisible: (() => { const el = document.querySelector('.mobile-nav-toggle'); return el ? getComputedStyle(el).display !== 'none' : null; })(),
       menuVisible: (() => { const el = document.getElementById('primaryNav'); return el ? getComputedStyle(el).display !== 'none' : null; })()
     }))()`);
@@ -113,7 +116,7 @@ async function runViewport(cdp, profileName, width, height, mobile) {
     if (!state.title) failures.push('missing title');
     if (!state.h1) failures.push('missing h1');
     if (state.bodyText < 80) failures.push('insufficient visible content');
-    if (state.overflow > 2) failures.push(`horizontal overflow ${state.overflow}px`);
+    if (state.overflow > 2) failures.push(`horizontal overflow ${state.overflow}px: ${JSON.stringify({ outside: state.overflowing, internal: state.internalOverflow })}`);
     if (state.brokenImages.length) failures.push(`broken images: ${state.brokenImages.join(', ')}`);
     if (!state.logoLoaded) failures.push('brand mark failed to load');
     if (route === '/' && mobile && state.menuButtonVisible !== true) failures.push('mobile menu button hidden');
@@ -157,7 +160,11 @@ try {
   console.log(JSON.stringify({ baseUrl, testedPages: results.length, failures, endpointChecks, artifacts: { desktop: join(artifacts, 'desktop-home.png'), mobile: join(artifacts, 'mobile-home-menu.png') } }, null, 2));
   if (failures.length || endpointChecks.some((check) => !check.ok)) process.exitCode = 1;
 } finally {
+  try { await Promise.race([cdp?.call('Browser.close'), sleep(1000)]); } catch (_) { /* Browser may already be closing. */ }
   cdp?.close();
-  browser.kill();
-  rmSync(profile, { recursive: true, force: true });
+  await Promise.race([new Promise((resolve) => browser.once('exit', resolve)), sleep(2000)]);
+  if (browser.exitCode == null) browser.kill();
+  browser.unref();
+  await sleep(300);
+  try { rmSync(profile, { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }); } catch (_) { /* OS cleanup will remove the disposable profile. */ }
 }
