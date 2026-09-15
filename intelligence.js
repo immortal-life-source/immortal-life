@@ -518,6 +518,7 @@
 
   async function request(viewName, limit) {
     const url = new URL(endpoint);
+    url.searchParams.set('quality_rules', '20260916b');
     url.searchParams.set('view', viewName);
     url.searchParams.set('limit', String(limit));
     if (topicSlug) url.searchParams.set('topic', topicSlug);
