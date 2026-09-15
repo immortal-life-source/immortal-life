@@ -65,3 +65,18 @@ test('canonical discovery URLs use the deployed www host', () => {
   assert.match(read('supabase/functions/public-pages/index.ts'), /const SITE = 'https:\/\/www\.immortal\.life'/);
   assert.doesNotMatch(read('build.js'), /https:\/\/immortal\.life\/(research|trials|topics|quality|entities)/);
 });
+
+test('global resource atlas is authority-based, jurisdiction-aware, and automatically monitored', () => {
+  const migration = read('supabase/migrations/20260915000300_global_resource_atlas.sql');
+  const api = read('supabase/functions/public-intelligence/index.ts');
+  const monitor = read('supabase/functions/check-resource-health/index.ts');
+  const template = read('intelligence-template.html');
+  assert.match(migration, /authority_tier/);
+  assert.match(migration, /jurisdiction_name/);
+  assert.match(migration, /consecutive_failures < 6/);
+  assert.match(migration, /having count\(\*\) >= 3/);
+  assert.match(api, /view === 'resources'/);
+  assert.match(monitor, /refresh_global_resource_eligibility/);
+  assert.match(template, /Public coverage map/);
+  assert.match(template, /Regulatory status applies only to the named jurisdiction/);
+});

@@ -32,7 +32,7 @@
       <a href="/topics" data-nav="topics">Topics</a>
       <a href="/regulatory" data-nav="regulatory">Regulatory</a>
       <a href="/evidence-graph" data-nav="graph">Evidence Graph</a>
-      <a href="/entities" data-nav="entities">Entities</a>
+      <a href="/resources" data-nav="resources">Resources</a>
       <a href="/quality" data-nav="quality">Quality</a>
       <a href="/briefings">Briefings</a>
       <a href="/join">Members</a>
@@ -120,6 +120,39 @@
     <section class="intel-section" id="entitiesSection" hidden>
       <div class="section-heading"><div><span class="section-index">Programmatic index</span><h2>Evidence entities</h2></div><span class="graph-hint">Generated from published source metadata</span></div>
       <div class="entity-grid" id="entityGrid"></div>
+    </section>
+
+    <section class="intel-section resource-atlas" id="resourcesSection" hidden>
+      <div class="atlas-summary" id="resourceStats" aria-label="Resource coverage statistics"></div>
+      <div class="section-heading atlas-heading">
+        <div><span class="section-index">Public coverage map</span><h2>Authoritative systems, clearly scoped.</h2></div>
+        <a href="/entities" class="section-link">Explore evidence entities</a>
+      </div>
+      <div class="resource-map-wrap">
+        <svg class="resource-map" viewBox="0 0 1200 520" role="img" aria-labelledby="resourceMapTitle resourceMapDescription">
+          <title id="resourceMapTitle">Geographic coverage of resources indexed by immortal.life</title>
+          <desc id="resourceMapDescription">A schematic map showing the number of authoritative resources covering global, European, American, and Asia-Pacific jurisdictions.</desc>
+          <g class="map-land" aria-hidden="true">
+            <path d="M90 165l88-66 131 13 61 53-43 53-87 9-38 78-79-27-48-63z" />
+            <path d="M329 302l61 31 33 70-20 91-44-30-25-85-34-34z" />
+            <path d="M523 137l73-35 102 18 26 43-64 35-16 55-76-8-47-45z" />
+            <path d="M594 257l86 12 51 68-36 112-62 25-36-83-54-62z" />
+            <path d="M711 128l151-40 174 35 86 77-78 77-119-20-68 56-108-44-43-68z" />
+            <path d="M947 360l93-24 70 55-23 66-112 2-54-53z" />
+          </g>
+          <g id="resourceMapNodes"></g>
+        </svg>
+        <p id="mapSummary" class="map-summary"></p>
+      </div>
+      <form class="resource-controls" id="resourceControls" role="search" aria-label="Filter global resources">
+        <label><span>Search</span><input id="resourceSearch" type="search" placeholder="Name, country, or authority" autocomplete="off" /></label>
+        <label><span>Region</span><select id="resourceRegion"><option value="">All regions</option></select></label>
+        <label><span>Resource type</span><select id="resourceType"><option value="">All resource types</option></select></label>
+        <label><span>Connection</span><select id="resourceIntegration"><option value="">All connections</option><option value="live">Live ingestion</option><option value="directory">Verified directory</option></select></label>
+      </form>
+      <p class="filter-result" id="resourceResult" aria-live="polite"></p>
+      <div class="resource-grid" id="resourceGrid"></div>
+      <aside class="automation-notice"><strong>Automated, jurisdiction-aware inclusion</strong><p>Resources qualify through authority, provenance, secure-link, access-condition, metadata-completeness, and availability rules. Availability is checked every six hours. Inclusion is not endorsement. Regulatory status applies only to the named jurisdiction and exact product or indication.</p></aside>
     </section>
 
     <section class="intel-section" id="qualitySection" hidden>

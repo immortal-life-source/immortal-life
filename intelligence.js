@@ -33,6 +33,17 @@
     graphFallback: document.getElementById('graphFallback'),
     entitiesSection: document.getElementById('entitiesSection'),
     entityGrid: document.getElementById('entityGrid'),
+    resourcesSection: document.getElementById('resourcesSection'),
+    resourceStats: document.getElementById('resourceStats'),
+    resourceMapNodes: document.getElementById('resourceMapNodes'),
+    mapSummary: document.getElementById('mapSummary'),
+    resourceControls: document.getElementById('resourceControls'),
+    resourceSearch: document.getElementById('resourceSearch'),
+    resourceRegion: document.getElementById('resourceRegion'),
+    resourceType: document.getElementById('resourceType'),
+    resourceIntegration: document.getElementById('resourceIntegration'),
+    resourceResult: document.getElementById('resourceResult'),
+    resourceGrid: document.getElementById('resourceGrid'),
     qualitySection: document.getElementById('qualitySection'),
     qualityGrid: document.getElementById('qualityGrid'),
     sourceSection: document.getElementById('sourceSection'),
@@ -324,6 +335,120 @@
     elements.entitiesSection.hidden = false;
   }
 
+  function resourceLabel(value) {
+    return String(value || '').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+  }
+
+  function renderResourceStats(coverage) {
+    elements.resourceStats.replaceChildren();
+    [
+      ['Qualified resources', coverage?.total || 0],
+      ['Jurisdictions', coverage?.jurisdictions || 0],
+      ['Live connections', coverage?.live_integrations || 0],
+      ['Healthy checks', coverage?.healthy || 0],
+    ].forEach(([label, value]) => {
+      const card = el('div', 'atlas-stat');
+      card.append(el('strong', '', numberFormatter.format(Number(value))), el('span', '', label));
+      elements.resourceStats.append(card);
+    });
+  }
+
+  function renderResourceMap(coverage) {
+    elements.resourceMapNodes.replaceChildren();
+    const positions = {
+      Global: { x: 600, y: 82 }, Europe: { x: 635, y: 196 }, Americas: { x: 250, y: 220 }, 'Asia-Pacific': { x: 970, y: 280 },
+    };
+    const ns = 'http://www.w3.org/2000/svg';
+    Object.entries(coverage?.by_region || {}).forEach(([region, count]) => {
+      const point = positions[region];
+      if (!point) return;
+      const group = document.createElementNS(ns, 'a');
+      group.setAttribute('href', `?region=${encodeURIComponent(region)}`);
+      group.setAttribute('class', 'resource-map-node');
+      group.setAttribute('aria-label', `Show ${region} resources: ${count}`);
+      const pulse = document.createElementNS(ns, 'circle');
+      pulse.setAttribute('class', 'resource-map-pulse'); pulse.setAttribute('cx', point.x); pulse.setAttribute('cy', point.y); pulse.setAttribute('r', '34');
+      const circle = document.createElementNS(ns, 'circle');
+      circle.setAttribute('cx', point.x); circle.setAttribute('cy', point.y); circle.setAttribute('r', String(22 + Math.min(18, Number(count) * 2)));
+      const number = document.createElementNS(ns, 'text');
+      number.setAttribute('x', point.x); number.setAttribute('y', point.y + 6); number.setAttribute('text-anchor', 'middle'); number.textContent = String(count);
+      const label = document.createElementNS(ns, 'text');
+      label.setAttribute('x', point.x); label.setAttribute('y', point.y + 58); label.setAttribute('text-anchor', 'middle'); label.setAttribute('class', 'resource-map-label'); label.textContent = region;
+      group.append(pulse, circle, number, label);
+      group.addEventListener('click', (event) => {
+        event.preventDefault();
+        elements.resourceRegion.value = region;
+        renderFilteredResources();
+        elements.resourceControls.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      elements.resourceMapNodes.append(group);
+    });
+    elements.mapSummary.textContent = 'The map shows directory coverage, not regulatory equivalence. Global resources aggregate across countries; national and regional decisions apply only where stated.';
+  }
+
+  let atlasResources = [];
+
+  function renderFilteredResources() {
+    const query = String(elements.resourceSearch.value || '').trim().toLowerCase();
+    const region = elements.resourceRegion.value;
+    const type = elements.resourceType.value;
+    const integration = elements.resourceIntegration.value;
+    const visible = atlasResources.filter((resource) => {
+      const searchable = `${resource.name} ${resource.jurisdiction_name} ${resource.description} ${resource.resource_type}`.toLowerCase();
+      return (!query || searchable.includes(query)) && (!region || resource.region === region) && (!type || resource.resource_type === type) && (!integration || resource.integration_status === integration);
+    });
+    elements.resourceGrid.replaceChildren();
+    visible.forEach((resource) => {
+      const card = el('article', 'resource-card');
+      const heading = el('div', 'resource-card-heading');
+      heading.append(el('span', 'section-index', resourceLabel(resource.resource_type)));
+      const health = el('span', 'source-health', resource.health);
+      health.dataset.health = resource.health;
+      heading.append(health);
+      const title = el('h3');
+      const official = link('', resource.name, resource.homepage_url);
+      official.target = '_blank'; official.rel = 'noopener noreferrer';
+      title.append(official);
+      const jurisdiction = el('p', 'resource-jurisdiction', `${resource.jurisdiction_name} · ${resourceLabel(resource.geographic_scope)} scope`);
+      const badges = el('div', 'resource-badges');
+      badges.append(
+        el('span', resource.integration_status === 'live' ? 'resource-badge resource-badge--live' : 'resource-badge', resource.integration_status === 'live' ? 'Live ingestion' : 'Verified directory'),
+        el('span', 'resource-badge', resourceLabel(resource.access_mode)),
+        el('span', 'resource-badge', resource.reuse_status === 'open' ? 'Open reuse' : resource.reuse_status === 'link-only' ? 'Link only' : 'Source terms apply'),
+      );
+      const actions = el('div', 'resource-actions');
+      if (resource.data_url) { const dataLink = link('section-link', 'Open data access', resource.data_url); dataLink.target = '_blank'; dataLink.rel = 'noopener noreferrer'; actions.append(dataLink); }
+      if (resource.terms_url) { const termsLink = link('section-link section-link--muted', 'Access terms', resource.terms_url); termsLink.target = '_blank'; termsLink.rel = 'noopener noreferrer'; actions.append(termsLink); }
+      const limitations = el('details', 'resource-limitations');
+      limitations.append(el('summary', '', 'Scope and limitations'), el('p', '', resource.limitations), el('p', 'resource-eligibility', resource.eligibility_reason));
+      const checked = resource.health_basis === 'ingestion' ? 'Health based on live ingestion' : resource.last_checked_at ? `Availability checked ${formatTimestamp(resource.last_checked_at)}` : 'First automated check pending';
+      card.append(heading, title, jurisdiction, el('p', 'resource-description', resource.description), badges, limitations, actions, el('p', 'resource-check', `${checked} · ${resource.update_cadence}`));
+      elements.resourceGrid.append(card);
+    });
+    elements.resourceResult.textContent = `${numberFormatter.format(visible.length)} of ${numberFormatter.format(atlasResources.length)} qualified resources shown.`;
+  }
+
+  function renderResources(data) {
+    atlasResources = Array.isArray(data.resources) ? data.resources : [];
+    renderResourceStats(data.coverage || {});
+    renderResourceMap(data.coverage || {});
+    const regions = [...new Set(atlasResources.map((item) => item.region))].sort();
+    const types = [...new Set(atlasResources.map((item) => item.resource_type))].sort();
+    regions.forEach((region) => elements.resourceRegion.append(new Option(region, region)));
+    types.forEach((type) => elements.resourceType.append(new Option(resourceLabel(type), type)));
+    const initialRegion = new URLSearchParams(location.search).get('region');
+    if (regions.includes(initialRegion)) elements.resourceRegion.value = initialRegion;
+    elements.resourceControls.addEventListener('input', renderFilteredResources);
+    renderFilteredResources();
+    const states = atlasResources.map((resource) => resource.health);
+    const healthy = states.filter((state) => state === 'healthy').length;
+    const degraded = states.filter((state) => state === 'degraded').length;
+    const restricted = states.filter((state) => state === 'restricted').length;
+    elements.freshness.dataset.health = degraded ? 'degraded' : healthy === states.length && states.length ? 'healthy' : 'pending';
+    elements.freshnessText.textContent = degraded ? `${degraded} resource check${degraded === 1 ? '' : 's'} delayed; jurisdiction and provenance data remain visible.` : restricted ? `${restricted} official source${restricted === 1 ? '' : 's'} restrict automated checks; verified links and scope information remain available.` : healthy === states.length && states.length ? 'All qualified resource links passed the latest automated availability check.' : 'Initial automated resource checks are in progress.';
+    elements.resourcesSection.hidden = false;
+  }
+
   function renderQuality(telemetry) {
     elements.qualityGrid.replaceChildren();
     const groups = [
@@ -415,6 +540,9 @@
         const data = await request('entities', 100);
         renderEntities(data.entities || []);
         renderSources(data.sources || []);
+      } else if (view === 'resources') {
+        const data = await request('resources', 100);
+        renderResources(data);
       } else if (view === 'quality') {
         const data = await request('quality', 100);
         renderQuality(data.telemetry || {});

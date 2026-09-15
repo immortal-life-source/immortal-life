@@ -162,6 +162,16 @@ const intelligencePages = [
     PAGE_HEADING: 'The entities shaping longevity evidence.',
   },
   {
+    filename: 'resources.html',
+    PAGE_TITLE: 'Global Longevity Resource Atlas — immortal.life',
+    PAGE_DESCRIPTION: 'A jurisdiction-aware atlas of authoritative global evidence systems, trial registries, and medicine regulators with automated availability and provenance checks.',
+    CANONICAL_URL: `${site}/resources`,
+    PAGE_VIEW: 'resources',
+    TOPIC_SLUG: '',
+    PAGE_KICKER: 'Global Resource Atlas',
+    PAGE_HEADING: 'Know the source. Know where it applies.',
+  },
+  {
     filename: 'quality.html',
     PAGE_TITLE: 'Automated Quality & Indexing Telemetry — immortal.life',
     PAGE_DESCRIPTION: 'Live relevance confidence, quarantine, duplicate suppression, source freshness, and indexing telemetry for immortal.life.',

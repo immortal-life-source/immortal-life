@@ -41,6 +41,7 @@ const edgeScripts = [
   'supabase/functions/notify-indexnow/index.ts',
   'supabase/functions/distribute-public-briefing/index.ts',
   'supabase/functions/social-card/index.ts',
+  'supabase/functions/check-resource-health/index.ts',
 ];
 
 for (const file of browserScripts) {
@@ -70,6 +71,9 @@ const requiredFiles = [
   'supabase/migrations/20260914000800_multi_provider_members.sql',
   'supabase/migrations/20260915000100_publication_and_discovery.sql',
   'supabase/migrations/20260915000200_relevance_quality_entities_distribution.sql',
+  'supabase/migrations/20260915000300_global_resource_atlas.sql',
+  'supabase/migrations/20260915000400_refresh_resource_health.sql',
+  'supabase/migrations/20260915000500_link_resource_ingestion_health.sql',
   'supabase/audits/membership-integrity.sql',
   'intelligence-template.html',
   'content-template.html',

@@ -47,7 +47,7 @@ function pageShell(input: { title: string; description: string; canonical: strin
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(input.title)}"><meta name="twitter:description" content="${escapeHtml(input.description)}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,300&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="/intelligence.css"><link rel="icon" href="/favicon.ico">
 <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}</script></head><body>
-<header class="intel-header"><a class="intel-logo" href="/" aria-label="immortal.life home"><img src="/linkedin-app-logo.png" width="40" height="40" alt="" decoding="async"><span>immortal.life</span></a><nav class="intel-nav" aria-label="Primary navigation"><a href="/research">Research</a><a href="/trials">Trial Radar</a><a href="/topics">Topics</a><a href="/regulatory">Regulatory</a><a href="/entities">Entities</a><a href="/quality">Quality</a><a href="/briefings">Briefings</a></nav></header>
+<header class="intel-header"><a class="intel-logo" href="/" aria-label="immortal.life home"><img src="/linkedin-app-logo.png" width="40" height="40" alt="" decoding="async"><span>immortal.life</span></a><nav class="intel-nav" aria-label="Primary navigation"><a href="/research">Research</a><a href="/trials">Trial Radar</a><a href="/topics">Topics</a><a href="/regulatory">Regulatory</a><a href="/resources">Resources</a><a href="/quality">Quality</a><a href="/briefings">Briefings</a></nav></header>
 <main><section class="intel-hero record-hero"><div class="intel-kicker">${escapeHtml(input.kicker)}</div><h1>${escapeHtml(input.heading)}</h1><p class="intel-lede">${escapeHtml(input.description)}</p></section>${input.body}</main>
 <footer class="intel-footer"><p><strong>Automated publication.</strong> ${escapeHtml(DISCLOSURE)} Research information only; not medical advice, diagnosis, or treatment guidance.</p><div><a href="/methodology">Methodology</a><a href="/automation">Automation disclosure</a><a href="/corrections">Corrections</a><a href="/feed.xml">RSS</a><span>© 2026 immortal.life</span></div></footer></body></html>`
 }
@@ -162,7 +162,7 @@ async function loadRecent(supabase: any, limit = 30): Promise<any[]> {
 }
 
 async function sitemap(supabase: any): Promise<string> {
-  const staticPaths = ['', '/research', '/trials', '/topics', '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/entities', '/quality', '/methodology', '/automation', '/publication-policy', '/corrections', '/data']
+  const staticPaths = ['', '/research', '/trials', '/topics', '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/resources', '/entities', '/quality', '/methodology', '/automation', '/publication-policy', '/corrections', '/data']
   const [topics, research, trials, regulatory, integrity, briefings, entities] = await Promise.all([
     supabase.from('intelligence_topics').select('slug,updated_at').eq('enabled', true),
     supabase.from('research_items').select('id,last_seen_at').eq('publication_state', 'published').order('id', { ascending: false }).limit(20000),

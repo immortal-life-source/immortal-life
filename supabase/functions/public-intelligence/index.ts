@@ -33,6 +33,38 @@ function publicSourceState(source: any): Record<string, unknown> {
   }
 }
 
+function publicResourceState(resource: any, ingestionSource?: any): Record<string, unknown> {
+  const failures = Number(resource?.consecutive_failures ?? 0)
+  const status = Number(resource?.last_status_code ?? 0)
+  const restricted = [401, 403, 405, 416, 429].includes(status)
+  const monitoredHealth = !resource?.last_checked_at ? 'pending' : failures > 0 ? 'degraded' : restricted ? 'restricted' : 'healthy'
+  const health = ingestionSource ? publicSourceState(ingestionSource).health : monitoredHealth
+  return {
+    id: resource.id,
+    name: resource.name,
+    resource_type: resource.resource_type,
+    geographic_scope: resource.geographic_scope,
+    jurisdiction_code: resource.jurisdiction_code,
+    jurisdiction_name: resource.jurisdiction_name,
+    region: resource.region,
+    authority_tier: resource.authority_tier,
+    description: resource.description,
+    limitations: resource.limitations,
+    homepage_url: resource.homepage_url,
+    data_url: resource.data_url,
+    terms_url: resource.terms_url,
+    access_mode: resource.access_mode,
+    reuse_status: resource.reuse_status,
+    integration_status: resource.integration_status,
+    health_basis: ingestionSource ? 'ingestion' : 'availability',
+    update_cadence: resource.update_cadence,
+    eligibility_reason: resource.eligibility_reason,
+    last_checked_at: resource.last_checked_at,
+    last_healthy_at: resource.last_healthy_at,
+    health,
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req, PUBLIC_METHODS) })
   if (req.method !== 'GET') return response(req, { error: 'Method not allowed' }, 405)
@@ -80,6 +112,38 @@ Deno.serve(async (req) => {
       if (error) throw error
       if (sourcesError) throw sourcesError
       return response(req, { entities: data ?? [], sources: (sources ?? []).map(publicSourceState) })
+    }
+
+    if (view === 'resources') {
+      const [{ data, error }, { data: ingestionSources, error: ingestionError }] = await Promise.all([supabase
+        .from('global_resources')
+        .select('id,name,resource_type,geographic_scope,jurisdiction_code,jurisdiction_name,region,authority_tier,description,limitations,homepage_url,data_url,terms_url,access_mode,reuse_status,integration_status,content_source_id,update_cadence,eligibility_reason,last_checked_at,last_healthy_at,last_status_code,consecutive_failures')
+        .eq('is_eligible', true)
+        .order('authority_tier')
+        .order('name')
+        .limit(limit), sourcesPromise])
+      if (error) throw error
+      if (ingestionError) throw ingestionError
+      const ingestionById = new Map((ingestionSources ?? []).map((source: any) => [source.id, source]))
+      const resources = (data ?? []).map((resource: any) => publicResourceState(resource, resource.content_source_id ? ingestionById.get(resource.content_source_id) : undefined))
+      const countBy = (key: string) => resources.reduce((counts: Record<string, number>, item: any) => {
+        const value = String(item[key] ?? 'Unknown')
+        counts[value] = (counts[value] ?? 0) + 1
+        return counts
+      }, {})
+      return response(req, {
+        generated_at: new Date().toISOString(),
+        resources,
+        coverage: {
+          total: resources.length,
+          jurisdictions: new Set(resources.map((item: any) => item.jurisdiction_code)).size,
+          live_integrations: resources.filter((item: any) => item.integration_status === 'live').length,
+          healthy: resources.filter((item: any) => item.health === 'healthy').length,
+          by_region: countBy('region'),
+          by_type: countBy('resource_type'),
+        },
+        scope_notice: 'Coverage is selective and authority-based. A resource applies only in its stated jurisdiction; directory inclusion is not endorsement or evidence of treatment approval.',
+      })
     }
 
     if (view === 'topics') {

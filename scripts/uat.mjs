@@ -13,7 +13,7 @@ mkdirSync(artifacts, { recursive: true });
 const defaultRoutes = [
   '/', '/research', '/trials', '/topics', '/topics/rapamycin',
   '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/methodology',
-  '/entities', '/entities/topic/rapamycin', '/quality', '/automation', '/publication-policy', '/corrections', '/data', '/join',
+  '/resources', '/entities', '/entities/topic/rapamycin', '/quality', '/automation', '/publication-policy', '/corrections', '/data', '/join',
   '/auth/x', '/auth/linkedin', '/leaderboard', '/privacy',
 ];
 const routes = process.env.UAT_ROUTES ? process.env.UAT_ROUTES.split(',').map((route) => route.trim()).filter(Boolean) : defaultRoutes;
