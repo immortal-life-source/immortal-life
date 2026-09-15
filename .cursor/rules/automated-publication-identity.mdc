@@ -1,0 +1,15 @@
+---
+description: Preserve immortal.life's identity and safety constraints as a fully automated publication
+alwaysApply: true
+---
+
+# Fully Automated Publication
+
+- immortal.life is an automated website and intelligence system.
+- It has no scientists, clinicians, researchers, editors, fact-checkers, or human reviewers.
+- Never write copy, metadata, schemas, product flows, or documentation that implies human scientific, clinical, editorial, or expert review.
+- Clearly label automated summaries, dossiers, feeds, graphs, rankings, and briefings as automated.
+- Keep direct source provenance and distinguish indexing from endorsement.
+- Never present research records, trial registration, or regulatory monitoring as personal medical advice, proof of safety or efficacy, or regulatory approval.
+- Prefer durable, source-driven automation over features requiring ongoing manual publication.
+- If a proposed feature genuinely requires human review, identify that conflict instead of inventing a team or silently claiming review.
