@@ -41,3 +41,12 @@ verify_jwt = false
 
 [functions.auth-linkedin-callback]
 verify_jwt = false
+
+[functions.public-pages]
+verify_jwt = false
+
+[functions.generate-public-briefing]
+verify_jwt = false
+
+[functions.notify-indexnow]
+verify_jwt = false

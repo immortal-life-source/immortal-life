@@ -99,7 +99,9 @@
       if (record.journal) meta.append(el('div', '', record.journal));
 
       const main = el('div', 'record-main');
-      main.append(el('h3', '', record.title));
+      const heading = el('h3');
+      heading.append(link('record-title-link', record.title, `/research/${encodeURIComponent(record.id)}`));
+      main.append(heading);
       main.append(el('p', '', record.editorial_summary));
       const tags = el('div', 'record-tags');
       topicLinks(record, 'research_item_topics').forEach((topic) => tags.append(link('record-tag', topic.name, `/topics/${encodeURIComponent(topic.slug)}`)));
@@ -144,7 +146,9 @@
       if (record.enrollment != null) meta.append(el('div', '', `${numberFormatter.format(record.enrollment)} planned enrollment`));
 
       const main = el('div', 'record-main');
-      main.append(el('h3', '', record.title));
+      const heading = el('h3');
+      heading.append(link('record-title-link', record.title, `/trials/${encodeURIComponent(record.id)}`));
+      main.append(heading);
       main.append(el('p', '', record.editorial_summary));
       const tags = el('div', 'record-tags');
       topicLinks(record, 'clinical_trial_topics').forEach((topic) => tags.append(link('record-tag', topic.name, `/topics/${encodeURIComponent(topic.slug)}`)));
@@ -173,7 +177,9 @@
       meta.append(el('div', '', formatTimestamp(record.published_at)));
       if (record.content_sources?.name) meta.append(el('div', '', record.content_sources.name));
       const main = el('div', 'record-main');
-      main.append(el('h3', '', record.title));
+      const heading = el('h3');
+      heading.append(link('record-title-link', record.title, `/regulatory/${encodeURIComponent(record.id)}`));
+      main.append(heading);
       main.append(el('p', '', record.summary));
       const tags = el('div', 'record-tags');
       (record.matched_topics || []).forEach((slug) => tags.append(link('record-tag', slug.replace(/-/g, ' '), `/topics/${encodeURIComponent(slug)}`)));
@@ -196,7 +202,9 @@
       meta.append(el('div', '', formatDate(record.announced_on)));
       meta.append(el('div', '', 'Detected ' + formatTimestamp(record.detected_at)));
       const main = el('div', 'record-main');
-      main.append(el('h3', '', record.title));
+      const heading = el('h3');
+      heading.append(link('record-title-link', record.title, `/integrity/${encodeURIComponent(record.id)}`));
+      main.append(heading);
       main.append(el('p', '', record.summary));
       if (record.research_items?.title) main.append(el('p', 'integrity-linked', `Indexed record: ${record.research_items.title}`));
       const action = el('div', 'record-action');

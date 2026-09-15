@@ -73,6 +73,8 @@ main { min-height: 70vh; }
 .record-card { display: grid; grid-template-columns: 145px minmax(0, 1fr) 210px; gap: clamp(20px, 4vw, 62px); padding: 34px 0; border-bottom: 1px solid var(--border); }
 .record-meta { color: var(--muted); font-size: 10px; letter-spacing: .08em; line-height: 1.8; text-transform: uppercase; }
 .record-main h3 { margin: 0 0 13px; font: 300 clamp(22px, 2.5vw, 31px)/1.16 var(--serif); }
+.record-title-link { color: inherit; text-decoration: none; }
+.record-title-link:hover { color: var(--gold); }
 .record-main p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.72; max-width: 760px; }
 .record-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 17px; }
 .record-tag { border: 1px solid var(--border); color: var(--muted); padding: 6px 8px; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; text-decoration: none; }
@@ -137,6 +139,30 @@ main { min-height: 70vh; }
 .legal-copy h2:first-child { margin-top: 0; }
 .legal-copy p { color: var(--muted); line-height: 1.8; }
 .legal-copy a { color: var(--gold); }
+.legal-copy code { color: var(--text); background: var(--surface); border: 1px solid var(--border); padding: 2px 6px; }
+.record-hero h1 { font-size: clamp(48px, 7.5vw, 100px); max-width: 1200px; }
+.topic-primer { background: linear-gradient(120deg, rgba(184,149,90,.055), transparent 62%); }
+.dossier-grid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
+.dossier-grid article { padding: 30px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.dossier-grid h3 { margin: 0 0 15px; font: 300 27px var(--serif); }
+.dossier-grid p, .record-detail p, .briefing-card p { color: var(--muted); line-height: 1.75; }
+.automation-notice { margin-top: 34px; padding: 24px 28px; border: 1px solid rgba(184,149,90,.35); background: rgba(184,149,90,.045); }
+.automation-notice strong { color: var(--gold); font-size: 10px; letter-spacing: .15em; text-transform: uppercase; }
+.automation-notice p { margin: 10px 0 0; color: var(--muted); line-height: 1.7; }
+.automation-notice--large { margin: 0 0 48px; }
+.record-detail-grid { display: grid; grid-template-columns: minmax(240px,.65fr) 1.5fr; gap: clamp(40px,8vw,120px); }
+.record-detail dl { margin: 0; border-top: 1px solid var(--border); }
+.record-detail dl div { padding: 15px 0; border-bottom: 1px solid var(--border); }
+.record-detail dt { color: var(--muted); text-transform: uppercase; letter-spacing: .12em; font-size: 9px; }
+.record-detail dd { margin: 6px 0 0; color: var(--text); line-height: 1.5; }
+.record-summary { margin: 14px 0 0; font: 300 clamp(23px,3vw,35px)/1.4 var(--serif); color: var(--text) !important; }
+.record-links { display: flex; flex-wrap: wrap; gap: 25px; margin-top: 34px; }
+.record-caveat { margin-top: 24px; padding-left: 16px; border-left: 1px solid var(--gold); }
+.briefing-list { display: grid; grid-template-columns: repeat(2,1fr); border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
+.briefing-card { padding: clamp(26px,4vw,48px); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.briefing-card h2 { margin: 18px 0 12px; font: 300 clamp(28px,3vw,42px)/1.1 var(--serif); }
+.briefing-card h2 a { text-decoration: none; }
+.briefing-card h2 a:hover { color: var(--gold); }
 
 @media (max-width: 860px) {
   .intel-header { position: static; align-items: flex-start; flex-direction: column; padding-top: 24px; padding-bottom: 20px; }
@@ -153,6 +179,7 @@ main { min-height: 70vh; }
   .intel-footer div { justify-content: flex-start; }
   .evidence-graph-wrap { overflow-x: auto; }
   .graph-fallback-list { columns: 1; }
+  .dossier-grid, .record-detail-grid, .briefing-list { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

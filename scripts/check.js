@@ -16,6 +16,7 @@ const browserScripts = [
   'intelligence.js',
   'news-modal.js',
   'spread-copy.js',
+  'widget.js',
 ];
 
 const edgeScripts = [
@@ -35,6 +36,9 @@ const edgeScripts = [
   'supabase/functions/get-news/index.ts',
   'supabase/functions/start-linkedin-auth/index.ts',
   'supabase/functions/auth-linkedin-callback/index.ts',
+  'supabase/functions/public-pages/index.ts',
+  'supabase/functions/generate-public-briefing/index.ts',
+  'supabase/functions/notify-indexnow/index.ts',
 ];
 
 for (const file of browserScripts) {
@@ -59,8 +63,10 @@ const requiredFiles = [
   'supabase/migrations/20260914000600_intelligence_tranche_two.sql',
   'supabase/migrations/20260914000700_publish_project_news.sql',
   'supabase/migrations/20260914000800_multi_provider_members.sql',
+  'supabase/migrations/20260915000100_publication_and_discovery.sql',
   'supabase/audits/membership-integrity.sql',
   'intelligence-template.html',
+  'content-template.html',
   'intelligence-topics.json',
   'privacy.html',
 ];

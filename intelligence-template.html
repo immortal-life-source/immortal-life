@@ -5,13 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{PAGE_TITLE}}</title>
   <meta name="description" content="{{PAGE_DESCRIPTION}}" />
-  <meta name="robots" content="index, follow" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
   <link rel="canonical" href="{{CANONICAL_URL}}" />
+  <link rel="alternate" type="application/rss+xml" title="immortal.life automated intelligence" href="https://immortal.life/feed.xml" />
   <meta property="og:title" content="{{PAGE_TITLE}}" />
   <meta property="og:description" content="{{PAGE_DESCRIPTION}}" />
   <meta property="og:url" content="{{CANONICAL_URL}}" />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="https://immortal.life/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="{{PAGE_TITLE}}" />
+  <meta name="twitter:description" content="{{PAGE_DESCRIPTION}}" />
+  <script type="application/ld+json">{{SCHEMA_JSON}}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,300&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
@@ -27,6 +32,7 @@
       <a href="/topics" data-nav="topics">Topics</a>
       <a href="/regulatory" data-nav="regulatory">Regulatory</a>
       <a href="/evidence-graph" data-nav="graph">Evidence Graph</a>
+      <a href="/briefings">Briefings</a>
       <a href="/join">Members</a>
     </nav>
   </header>
@@ -41,6 +47,8 @@
         <span id="freshnessText">Checking source freshness…</span>
       </div>
     </section>
+
+    {{TOPIC_DOSSIER_HTML}}
 
     <section class="intel-stats" id="statsSection" aria-label="Index statistics" hidden>
       <div><strong id="researchCount">0</strong><span>Research records</span></div>
@@ -124,10 +132,13 @@
   </main>
 
   <footer class="intel-footer">
-    <p><strong>Research information only.</strong> Nothing on this website is medical advice, diagnosis, or treatment guidance. Trial registration does not establish safety or effectiveness.</p>
+    <p><strong>Automated publication.</strong> No scientist, clinician, researcher, editor, or human reviewer evaluates records before publication. Research information only; not medical advice, diagnosis, or treatment guidance.</p>
     <div>
       <a href="/">Home</a>
-      <a href="mailto:research@immortal.life">Report a correction</a>
+      <a href="/methodology">Methodology</a>
+      <a href="/automation">Automation</a>
+      <a href="/corrections">Corrections</a>
+      <a href="/feed.xml">RSS</a>
       <span>© 2026 immortal.life</span>
     </div>
   </footer>
