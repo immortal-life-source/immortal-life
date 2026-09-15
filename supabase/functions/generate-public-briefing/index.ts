@@ -36,13 +36,13 @@ Deno.serve(async (req) => {
   try {
     const period = previousWeek()
     const [research, trials, regulatory, integrity] = await Promise.all([
-      supabase.from('research_items').select('id,title,published_on,source_url,status').gte('first_seen_at', period.since).lt('first_seen_at', period.until).order('first_seen_at', { ascending: false }).limit(25),
-      supabase.from('clinical_trials').select('id,title,overall_status,last_update_date,source_url').gte('first_seen_at', period.since).lt('first_seen_at', period.until).order('first_seen_at', { ascending: false }).limit(25),
-      supabase.from('regulatory_events').select('id,title,jurisdiction,published_at,source_url').gte('first_seen_at', period.since).lt('first_seen_at', period.until).order('first_seen_at', { ascending: false }).limit(20),
-      supabase.from('research_integrity_events').select('id,title,event_type,detected_at,source_url').gte('detected_at', period.since).lt('detected_at', period.until).order('detected_at', { ascending: false }).limit(20),
+      supabase.from('research_items').select('id,title,published_on,source_url,status', { count: 'exact' }).gte('first_seen_at', period.since).lt('first_seen_at', period.until).order('first_seen_at', { ascending: false }).limit(25),
+      supabase.from('clinical_trials').select('id,title,overall_status,last_update_date,source_url', { count: 'exact' }).gte('first_seen_at', period.since).lt('first_seen_at', period.until).order('first_seen_at', { ascending: false }).limit(25),
+      supabase.from('regulatory_events').select('id,title,jurisdiction,published_at,source_url', { count: 'exact' }).gte('first_seen_at', period.since).lt('first_seen_at', period.until).order('first_seen_at', { ascending: false }).limit(20),
+      supabase.from('research_integrity_events').select('id,title,event_type,detected_at,source_url', { count: 'exact' }).gte('detected_at', period.since).lt('detected_at', period.until).order('detected_at', { ascending: false }).limit(20),
     ])
     for (const result of [research, trials, regulatory, integrity]) if (result.error) throw result.error
-    const counts = { research: research.data?.length ?? 0, trials: trials.data?.length ?? 0, regulatory: regulatory.data?.length ?? 0, integrity: integrity.data?.length ?? 0 }
+    const counts = { research: research.count ?? 0, trials: trials.count ?? 0, regulatory: regulatory.count ?? 0, integrity: integrity.count ?? 0 }
     const total = Object.values(counts).reduce((sum, count) => sum + count, 0)
     const title = `Longevity evidence briefing · ${period.start}`
     const dek = `${total} newly indexed source records for the week ending ${period.end}.`
