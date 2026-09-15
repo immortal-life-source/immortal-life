@@ -167,4 +167,5 @@ try {
   browser.unref();
   await sleep(300);
   try { rmSync(profile, { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }); } catch (_) { /* OS cleanup will remove the disposable profile. */ }
+  process.exit(process.exitCode || 0);
 }
