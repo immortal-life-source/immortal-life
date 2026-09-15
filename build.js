@@ -94,42 +94,42 @@ const intelligencePages = [
   {
     filename: 'research.html',
     PAGE_TITLE: 'Longevity Research Intelligence — immortal.life',
-    PAGE_DESCRIPTION: 'Continuously updated longevity research, clinical trials, and evidence records with direct source provenance.',
+    PAGE_DESCRIPTION: 'Explore automatically updated longevity research and clinical trials, with a direct link to every original source.',
     CANONICAL_URL: `${site}/research`,
     PAGE_VIEW: 'overview',
     TOPIC_SLUG: '',
-    PAGE_KICKER: 'Autonomous evidence intelligence',
-    PAGE_HEADING: 'The science, continuously updated.',
+    PAGE_KICKER: 'Longevity research, updated automatically',
+    PAGE_HEADING: 'See what is changing in longevity research.',
   },
   {
     filename: 'trials.html',
     PAGE_TITLE: 'Longevity Trial Radar — immortal.life',
-    PAGE_DESCRIPTION: 'Automatically tracked clinical studies relevant to longevity and ageing, sourced from official trial registries.',
+    PAGE_DESCRIPTION: 'Find clinical studies connected to longevity and healthy ageing, sourced from official trial registries.',
     CANONICAL_URL: `${site}/trials`,
     PAGE_VIEW: 'trials',
     TOPIC_SLUG: '',
-    PAGE_KICKER: 'Clinical trial registry intelligence',
-    PAGE_HEADING: 'Trial Radar.',
+    PAGE_KICKER: 'Clinical studies from official registries',
+    PAGE_HEADING: 'Find longevity-related clinical trials.',
   },
   {
     filename: 'topics.html',
     PAGE_TITLE: 'Longevity Evidence Topics — immortal.life',
-    PAGE_DESCRIPTION: 'A continuously updated index of longevity interventions, mechanisms, trials, and research topics.',
+    PAGE_DESCRIPTION: 'Choose a topic to see its latest research, clinical trials, limitations, and regulatory context.',
     CANONICAL_URL: `${site}/topics`,
     PAGE_VIEW: 'topics',
     TOPIC_SLUG: '',
-    PAGE_KICKER: 'Immortal Index',
-    PAGE_HEADING: 'Follow the evidence, not the noise.',
+    PAGE_KICKER: 'Topic guides',
+    PAGE_HEADING: 'Explore longevity one question at a time.',
   },
   {
     filename: 'regulatory.html',
     PAGE_TITLE: 'EU & Czech Regulatory Watch — immortal.life',
-    PAGE_DESCRIPTION: 'Automatically monitored official notices from European and Czech medicines regulators, with source provenance and topic matching.',
+    PAGE_DESCRIPTION: 'Official notices from European and Czech medicines regulators, monitored automatically and linked to their original sources.',
     CANONICAL_URL: `${site}/regulatory`,
     PAGE_VIEW: 'regulatory',
     TOPIC_SLUG: '',
-    PAGE_KICKER: 'EU and Czech official-source monitoring',
-    PAGE_HEADING: 'Regulatory watch.',
+    PAGE_KICKER: 'Official EU and Czech notices',
+    PAGE_HEADING: 'See when regulatory information changes.',
   },
   {
     filename: 'integrity.html',
@@ -138,8 +138,8 @@ const intelligencePages = [
     CANONICAL_URL: `${site}/integrity`,
     PAGE_VIEW: 'integrity',
     TOPIC_SLUG: '',
-    PAGE_KICKER: 'Crossref-linked post-publication updates',
-    PAGE_HEADING: 'Evidence changes. We track it.',
+    PAGE_KICKER: 'Corrections and retractions',
+    PAGE_HEADING: 'When evidence changes, see the change.',
   },
   {
     filename: 'evidence-graph.html',
@@ -148,8 +148,8 @@ const intelligencePages = [
     CANONICAL_URL: `${site}/evidence-graph`,
     PAGE_VIEW: 'graph',
     TOPIC_SLUG: '',
-    PAGE_KICKER: 'A living map of the evidence',
-    PAGE_HEADING: 'See how the field connects.',
+    PAGE_KICKER: 'Evidence connections',
+    PAGE_HEADING: 'See how topics and sources connect.',
   },
   {
     filename: 'entities.html',
@@ -158,28 +158,28 @@ const intelligencePages = [
     CANONICAL_URL: `${site}/entities`,
     PAGE_VIEW: 'entities',
     TOPIC_SLUG: '',
-    PAGE_KICKER: 'Programmatic knowledge index',
-    PAGE_HEADING: 'The entities shaping longevity evidence.',
+    PAGE_KICKER: 'Evidence directory',
+    PAGE_HEADING: 'Explore the topics and sources in the index.',
   },
   {
     filename: 'resources.html',
     PAGE_TITLE: 'Global Longevity Resource Atlas — immortal.life',
-    PAGE_DESCRIPTION: 'A jurisdiction-aware atlas of authoritative global evidence systems, trial registries, and medicine regulators with automated availability and provenance checks.',
+    PAGE_DESCRIPTION: 'Find official global research databases, trial registries, and medicines regulators, with clear notes about geographic coverage.',
     CANONICAL_URL: `${site}/resources`,
     PAGE_VIEW: 'resources',
     TOPIC_SLUG: '',
-    PAGE_KICKER: 'Global Resource Atlas',
-    PAGE_HEADING: 'Know the source. Know where it applies.',
+    PAGE_KICKER: 'Global source directory',
+    PAGE_HEADING: 'Know the source and where it applies.',
   },
   {
     filename: 'quality.html',
-    PAGE_TITLE: 'Automated Quality & Indexing Telemetry — immortal.life',
-    PAGE_DESCRIPTION: 'Live relevance confidence, quarantine, duplicate suppression, source freshness, and indexing telemetry for immortal.life.',
+    PAGE_TITLE: 'Automated Quality Checks — immortal.life',
+    PAGE_DESCRIPTION: 'See how many records were shown, withheld, grouped as duplicates, or delayed by the automated quality checks.',
     CANONICAL_URL: `${site}/quality`,
     PAGE_VIEW: 'quality',
     TOPIC_SLUG: '',
-    PAGE_KICKER: 'Observable automated publishing',
-    PAGE_HEADING: 'Quality signals, in public.',
+    PAGE_KICKER: 'Quality checks you can see',
+    PAGE_HEADING: 'See what the system published—and what it held back.',
   },
 ];
 
@@ -191,9 +191,9 @@ const topicOutputDir = path.join(outputDir, 'topics');
 fs.mkdirSync(topicOutputDir, { recursive: true });
 for (const topic of intelligenceTopics) {
   const dossier = `<section class="intel-section topic-primer" aria-labelledby="topic-question">
-    <div class="section-heading"><div><span class="section-index">Automated evidence frame</span><h2 id="topic-question">${htmlEscape(topic.question)}</h2></div><a class="section-link" href="/methodology">How this is generated</a></div>
-    <div class="dossier-grid"><article><h3>Current evidence state</h3><p>${htmlEscape(topic.state)}</p></article><article><h3>Known limits</h3><p>${htmlEscape(topic.limits)}</p></article><article><h3>Regulatory context</h3><p>${htmlEscape(topic.regulatory)}</p></article></div>
-    <aside class="automation-notice"><strong>Automated dossier</strong><p>This page is assembled from live source metadata. No scientist, clinician, researcher, editor, or human reviewer evaluates it before publication. Verify consequential details at the cited source.</p><p><a class="section-link" href="/feeds/topics/${topic.slug}.xml">Follow this topic via RSS</a> · <a class="section-link" href="/feeds/topics/${topic.slug}.json">JSON Feed</a></p></aside>
+    <div class="section-heading"><div><span class="section-index">The question we track</span><h2 id="topic-question">${htmlEscape(topic.question)}</h2></div><a class="section-link" href="/methodology">How records are chosen</a></div>
+    <div class="dossier-grid"><article><h3>What the records show</h3><p>${htmlEscape(topic.state)}</p></article><article><h3>What is still uncertain</h3><p>${htmlEscape(topic.limits)}</p></article><article><h3>Regulatory position</h3><p>${htmlEscape(topic.regulatory)}</p></article></div>
+    <aside class="automation-notice"><strong>Built automatically from source records</strong><p>No scientist, clinician, researcher, editor, or human reviewer evaluates this page before publication. Check important details at the linked original source.</p><p><a class="section-link" href="/feeds/topics/${topic.slug}.xml">Follow this topic by RSS</a> · <a class="section-link" href="/feeds/topics/${topic.slug}.json">Use the JSON feed</a></p></aside>
   </section>`;
   fs.writeFileSync(
     path.join(topicOutputDir, `${topic.slug}.html`),
@@ -203,7 +203,7 @@ for (const topic of intelligenceTopics) {
       CANONICAL_URL: `${site}/topics/${topic.slug}`,
       PAGE_VIEW: 'topic',
       TOPIC_SLUG: topic.slug,
-      PAGE_KICKER: 'Continuously updated topic dossier',
+      PAGE_KICKER: 'Automatically updated topic guide',
       PAGE_HEADING: topic.name,
       SOCIAL_IMAGE_URL: `${site}/social-card/entity/topic-${topic.slug}.png`,
     }, dossier)
@@ -212,9 +212,9 @@ for (const topic of intelligenceTopics) {
 
 const contentPages = [
   {
-    filename: 'methodology.html', title: 'Methodology — immortal.life', heading: 'How the index works.', kicker: 'Transparent automated methodology',
+    filename: 'methodology.html', title: 'How immortal.life works', heading: 'How records reach the website.', kicker: 'A transparent automatic process',
     description: 'How immortal.life automatically discovers, classifies, links, updates, and publishes longevity intelligence without human review.',
-    body: `<h2>What the system does</h2><p>immortal.life retrieves public metadata from named literature databases, trial registries, Crossref-linked integrity records, and official regulatory feeds. Automated matching rules connect records to tracked topics, normalize dates and identifiers, and publish the resulting index.</p><h2>What the system does not do</h2><p>No scientist, clinician, researcher, editor, or human reviewer screens individual records before publication. The system does not reproduce a peer-review process, judge clinical suitability, or provide personal medical advice.</p><h2>Evidence labels</h2><p>Labels describe source metadata and study design signals: synthesis, randomized human study, human study, preclinical research, preprint, or general research record. They are navigation aids, not quality scores or treatment recommendations.</p><h2>Topic matching and quarantine</h2><p>Controlled terminology is evaluated across titles, abstracts, source keywords, and study types. Broad terms such as sleep, exercise, stem cells, or gene therapy also require explicit ageing, longevity, healthspan, or frailty context. Records scoring below 60% remain stored in automated quarantine and are excluded from public pages, counts, feeds, briefings, graphs, indexing notifications, and the sitemap.</p><h2>Duplicate clustering</h2><p>DOIs, registry identifiers, and normalized titles create deterministic clusters. Only the canonical cluster leader is eligible for publication; duplicates remain quarantined and traceable internally.</p><h2>Public explanations</h2><p>Published records display their relevance confidence, matched fields, controlled-term reasons, source-quality score, and freshness score. These explain automated routing and do not measure treatment effectiveness, safety, or overall scientific quality. Aggregate results appear on the <a href="/quality">quality telemetry page</a>.</p><h2>Freshness and provenance</h2><p>Each record retains a direct source URL and update timestamps. Feed health is shown publicly. If live data cannot be retrieved, the interface does not substitute uncited claims.</p><h2>Known limitations</h2><p>Source metadata can be incomplete, delayed, duplicated, corrected, or wrong. Automated summaries may omit context. Registration does not establish trial quality, safety, effectiveness, completion, or approval.</p>`
+    body: `<h2>1. Records are collected</h2><p>immortal.life reads public information from named research databases, trial registries, correction services, and official regulatory feeds. Every published item keeps a direct link to its original source.</p><h2>2. Topic relevance is checked</h2><p>The system looks for topic terms in titles, summaries, source keywords, and study types. Broad subjects such as sleep, exercise, stem cells, or gene therapy must also mention ageing, longevity, healthspan, or frailty in the title or summary.</p><h2>3. Weak matches are held back</h2><p>A record needs a topic-match score of at least 60% to appear publicly. Lower-scoring records are withheld from pages, counts, feeds, briefings, graphs, search notifications, and the sitemap.</p><h2>4. Repeated records are grouped</h2><p>DOIs, trial identifiers, and simplified titles help identify duplicate or near-duplicate entries. One main record is shown; the repeated versions are withheld.</p><h2>5. Readers can inspect the result</h2><p>Each record explains why it appeared, shows its topic-match percentage, and links to the source. These figures help organise information; they do not rate safety, effectiveness, or scientific quality. Overall results appear on the <a href="/quality">quality checks page</a>.</p><h2>No human review before publication</h2><p>No scientist, clinician, researcher, editor, or human reviewer screens individual records before they appear. The website is a discovery tool, not a peer-review service or a source of personal medical advice.</p><h2>Known limitations</h2><p>Source information can be incomplete, delayed, duplicated, corrected, or wrong. A registered trial is not proof of quality, safety, effectiveness, completion, or regulatory approval. Always check important details at the original source.</p>`
   },
   {
     filename: 'automation.html', title: 'Automation disclosure — immortal.life', heading: 'Built by systems, not a newsroom.', kicker: 'Permanent publication disclosure',

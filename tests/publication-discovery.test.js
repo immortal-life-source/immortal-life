@@ -66,11 +66,11 @@ test('Search Console and consent-based briefing delivery are automated and priva
   assert.match(read('supabase/functions/deliver-briefings/index.ts'), /RESEND_API_KEY/);
 });
 
-test('public intelligence UI suppresses misleading empty-number states', () => {
+test('public intelligence UI explains empty states and reports quality zeros accurately', () => {
   const script = read('intelligence.js');
   const template = read('intelligence-template.html');
   assert.match(script, /countParts\.join\(' · '\) \|\| 'Index building'/);
   assert.match(script, /node\.kind === 'topic' && Number\(node\.weight \|\| 0\) > 0/);
-  assert.match(script, /value === 0 \? 'None'/);
+  assert.match(script, /typeof value === 'number' \? numberFormatter\.format\(value\)/);
   assert.doesNotMatch(template, /id="(?:research|trial|topic)Count">0</);
 });

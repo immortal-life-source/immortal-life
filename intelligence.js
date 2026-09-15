@@ -87,16 +87,20 @@
 
   function appendQualityExplanation(container, record, relationName) {
     const details = el('details', 'quality-explanation');
-    const summary = el('summary', '', `Why this matched · ${numberFormatter.format(Number(record.relevance_confidence || 0))}% confidence`);
-    details.append(summary, el('p', '', record.match_explanation || 'Matched automatically using controlled terminology and source metadata.'));
+    const confidence = numberFormatter.format(Number(record.relevance_confidence || 0));
+    const summary = el('summary', '', `Why this record appears here · ${confidence}% topic match`);
+    details.append(summary, el('p', '', 'The title, summary, or source keywords matched one or more topics followed by immortal.life. A higher percentage means a stronger topic match; it does not rate safety, effectiveness, or study quality.'));
     const relations = Array.isArray(record?.[relationName]) ? record[relationName].filter((item) => item?.is_published !== false) : [];
     relations.forEach((relation) => {
       const topic = relation?.intelligence_topics?.name || relation?.topic_slug || 'Tracked topic';
-      const reasons = Array.isArray(relation?.match_reasons) ? relation.match_reasons.join(' ') : '';
-      details.append(el('p', 'quality-reason', `${topic} · ${Number(relation?.relevance_score || 0)}%${reasons ? ` — ${reasons}` : ''}`));
+      details.append(el('p', 'quality-reason', `${topic}: ${Number(relation?.relevance_score || 0)}% topic match`));
     });
-    details.append(el('p', 'quality-signal-note', `Source quality ${Number(record.source_quality_score || 0)}% · freshness ${Number(record.freshness_score || 0)}%. Routing signals only—not medical or evidence-strength ratings.`));
+    details.append(el('p', 'quality-signal-note', `Automated source check: ${Number(record.source_quality_score || 0)}% · update recency: ${Number(record.freshness_score || 0)}%. These figures help sort records; they are not medical ratings.`));
     container.append(details);
+  }
+
+  function readableStatus(value) {
+    return String(value || 'Status not supplied').replace(/_/g, ' ').toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase());
   }
 
   function renderTopics(topics, compact) {
@@ -137,7 +141,8 @@
       const heading = el('h3');
       heading.append(link('record-title-link', record.title, `/research/${encodeURIComponent(record.id)}`));
       main.append(heading);
-      main.append(el('p', '', record.editorial_summary));
+      const researchSummary = `${evidenceLabel(record.evidence_level, record.status)}${record.journal ? ` from ${record.journal}` : ''}. Open the original record for the study details, methods, and limitations.`;
+      main.append(el('p', '', researchSummary));
       const tags = el('div', 'record-tags');
       topicLinks(record, 'research_item_topics').forEach((topic) => tags.append(link('record-tag', topic.name, `/topics/${encodeURIComponent(topic.slug)}`)));
       if (record.is_open_access) tags.append(el('span', 'record-tag', 'Open access'));
@@ -185,7 +190,8 @@
       const heading = el('h3');
       heading.append(link('record-title-link', record.title, `/trials/${encodeURIComponent(record.id)}`));
       main.append(heading);
-      main.append(el('p', '', record.editorial_summary));
+      const phases = Array.isArray(record.phases) && record.phases.length ? record.phases.map(readableStatus).join(', ') : 'Phase not supplied';
+      main.append(el('p', '', `${phases} clinical study. Registry status: ${readableStatus(record.overall_status)}. Open the registry record for eligibility, locations, and contacts.`));
       const tags = el('div', 'record-tags');
       topicLinks(record, 'clinical_trial_topics').forEach((topic) => tags.append(link('record-tag', topic.name, `/topics/${encodeURIComponent(topic.slug)}`)));
       (record.phases || []).forEach((phase) => tags.append(el('span', 'record-tag', phase.replace(/_/g, ' '))));
@@ -193,7 +199,7 @@
       appendQualityExplanation(main, record, 'clinical_trial_topics');
 
       const action = el('div', 'record-action');
-      action.append(el('span', 'record-status', record.overall_status));
+      action.append(el('span', 'record-status', readableStatus(record.overall_status)));
       const source = link('source-link', 'Open registry record', record.source_url);
       source.target = '_blank';
       source.rel = 'noopener noreferrer';
@@ -260,14 +266,14 @@
     svg.replaceChildren(svg.querySelector('title'), svg.querySelector('desc'));
     const width = 1200, height = 720, centerX = width / 2, centerY = height / 2;
     const layerPositions = {
-      'layer:research': { x: 165, y: 140 }, 'layer:trials': { x: 1035, y: 140 },
-      'layer:regulatory': { x: 1035, y: 580 }, 'layer:integrity': { x: 165, y: 580 },
+      'layer:research': { x: 95, y: 92 }, 'layer:trials': { x: 1105, y: 92 },
+      'layer:regulatory': { x: 1105, y: 628 }, 'layer:integrity': { x: 95, y: 628 },
     };
     const topicNodes = (data.nodes || []).filter((node) => node.kind === 'topic' && Number(node.weight || 0) > 0);
     const positions = {};
     topicNodes.forEach((node, index) => {
       const angle = -Math.PI / 2 + index * Math.PI * 2 / Math.max(topicNodes.length, 1);
-      positions[node.id] = { x: centerX + Math.cos(angle) * 245, y: centerY + Math.sin(angle) * 245 };
+      positions[node.id] = { x: centerX + Math.cos(angle) * 325, y: centerY + Math.sin(angle) * 205 };
     });
     Object.assign(positions, layerPositions);
     const ns = 'http://www.w3.org/2000/svg';
@@ -277,7 +283,7 @@
       const line = document.createElementNS(ns, 'line');
       line.setAttribute('x1', from.x); line.setAttribute('y1', from.y); line.setAttribute('x2', to.x); line.setAttribute('y2', to.y);
       line.setAttribute('class', `graph-link graph-link--${edge.kind}`);
-      line.setAttribute('stroke-width', String(Math.min(8, 0.8 + Math.log2(edge.weight + 1))));
+      line.setAttribute('stroke-width', String(Math.min(4, 0.7 + Math.log2(edge.weight + 1) * .55)));
       svg.append(line);
     });
     (data.nodes || []).filter((node) => Number(node.weight || 0) > 0).forEach((node) => {
@@ -287,9 +293,9 @@
       group.setAttribute('class', `graph-node graph-node--${node.kind}`);
       const circle = document.createElementNS(ns, 'circle');
       circle.setAttribute('cx', point.x); circle.setAttribute('cy', point.y);
-      circle.setAttribute('r', String(node.kind === 'topic' ? Math.min(35, 18 + Math.log2(Number(node.weight || 0) + 1) * 2) : 48));
+      circle.setAttribute('r', String(node.kind === 'topic' ? Math.min(32, 17 + Math.log2(Number(node.weight || 0) + 1) * 1.8) : 37));
       const label = document.createElementNS(ns, 'text');
-      label.setAttribute('x', point.x); label.setAttribute('y', point.y + (node.kind === 'topic' ? 50 : 70));
+      label.setAttribute('x', point.x); label.setAttribute('y', point.y + (node.kind === 'topic' ? 48 : 57));
       label.setAttribute('text-anchor', 'middle'); label.textContent = node.label;
       const count = document.createElementNS(ns, 'text');
       count.setAttribute('x', point.x); count.setAttribute('y', point.y + 4); count.setAttribute('text-anchor', 'middle');
@@ -303,7 +309,8 @@
     elements.graphFallback.append(fallbackList); elements.graphSection.hidden = false;
   }
 
-  function renderSources(sources) {
+  function renderSources(sources, showList) {
+    const shouldShowList = showList !== false;
     elements.sourceList.replaceChildren();
     if (!sources.length) {
       elements.sourceSection.hidden = true;
@@ -320,14 +327,14 @@
       health.dataset.health = source.health;
       const updated = source.last_success_at ? `Last successful sync ${dateFormatter.format(new Date(source.last_success_at))} · ${source.update_cadence}` : `First sync pending · ${source.update_cadence}`;
       item.append(sourceLink, health, el('p', '', updated));
-      elements.sourceList.append(item);
+      if (shouldShowList) elements.sourceList.append(item);
     });
-    elements.sourceSection.hidden = false;
+    elements.sourceSection.hidden = !shouldShowList;
 
     const states = sources.map((source) => source.health);
     const overall = states.includes('degraded') ? 'degraded' : states.includes('stale') ? 'stale' : states.every((state) => state === 'healthy') ? 'healthy' : 'pending';
     elements.freshness.dataset.health = overall;
-    if (overall === 'healthy') elements.freshnessText.textContent = 'All configured sources passed their latest automated checks.';
+    if (overall === 'healthy') elements.freshnessText.textContent = 'Source records are up to date.';
     else if (overall === 'pending') elements.freshnessText.textContent = 'Initial source synchronization is in progress.';
     else elements.freshnessText.textContent = 'One or more sources are delayed; existing records remain cited and available.';
   }
@@ -358,10 +365,11 @@
     if (!entities.length) elements.entityGrid.append(el('p', 'empty-list', 'Entity generation will follow the next source synchronization.'));
     entities.forEach((entity) => {
       const card = link('entity-card', '', `/entities/${encodeURIComponent(entity.kind)}/${encodeURIComponent(entity.slug)}`);
-      card.append(el('span', 'section-index', entity.kind));
+      const kinds = { topic: 'Topic', source: 'Scientific source', journal: 'Journal', sponsor: 'Trial sponsor' };
+      card.append(el('span', 'section-index', kinds[entity.kind] || resourceLabel(entity.kind)));
       card.append(el('h3', '', entity.name));
       card.append(el('p', '', entity.description));
-      card.append(el('strong', 'entity-count', `${numberFormatter.format(Number(entity.record_count || 0))} published records`));
+      card.append(el('strong', 'entity-count', `${numberFormatter.format(Number(entity.record_count || 0))} connected records`));
       elements.entityGrid.append(card);
     });
     elements.entitiesSection.hidden = false;
@@ -374,10 +382,10 @@
   function renderResourceStats(coverage) {
     elements.resourceStats.replaceChildren();
     [
-      ['Qualified resources', coverage?.total || 0],
-      ['Jurisdictions', coverage?.jurisdictions || 0],
-      ['Live connections', coverage?.live_integrations || 0],
-      ['Healthy checks', coverage?.healthy || 0],
+      ['Official resources listed', coverage?.total || 0],
+      ['Countries and regions', coverage?.jurisdictions || 0],
+      ['Updated automatically', coverage?.live_integrations || 0],
+      ['Links checked successfully', coverage?.healthy || 0],
     ].forEach(([label, value]) => {
       const card = el('div', 'atlas-stat');
       card.append(el('strong', '', numberFormatter.format(Number(value))), el('span', '', label));
@@ -434,7 +442,8 @@
       const card = el('article', 'resource-card');
       const heading = el('div', 'resource-card-heading');
       heading.append(el('span', 'section-index', resourceLabel(resource.resource_type)));
-      const health = el('span', 'source-health', resource.health);
+      const healthLabels = { healthy: 'Available', degraded: 'Check delayed', restricted: 'Access limited', stale: 'Update delayed', pending: 'Checking' };
+      const health = el('span', 'source-health', healthLabels[resource.health] || readableStatus(resource.health));
       health.dataset.health = resource.health;
       heading.append(health);
       const title = el('h3');
@@ -444,20 +453,20 @@
       const jurisdiction = el('p', 'resource-jurisdiction', `${resource.jurisdiction_name} · ${resourceLabel(resource.geographic_scope)} scope`);
       const badges = el('div', 'resource-badges');
       badges.append(
-        el('span', resource.integration_status === 'live' ? 'resource-badge resource-badge--live' : 'resource-badge', resource.integration_status === 'live' ? 'Live ingestion' : 'Verified directory'),
-        el('span', 'resource-badge', resourceLabel(resource.access_mode)),
-        el('span', 'resource-badge', resource.reuse_status === 'open' ? 'Open reuse' : resource.reuse_status === 'link-only' ? 'Link only' : 'Source terms apply'),
+        el('span', resource.integration_status === 'live' ? 'resource-badge resource-badge--live' : 'resource-badge', resource.integration_status === 'live' ? 'Updated automatically' : 'Verified official link'),
+        el('span', 'resource-badge', resource.access_mode === 'api' ? 'Data interface available' : resourceLabel(resource.access_mode)),
+        el('span', 'resource-badge', resource.reuse_status === 'open' ? 'Reuse allowed' : resource.reuse_status === 'link-only' ? 'Link to source' : 'Source terms apply'),
       );
       const actions = el('div', 'resource-actions');
-      if (resource.data_url) { const dataLink = link('section-link', 'Open data access', resource.data_url); dataLink.target = '_blank'; dataLink.rel = 'noopener noreferrer'; actions.append(dataLink); }
-      if (resource.terms_url) { const termsLink = link('section-link section-link--muted', 'Access terms', resource.terms_url); termsLink.target = '_blank'; termsLink.rel = 'noopener noreferrer'; actions.append(termsLink); }
+      if (resource.data_url) { const dataLink = link('section-link', 'Visit data page', resource.data_url); dataLink.target = '_blank'; dataLink.rel = 'noopener noreferrer'; actions.append(dataLink); }
+      if (resource.terms_url) { const termsLink = link('section-link section-link--muted', 'Usage terms', resource.terms_url); termsLink.target = '_blank'; termsLink.rel = 'noopener noreferrer'; actions.append(termsLink); }
       const limitations = el('details', 'resource-limitations');
-      limitations.append(el('summary', '', 'Scope and limitations'), el('p', '', resource.limitations), el('p', 'resource-eligibility', resource.eligibility_reason));
-      const checked = resource.health_basis === 'ingestion' ? 'Health based on live ingestion' : resource.last_checked_at ? `Availability checked ${formatTimestamp(resource.last_checked_at)}` : 'First automated check pending';
+      limitations.append(el('summary', '', 'What this source covers'), el('p', '', resource.limitations), el('p', 'resource-eligibility', resource.eligibility_reason));
+      const checked = resource.health_basis === 'ingestion' ? 'Updated from the live source' : resource.last_checked_at ? `Link checked ${formatTimestamp(resource.last_checked_at)}` : 'First link check is pending';
       card.append(heading, title, jurisdiction, el('p', 'resource-description', resource.description), badges, limitations, actions, el('p', 'resource-check', `${checked} · ${resource.update_cadence}`));
       elements.resourceGrid.append(card);
     });
-    elements.resourceResult.textContent = `${numberFormatter.format(visible.length)} of ${numberFormatter.format(atlasResources.length)} qualified resources shown.`;
+    elements.resourceResult.textContent = `Showing ${numberFormatter.format(visible.length)} of ${numberFormatter.format(atlasResources.length)} official resources.`;
   }
 
   function renderResources(data) {
@@ -484,24 +493,24 @@
   function renderQuality(telemetry) {
     elements.qualityGrid.replaceChildren();
     const groups = [
-      ['Research published', telemetry?.research?.published],
-      ['Research quarantined', telemetry?.research?.quarantined],
-      ['Research confidence', Number(telemetry?.research?.average_confidence || 0) > 0 ? `${Number(telemetry.research.average_confidence)}%` : 'Pending'],
-      ['Duplicates suppressed', telemetry?.research?.duplicates_suppressed],
-      ['Trials published', telemetry?.trials?.published],
-      ['Trials quarantined', telemetry?.trials?.quarantined],
-      ['Trial confidence', Number(telemetry?.trials?.average_confidence || 0) > 0 ? `${Number(telemetry.trials.average_confidence)}%` : 'Pending'],
-      ['IndexNow notification', telemetry?.indexing?.succeeded === true ? 'Healthy' : telemetry?.indexing?.succeeded === false ? 'Degraded' : 'Pending'],
-      ['Briefing distribution', telemetry?.distribution?.succeeded === true ? 'Healthy' : telemetry?.distribution?.succeeded === false ? 'Degraded' : 'Pending'],
-      ['Search impressions · 28d', telemetry?.search?.last_imported_at ? telemetry.search.impressions : 'Connecting'],
-      ['Search clicks · 28d', telemetry?.search?.last_imported_at ? telemetry.search.clicks : 'Connecting'],
-      ['Search opportunities', telemetry?.search?.last_imported_at ? telemetry.search.open_opportunities : 'Connecting'],
-      ['Search data freshness', telemetry?.search?.last_imported_at ? formatTimestamp(telemetry.search.last_imported_at) : 'Awaiting secure API link'],
+      ['Research records shown', telemetry?.research?.published, 'Passed the automatic topic and source checks.'],
+      ['Research records withheld', telemetry?.research?.quarantined, 'Kept off the public site because the match was too weak or uncertain.'],
+      ['Average research match', Number(telemetry?.research?.average_confidence || 0) > 0 ? `${Number(telemetry.research.average_confidence)}%` : 'Pending', 'Average topic relevance of the records currently shown.'],
+      ['Repeated records removed', telemetry?.research?.duplicates_suppressed, 'Near-identical records grouped behind one main entry.'],
+      ['Trial records shown', telemetry?.trials?.published, 'Registry records that passed the automatic checks.'],
+      ['Trial records withheld', telemetry?.trials?.quarantined, 'Registry records held back because the longevity connection was unclear.'],
+      ['Average trial match', Number(telemetry?.trials?.average_confidence || 0) > 0 ? `${Number(telemetry.trials.average_confidence)}%` : 'Pending', 'Average topic relevance of the trials currently shown.'],
+      ['Search engine update', telemetry?.indexing?.succeeded === true ? 'Up to date' : telemetry?.indexing?.succeeded === false ? 'Delayed' : 'Pending', 'Whether the latest changed pages were sent to supported search engines.'],
+      ['Weekly briefing delivery', telemetry?.distribution?.succeeded === true ? 'Up to date' : telemetry?.distribution?.succeeded === false ? 'Delayed' : 'Pending', 'Whether the latest automatic briefing was generated and sent.'],
+      ['Google impressions · 28 days', telemetry?.search?.last_imported_at ? telemetry.search.impressions : 'Not connected yet', 'How often pages appeared in Google search results.'],
+      ['Google visits · 28 days', telemetry?.search?.last_imported_at ? telemetry.search.clicks : 'Not connected yet', 'Visits from Google search results.'],
+      ['Search pages to improve', telemetry?.search?.last_imported_at ? telemetry.search.open_opportunities : 'Not connected yet', 'Pages appearing in search that may benefit from clearer titles or descriptions.'],
+      ['Google data last updated', telemetry?.search?.last_imported_at ? formatTimestamp(telemetry.search.last_imported_at) : 'Not connected yet', 'Search Console data will appear here after its secure connection is configured.'],
     ];
-    groups.forEach(([label, value]) => {
+    groups.forEach(([label, value, description]) => {
       const card = el('article', 'quality-stat');
-      const displayValue = typeof value === 'number' ? (value === 0 ? 'None' : numberFormatter.format(value)) : value ?? 'Pending';
-      card.append(el('span', '', label), el('strong', '', displayValue));
+      const displayValue = typeof value === 'number' ? numberFormatter.format(value) : value ?? 'Pending';
+      card.append(el('span', '', label), el('strong', '', displayValue), el('small', '', description));
       elements.qualityGrid.append(card);
     });
     elements.qualitySection.hidden = false;
@@ -527,21 +536,21 @@
         renderTopics(data.topics || [], true);
         renderResearch(data.research || []);
         renderTrials(data.trials || []);
-        renderSources(data.sources || []);
+        renderSources(data.sources || [], true);
       } else if (view === 'research') {
         const [data, topicsData] = await Promise.all([request('research', 60), request('topics', 100)]);
         renderResearch(data.research || []);
-        renderSources(data.sources || []);
+        renderSources(data.sources || [], false);
         renderTopics(topicsData.topics || [], true);
       } else if (view === 'trials') {
         const [data, topicsData] = await Promise.all([request('trials', 60), request('topics', 100)]);
         renderTrials(data.trials || []);
-        renderSources(data.sources || []);
+        renderSources(data.sources || [], false);
         renderTopics(topicsData.topics || [], true);
       } else if (view === 'topics') {
         const data = await request('topics', 100);
         renderTopics(data.topics || [], false);
-        renderSources(data.sources || []);
+        renderSources(data.sources || [], true);
       } else if (view === 'topic') {
         const [research, trials, topics] = await Promise.all([
           request('research', 40),
@@ -550,7 +559,7 @@
         ]);
         renderResearch(research.research || []);
         renderTrials(trials.trials || []);
-        renderSources(research.sources || trials.sources || []);
+        renderSources(research.sources || trials.sources || [], false);
         const selected = (topics.topics || []).find((topic) => topic.slug === topicSlug);
         if (selected) {
           renderStats({ research: selected.research_count, trials: selected.trial_count });
@@ -558,26 +567,26 @@
       } else if (view === 'regulatory') {
         const data = await request('regulatory', 80);
         renderRegulatory(data.regulatory || []);
-        renderSources(data.sources || []);
+        renderSources(data.sources || [], false);
       } else if (view === 'integrity') {
         const data = await request('integrity', 80);
         renderIntegrity(data.integrity || []);
-        renderSources(data.sources || []);
+        renderSources(data.sources || [], false);
       } else if (view === 'graph') {
         const data = await request('graph', 100);
         renderGraph(data);
-        renderSources(data.sources || []);
+        renderSources(data.sources || [], true);
       } else if (view === 'entities') {
         const data = await request('entities', 100);
         renderEntities(data.entities || []);
-        renderSources(data.sources || []);
+        renderSources(data.sources || [], false);
       } else if (view === 'resources') {
         const data = await request('resources', 100);
         renderResources(data);
       } else if (view === 'quality') {
         const data = await request('quality', 100);
         renderQuality(data.telemetry || {});
-        renderSources(data.sources || []);
+        renderSources(data.sources || [], true);
       }
       elements.loading.hidden = true;
     } catch (error) {

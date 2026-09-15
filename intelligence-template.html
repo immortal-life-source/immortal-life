@@ -32,10 +32,9 @@
       <a href="/trials" data-nav="trials">Trial Radar</a>
       <a href="/topics" data-nav="topics">Topics</a>
       <a href="/regulatory" data-nav="regulatory">Regulatory</a>
-      <a href="/evidence-graph" data-nav="graph">Evidence Graph</a>
       <a href="/resources" data-nav="resources">Resources</a>
-      <a href="/quality" data-nav="quality">Quality</a>
       <a href="/briefings">Briefings</a>
+      <a href="/methodology">How it works</a>
       <a href="/join">Members</a>
     </nav>
   </header>
@@ -69,7 +68,7 @@
 
     <section class="intel-section" id="researchSection" hidden>
       <div class="section-heading">
-        <div><span class="section-index">Literature</span><h2>Latest research</h2></div>
+        <div><span class="section-index">Research updates</span><h2>New research records</h2></div>
         <a href="/research" class="section-link" id="researchAllLink">View research feed</a>
       </div>
       <div class="filter-row" id="researchFilters" hidden></div>
@@ -78,7 +77,7 @@
 
     <section class="intel-section" id="trialsSection" hidden>
       <div class="section-heading">
-        <div><span class="section-index">Registry</span><h2>Trial Radar</h2></div>
+        <div><span class="section-index">Clinical studies</span><h2>Trial Radar</h2></div>
         <a href="/trials" class="section-link" id="trialsAllLink">View all trials</a>
       </div>
       <div class="filter-row" id="trialFilters" hidden></div>
@@ -87,7 +86,7 @@
 
     <section class="intel-section" id="regulatorySection" hidden>
       <div class="section-heading">
-        <div><span class="section-index">Official notices</span><h2>Regulatory watch</h2></div>
+        <div><span class="section-index">Official notices</span><h2>Regulatory updates</h2></div>
         <a href="/integrity" class="section-link">Research integrity feed</a>
       </div>
       <div class="record-list" id="regulatoryList"></div>
@@ -103,8 +102,8 @@
 
     <section class="intel-section graph-section" id="graphSection" hidden>
       <div class="section-heading">
-        <div><span class="section-index">Living map</span><h2>Visual evidence graph</h2></div>
-        <span class="graph-hint">Select a topic node to open its dossier</span>
+        <div><span class="section-index">How the evidence connects</span><h2>Evidence connections</h2></div>
+        <span class="graph-hint">Choose a topic circle to open its guide</span>
       </div>
       <div class="evidence-graph-wrap">
         <svg id="evidenceGraph" class="evidence-graph" viewBox="0 0 1200 720" role="img" aria-labelledby="graphTitle graphDescription">
@@ -119,15 +118,15 @@
     </section>
 
     <section class="intel-section" id="entitiesSection" hidden>
-      <div class="section-heading"><div><span class="section-index">Programmatic index</span><h2>Evidence entities</h2></div><span class="graph-hint">Generated from published source metadata</span></div>
+      <div class="section-heading"><div><span class="section-index">Evidence directory</span><h2>People, organisations, and topics</h2></div><span class="graph-hint">Built automatically from source records</span></div>
       <div class="entity-grid" id="entityGrid"></div>
     </section>
 
     <section class="intel-section resource-atlas" id="resourcesSection" hidden>
       <div class="atlas-summary" id="resourceStats" aria-label="Resource coverage statistics"></div>
       <div class="section-heading atlas-heading">
-        <div><span class="section-index">Public coverage map</span><h2>Authoritative systems, clearly scoped.</h2></div>
-        <a href="/entities" class="section-link">Explore evidence entities</a>
+        <div><span class="section-index">Coverage map</span><h2>Trusted public sources, by region.</h2></div>
+        <a href="/entities" class="section-link">Explore the evidence directory</a>
       </div>
       <div class="resource-map-wrap">
         <svg class="resource-map" viewBox="0 0 1200 520" role="img" aria-labelledby="resourceMapTitle resourceMapDescription">
@@ -149,28 +148,29 @@
         <label><span>Search</span><input id="resourceSearch" type="search" placeholder="Name, country, or authority" autocomplete="off" /></label>
         <label><span>Region</span><select id="resourceRegion"><option value="">All regions</option></select></label>
         <label><span>Resource type</span><select id="resourceType"><option value="">All resource types</option></select></label>
-        <label><span>Connection</span><select id="resourceIntegration"><option value="">All connections</option><option value="live">Live ingestion</option><option value="directory">Verified directory</option></select></label>
+        <label><span>Update method</span><select id="resourceIntegration"><option value="">All sources</option><option value="live">Updated automatically</option><option value="directory">Verified official link</option></select></label>
       </form>
       <p class="filter-result" id="resourceResult" aria-live="polite"></p>
       <div class="resource-grid" id="resourceGrid"></div>
-      <aside class="automation-notice"><strong>Automated, jurisdiction-aware inclusion</strong><p>Resources qualify through authority, provenance, secure-link, access-condition, metadata-completeness, and availability rules. Availability is checked every six hours. Inclusion is not endorsement. Regulatory status applies only to the named jurisdiction and exact product or indication.</p></aside>
+      <aside class="automation-notice"><strong>How sources are included</strong><p>We list official or widely recognised public sources and check their links every six hours. A listing is not an endorsement. Regulatory information applies only to the country or region, product, and use named by the original authority.</p></aside>
     </section>
 
     <section class="intel-section" id="qualitySection" hidden>
-      <div class="section-heading"><div><span class="section-index">Live telemetry</span><h2>Automated publication quality</h2></div><a href="/methodology" class="section-link">Scoring methodology</a></div>
+      <div class="section-heading"><div><span class="section-index">Live quality checks</span><h2>How well the automated checks are working</h2></div><a href="/methodology" class="section-link">How records are checked</a></div>
+      <p class="quality-intro">These figures show what the system published, withheld, or removed as a duplicate. Match confidence estimates topic relevance; it does not rate whether an intervention is safe or effective.</p>
       <div class="quality-grid" id="qualityGrid"></div>
-      <p class="quality-note">Confidence scores measure automated topic relevance. They are not ratings of clinical effectiveness, safety, or study quality.</p>
+      <p class="quality-note">All checks run automatically. No scientist, clinician, editor, or human reviewer approves individual records before publication.</p>
     </section>
 
     <section class="source-section" id="sourceSection" hidden>
       <div>
-        <span class="section-index">Provenance</span>
-        <h2>Official sources, continuously checked</h2>
+        <span class="section-index">Sources</span>
+        <h2>Where this information comes from</h2>
       </div>
       <div class="source-list" id="sourceList"></div>
     </section>
 
-    <div class="loading-state" id="loadingState" role="status">Building the latest evidence view…</div>
+    <div class="loading-state" id="loadingState" role="status">Loading the latest source records…</div>
     <div class="error-state" id="errorState" hidden>
       <h2>The intelligence feed is temporarily unavailable.</h2>
       <p>No uncited fallback content has been substituted. Please try again shortly.</p>

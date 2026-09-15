@@ -39,13 +39,35 @@ test('broad-topic false positives require explicit longevity context', async () 
   assert.ok(strong.relevanceScore >= 60);
 });
 
+test('broad topics cannot publish from source tags alone', async () => {
+  const { assessTopicMatch } = await import('../supabase/functions/_shared/intelligence.ts');
+  const metadataOnly = assessTopicMatch('exercise', {
+    title: 'Family study of affective and anxiety spectrum disorders',
+    abstract: 'A registry study of families and mood outcomes.',
+    controlledTerms: ['exercise', 'ageing'],
+    studyType: 'observational study',
+    sourceId: 'clinicaltrials-gov',
+  });
+  assert.equal(metadataOnly.publish, false);
+  assert.ok(metadataOnly.relevanceScore < 60);
+
+  const explicit = assessTopicMatch('exercise', {
+    title: 'Exercise for healthy ageing and frailty prevention',
+    abstract: 'Physical activity in older adults with frailty.',
+    controlledTerms: ['exercise'],
+    studyType: 'clinical trial',
+    sourceId: 'clinicaltrials-gov',
+  });
+  assert.equal(explicit.publish, true);
+});
+
 test('all public discovery surfaces exclude quarantined records', () => {
   const publicApi = read('supabase/functions/public-intelligence/index.ts');
   const pages = read('supabase/functions/public-pages/index.ts');
   const briefings = read('supabase/functions/generate-public-briefing/index.ts');
   const indexNow = read('supabase/functions/notify-indexnow/index.ts');
   for (const source of [publicApi, pages, briefings, indexNow]) assert.match(source, /publication_state/);
-  assert.match(pages, /Why this record matched/);
+  assert.match(pages, /Why this record appears here/);
   assert.match(publicApi, /get_intelligence_quality_telemetry/);
 });
 
@@ -79,6 +101,6 @@ test('global resource atlas is authority-based, jurisdiction-aware, and automati
   assert.match(migration, /having count\(\*\) >= 3/);
   assert.match(api, /view === 'resources'/);
   assert.match(monitor, /refresh_global_resource_eligibility/);
-  assert.match(template, /Public coverage map/);
-  assert.match(template, /Regulatory status applies only to the named jurisdiction/);
+  assert.match(template, /Coverage map/);
+  assert.match(template, /Regulatory information applies only to the country or region/);
 });

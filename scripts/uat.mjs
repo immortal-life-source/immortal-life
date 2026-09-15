@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 const baseUrl = process.argv[2] || 'https://www.immortal.life';
 const chromePath = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-const port = 9334;
+const port = 9334 + Math.floor(Math.random() * 400);
 const profile = mkdtempSync(join(tmpdir(), 'immortal-life-uat-'));
 const artifacts = join(tmpdir(), 'immortal-life-uat-artifacts');
 mkdirSync(artifacts, { recursive: true });
@@ -28,8 +28,11 @@ if (!process.env.UAT_ROUTES) {
 
 const browser = spawn(chromePath, [
   '--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
-  '--no-first-run', '--disable-gpu', '--hide-scrollbars', 'about:blank',
-], { stdio: 'ignore', windowsHide: true });
+  '--remote-allow-origins=*', '--no-first-run', '--disable-gpu', '--use-angle=swiftshader',
+  '--disable-features=Vulkan,SkiaGraphite,Dawn,WebGPU', '--hide-scrollbars', 'about:blank',
+], { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
+let chromeError = '';
+browser.stderr?.on('data', (chunk) => { chromeError = (chromeError + chunk.toString()).slice(-12000); });
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -49,11 +52,7 @@ class Cdp {
     this.socket = new WebSocket(url);
   }
   async open() {
-    await new Promise((resolve, reject) => {
-      this.socket.addEventListener('open', resolve, { once: true });
-      this.socket.addEventListener('error', reject, { once: true });
-    });
-    this.socket.addEventListener('message', (event) => {
+    this.socket.onmessage = (event) => {
       const message = JSON.parse(event.data);
       if (message.id) {
         const pending = this.pending.get(message.id);
@@ -64,12 +63,30 @@ class Cdp {
       } else {
         this.events.push(message);
       }
+    };
+    this.socket.addEventListener('close', () => {
+      for (const pending of this.pending.values()) pending.reject(new Error(`Browser connection closed during ${pending.method}`));
+      this.pending.clear();
+    });
+    if (this.socket.readyState === WebSocket.OPEN) return;
+    await new Promise((resolve, reject) => {
+      this.socket.addEventListener('open', resolve, { once: true });
+      this.socket.addEventListener('error', reject, { once: true });
+      this.socket.addEventListener('close', () => reject(new Error('Browser connection closed before opening')), { once: true });
     });
   }
   call(method, params = {}) {
     const id = ++this.id;
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      const timeout = setTimeout(() => {
+        this.pending.delete(id);
+        reject(new Error(`CDP timed out: ${method}`));
+      }, 15000);
+      this.pending.set(id, {
+        method,
+        resolve: (value) => { clearTimeout(timeout); resolve(value); },
+        reject: (error) => { clearTimeout(timeout); reject(error); },
+      });
       this.socket.send(JSON.stringify({ id, method, params }));
     });
   }
@@ -90,8 +107,12 @@ async function waitForReady(cdp) {
   await sleep(1700);
 }
 
-async function capture(cdp, name) {
-  const shot = await cdp.call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+async function capture(cdp, name, fullPage = false) {
+  const shot = await cdp.call('Page.captureScreenshot', {
+    format: 'png',
+    captureBeyondViewport: fullPage,
+    fromSurface: true,
+  });
   const target = join(artifacts, name);
   writeFileSync(target, Buffer.from(shot.data, 'base64'));
   return target;
@@ -139,17 +160,18 @@ async function runViewport(cdp, profileName, width, height, mobile) {
     failures.push(...exceptions, ...consoleErrors);
     results.push({ profile: profileName, route, resolvedUrl: state.url, failures });
 
+    const routeName = route === '/' ? 'home' : route.slice(1).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
+    await capture(cdp, `${profileName}-${routeName}.png`, false);
+
     if (route === '/') {
       if (mobile) {
         const menu = await evaluate(cdp, `(() => { const button = document.querySelector('.mobile-nav-toggle'); button?.click(); const nav = document.getElementById('primaryNav'); return { expanded: button?.getAttribute('aria-expanded'), visible: nav ? getComputedStyle(nav).display !== 'none' : false, links: nav ? [...nav.querySelectorAll('a')].filter(a => { const r=a.getBoundingClientRect(); return r.width >= 1 && r.height >= 40; }).length : 0 }; })()`);
         if (menu.expanded !== 'true' || !menu.visible || menu.links < 8) results.at(-1).failures.push('mobile menu interaction failed');
-        await capture(cdp, 'mobile-home-menu.png');
+        await capture(cdp, 'mobile-home-menu.png', false);
       } else {
-        await capture(cdp, 'desktop-home.png');
+        await capture(cdp, 'desktop-home.png', false);
       }
     }
-    if (route === '/resources') await capture(cdp, `${profileName}-resources.png`);
-    if (route === '/discover') await capture(cdp, `${profileName}-discover.png`);
   }
   return results;
 }
@@ -165,7 +187,9 @@ try {
   if (!page) throw new Error('No headless Chrome page target');
   cdp = new Cdp(page.webSocketDebuggerUrl);
   await cdp.open();
-  await Promise.all([cdp.call('Page.enable'), cdp.call('Runtime.enable'), cdp.call('Network.enable')]);
+  await cdp.call('Page.enable');
+  await cdp.call('Runtime.enable');
+  await cdp.call('Network.enable');
   const desktop = await runViewport(cdp, 'desktop', 1440, 1000, false);
   const mobile = await runViewport(cdp, 'mobile', 390, 844, true);
   const endpointChecks = await Promise.all(['/sitemap.xml', '/sitemaps/static.xml', '/sitemaps/research.xml', '/feed.xml', '/feed.atom', '/feed.json', '/feeds/topics/rapamycin.xml', '/datasets/trials.csv', '/datasets/research.json', '/api/subscribe?action=confirm&token=bad', '/social-card/entity/topic-rapamycin.png'].map(async (route) => {
@@ -176,13 +200,15 @@ try {
   const failures = results.filter((result) => result.failures.length);
   console.log(JSON.stringify({ baseUrl, testedPages: results.length, failures, endpointChecks, artifacts: { desktop: join(artifacts, 'desktop-home.png'), mobile: join(artifacts, 'mobile-home-menu.png'), resourcesDesktop: join(artifacts, 'desktop-resources.png'), resourcesMobile: join(artifacts, 'mobile-resources.png') } }, null, 2));
   if (failures.length || endpointChecks.some((check) => !check.ok)) process.exitCode = 1;
+} catch (error) {
+  console.error(error instanceof Error ? error.stack : error);
+  if (chromeError.trim()) console.error(chromeError.trim());
+  process.exitCode = 1;
 } finally {
-  try { await Promise.race([cdp?.call('Browser.close'), sleep(1000)]); } catch (_) { /* Browser may already be closing. */ }
   cdp?.close();
-  await Promise.race([new Promise((resolve) => browser.once('exit', resolve)), sleep(2000)]);
   if (browser.exitCode == null) browser.kill();
+  await Promise.race([new Promise((resolve) => browser.once('exit', resolve)), sleep(2000)]);
   browser.unref();
   await sleep(300);
   try { rmSync(profile, { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }); } catch (_) { /* OS cleanup will remove the disposable profile. */ }
-  process.exit(process.exitCode || 0);
 }

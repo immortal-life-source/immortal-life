@@ -125,7 +125,8 @@ export function assessTopicMatch(topicSlug: string, input: MatchInput): QualityA
   const titleContext = containsAny(title, AGEING_TERMS)
   const abstractContext = containsAny(abstract, AGEING_TERMS)
   const controlledContext = containsAny(controlled, AGEING_TERMS)
-  const hasContext = titleContext.length + abstractContext.length + controlledContext.length > 0
+  const hasExplicitContext = titleContext.length + abstractContext.length > 0
+  const hasExplicitAnchor = titleAnchors.length + abstractAnchors.length > 0
   if (titleContext.length) {
     relevanceScore += 20
     matchedFields.push('title context')
@@ -146,9 +147,9 @@ export function assessTopicMatch(topicSlug: string, input: MatchInput): QualityA
     reasons.push(`Study type is explicitly identified as ${cleanText(input.studyType, 80)}.`)
   }
   if (matchedFields.filter((field) => ['title', 'abstract', 'controlled terminology'].includes(field)).length >= 2) relevanceScore += 8
-  if (definition.requiresAgeingContext && !hasContext) {
+  if (definition.requiresAgeingContext && (!hasExplicitContext || !hasExplicitAnchor)) {
     relevanceScore = Math.min(relevanceScore, 45)
-    reasons.push('A broad topic term appeared without explicit ageing, longevity, healthspan, or frailty context.')
+    reasons.push('A broad topic needs both a topic term and ageing, longevity, healthspan, or frailty context in the title or summary; source tags alone are not enough.')
   }
   if (!titleAnchors.length && !abstractAnchors.length && !controlledAnchors.length) {
     relevanceScore = 0

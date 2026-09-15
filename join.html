@@ -40,6 +40,9 @@
       margin-bottom: 0;
       text-align: right;
     }
+    .join-top-links { display: flex; align-items: center; gap: 16px; }
+    .join-top-links a { color: var(--gold); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; text-decoration: none; }
+    #inviteError { margin: 4px 0 14px; line-height: 1.5; }
     .join-main {
       flex: 1;
       display: flex;
@@ -294,7 +297,7 @@
   <div class="m-shell join-page">
     <header class="join-top">
       <a href="/" class="m-logo" style="text-decoration: none;" aria-label="immortal.life home"><img src="/linkedin-app-logo.png" width="38" height="38" alt="" decoding="async" /><span>immortal.life</span></a>
-      <p class="join-news-link"><a href="#" data-news-trigger>Project news →</a></p>
+      <nav class="join-top-links" aria-label="Page links"><a href="/research">Research</a><a href="#" data-news-trigger>Project news</a></nav>
     </header>
 
     <main class="join-main">

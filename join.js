@@ -138,7 +138,7 @@
   if (urlParams.get('error') === 'invalid_code') {
     showError('This code is not valid.');
   } else if (urlParams.get('error') === 'invalid_state') {
-    showError('Your login attempt expired. Please try again.');
+    showError('That sign-in link expired. Choose X or LinkedIn below to start again.');
   } else if (urlParams.has('error')) {
     showError('Could not complete login. Please try again.');
   }
