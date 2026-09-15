@@ -101,7 +101,7 @@ body[data-view="topics"] .intel-section { padding-top: clamp(38px, 4vw, 58px); }
 .quality-explanation li { margin: 10px 0; line-height: 1.55; }
 .quality-explanation li span { display: block; margin-top: 4px; }
 
-.quality-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
+.quality-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
 .quality-stat { min-width: 0; min-height: 176px; padding: 28px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .quality-stat span { display: block; color: var(--muted); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
 .quality-stat strong { display: block; margin-top: 18px; color: var(--gold); font: 300 clamp(28px,4vw,48px)/1 var(--serif); overflow-wrap: anywhere; }

@@ -323,9 +323,10 @@
       const sourceLink = link('', source.name, source.homepage_url);
       sourceLink.target = '_blank';
       sourceLink.rel = 'noopener noreferrer';
-      const health = el('span', 'source-health', source.health);
+      const sourceHealthLabels = { healthy: 'Up to date', degraded: 'Delayed', stale: 'Update delayed', pending: 'Checking' };
+      const health = el('span', 'source-health', sourceHealthLabels[source.health] || readableStatus(source.health));
       health.dataset.health = source.health;
-      const updated = source.last_success_at ? `Last successful sync ${dateFormatter.format(new Date(source.last_success_at))} · ${source.update_cadence}` : `First sync pending · ${source.update_cadence}`;
+      const updated = source.last_success_at ? `Last checked ${dateFormatter.format(new Date(source.last_success_at))} · Updated ${source.update_cadence}` : `First update is pending · Updated ${source.update_cadence}`;
       item.append(sourceLink, health, el('p', '', updated));
       if (shouldShowList) elements.sourceList.append(item);
     });
@@ -504,8 +505,7 @@
       ['Weekly briefing delivery', telemetry?.distribution?.succeeded === true ? 'Up to date' : telemetry?.distribution?.succeeded === false ? 'Delayed' : 'Pending', 'Whether the latest automatic briefing was generated and sent.'],
       ['Google impressions · 28 days', telemetry?.search?.last_imported_at ? telemetry.search.impressions : 'Not connected yet', 'How often pages appeared in Google search results.'],
       ['Google visits · 28 days', telemetry?.search?.last_imported_at ? telemetry.search.clicks : 'Not connected yet', 'Visits from Google search results.'],
-      ['Search pages to improve', telemetry?.search?.last_imported_at ? telemetry.search.open_opportunities : 'Not connected yet', 'Pages appearing in search that may benefit from clearer titles or descriptions.'],
-      ['Google data last updated', telemetry?.search?.last_imported_at ? formatTimestamp(telemetry.search.last_imported_at) : 'Not connected yet', 'Search Console data will appear here after its secure connection is configured.'],
+      ['Search pages to improve', telemetry?.search?.last_imported_at ? telemetry.search.open_opportunities : 'Not connected yet', telemetry?.search?.last_imported_at ? `Pages appearing in search that may benefit from clearer titles or descriptions. Data updated ${formatTimestamp(telemetry.search.last_imported_at)}.` : 'Search Console data will appear here after its secure connection is configured.'],
     ];
     groups.forEach(([label, value, description]) => {
       const card = el('article', 'quality-stat');
