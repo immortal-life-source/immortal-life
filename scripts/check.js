@@ -42,6 +42,9 @@ const edgeScripts = [
   'supabase/functions/distribute-public-briefing/index.ts',
   'supabase/functions/social-card/index.ts',
   'supabase/functions/check-resource-health/index.ts',
+  'supabase/functions/sync-search-console/index.ts',
+  'supabase/functions/subscribe-briefing/index.ts',
+  'supabase/functions/deliver-briefings/index.ts',
 ];
 
 for (const file of browserScripts) {
@@ -75,6 +78,7 @@ const requiredFiles = [
   'supabase/migrations/20260915000400_refresh_resource_health.sql',
   'supabase/migrations/20260915000500_link_resource_ingestion_health.sql',
   'supabase/migrations/20260915000600_repair_resource_links.sql',
+  'supabase/migrations/20260915000700_search_demand_and_utility.sql',
   'supabase/audits/membership-integrity.sql',
   'intelligence-template.html',
   'content-template.html',

@@ -300,6 +300,12 @@
 
   function renderSources(sources) {
     elements.sourceList.replaceChildren();
+    if (!sources.length) {
+      elements.sourceSection.hidden = true;
+      elements.freshness.dataset.health = 'pending';
+      elements.freshnessText.textContent = 'Waiting for a verified source synchronization.';
+      return;
+    }
     sources.forEach((source) => {
       const item = el('div', 'source-item');
       const sourceLink = link('', source.name, source.homepage_url);
@@ -316,9 +322,30 @@
     const states = sources.map((source) => source.health);
     const overall = states.includes('degraded') ? 'degraded' : states.includes('stale') ? 'stale' : states.every((state) => state === 'healthy') ? 'healthy' : 'pending';
     elements.freshness.dataset.health = overall;
-    if (overall === 'healthy') elements.freshnessText.textContent = 'All source feeds are current and updating automatically.';
+    if (overall === 'healthy') elements.freshnessText.textContent = 'All configured sources passed their latest automated checks.';
     else if (overall === 'pending') elements.freshnessText.textContent = 'Initial source synchronization is in progress.';
     else elements.freshnessText.textContent = 'One or more sources are delayed; existing records remain cited and available.';
+  }
+
+  function renderStats(values) {
+    const stats = [
+      [elements.researchCount, Number(values.research || 0)],
+      [elements.trialCount, Number(values.trials || 0)],
+      [elements.topicCount, Number(values.topics || 0)],
+    ];
+    let visible = 0;
+    stats.forEach(([valueElement, value]) => {
+      const cell = valueElement?.parentElement;
+      if (!valueElement || !cell) return;
+      const hasValue = Number.isFinite(value) && value > 0;
+      cell.hidden = !hasValue;
+      if (hasValue) {
+        valueElement.textContent = numberFormatter.format(value);
+        visible += 1;
+      }
+    });
+    elements.statsSection.hidden = visible === 0;
+    elements.statsSection.style.setProperty('--visible-stat-count', String(Math.max(visible, 1)));
   }
 
   function renderEntities(entities) {
@@ -461,6 +488,10 @@
       ['Trial confidence', `${Number(telemetry?.trials?.average_confidence || 0)}%`],
       ['IndexNow notification', telemetry?.indexing?.succeeded === true ? 'Healthy' : telemetry?.indexing?.succeeded === false ? 'Degraded' : 'Pending'],
       ['Briefing distribution', telemetry?.distribution?.succeeded === true ? 'Healthy' : telemetry?.distribution?.succeeded === false ? 'Degraded' : 'Pending'],
+      ['Search impressions · 28d', telemetry?.search?.last_imported_at ? telemetry.search.impressions : 'Connecting'],
+      ['Search clicks · 28d', telemetry?.search?.last_imported_at ? telemetry.search.clicks : 'Connecting'],
+      ['Search opportunities', telemetry?.search?.last_imported_at ? telemetry.search.open_opportunities : 'Connecting'],
+      ['Search data freshness', telemetry?.search?.last_imported_at ? formatTimestamp(telemetry.search.last_imported_at) : 'Awaiting secure API link'],
     ];
     groups.forEach(([label, value]) => {
       const card = el('article', 'quality-stat');
@@ -486,10 +517,7 @@
     try {
       if (view === 'overview') {
         const data = await request('overview', 12);
-        elements.researchCount.textContent = numberFormatter.format(data.stats.research_records);
-        elements.trialCount.textContent = numberFormatter.format(data.stats.clinical_trials);
-        elements.topicCount.textContent = numberFormatter.format(data.stats.topics);
-        elements.statsSection.hidden = false;
+        renderStats({ research: data.stats?.research_records, trials: data.stats?.clinical_trials, topics: data.stats?.topics });
         renderTopics(data.topics || [], true);
         renderResearch(data.research || []);
         renderTrials(data.trials || []);
@@ -519,10 +547,7 @@
         renderSources(research.sources || trials.sources || []);
         const selected = (topics.topics || []).find((topic) => topic.slug === topicSlug);
         if (selected) {
-          elements.researchCount.textContent = numberFormatter.format(selected.research_count || 0);
-          elements.trialCount.textContent = numberFormatter.format(selected.trial_count || 0);
-          elements.topicCount.textContent = '1';
-          elements.statsSection.hidden = false;
+          renderStats({ research: selected.research_count, trials: selected.trial_count });
         }
       } else if (view === 'regulatory') {
         const data = await request('regulatory', 80);

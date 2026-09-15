@@ -90,13 +90,15 @@ Deno.serve(async (req) => {
       .order('name')
 
     if (view === 'quality') {
-      const [{ data: telemetry, error }, { data: sources, error: sourcesError }] = await Promise.all([
+      const [{ data: telemetry, error }, { data: search, error: searchError }, { data: sources, error: sourcesError }] = await Promise.all([
         supabase.rpc('get_intelligence_quality_telemetry'),
+        supabase.rpc('search_utility_telemetry'),
         sourcesPromise,
       ])
       if (error) throw error
+      if (searchError) throw searchError
       if (sourcesError) throw sourcesError
-      return response(req, { telemetry: telemetry ?? {}, sources: (sources ?? []).map(publicSourceState) })
+      return response(req, { telemetry: { ...(telemetry ?? {}), search: search ?? {} }, sources: (sources ?? []).map(publicSourceState) })
     }
 
     if (view === 'entities') {

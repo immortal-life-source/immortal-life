@@ -12,6 +12,7 @@ mkdirSync(artifacts, { recursive: true });
 
 const defaultRoutes = [
   '/', '/research', '/trials', '/topics', '/topics/rapamycin',
+  '/discover', '/discover/recruiting-trials', '/discover/regulatory-status', '/discover/research-integrity', '/reports',
   '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/methodology',
   '/resources', '/entities', '/entities/topic/rapamycin', '/quality', '/automation', '/publication-policy', '/corrections', '/data', '/join',
   '/auth/x', '/auth/linkedin', '/leaderboard', '/privacy',
@@ -19,7 +20,7 @@ const defaultRoutes = [
 const routes = process.env.UAT_ROUTES ? process.env.UAT_ROUTES.split(',').map((route) => route.trim()).filter(Boolean) : defaultRoutes;
 if (!process.env.UAT_ROUTES) {
   try {
-    const sitemap = await (await fetch(`${baseUrl}/sitemap.xml`)).text();
+    const sitemap = await (await fetch(`${baseUrl}/sitemaps/research.xml`)).text();
     const sample = sitemap.match(/<loc>https?:\/\/[^<]+(\/research\/\d+)<\/loc>/)?.[1];
     if (sample) routes.splice(2, 0, sample);
   } catch (_) { /* Dynamic record discovery is best-effort for local previews. */ }
@@ -115,6 +116,10 @@ async function runViewport(cdp, profileName, width, height, mobile) {
       internalOverflow: [document.documentElement, document.body, ...document.querySelectorAll('body *')].map(el => ({ element: el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().replace(/\\s+/g,'.') : ''), scrollWidth: el.scrollWidth, clientWidth: el.clientWidth })).filter(item => item.scrollWidth > item.clientWidth + 2).sort((a,b) => (b.scrollWidth-b.clientWidth) - (a.scrollWidth-a.clientWidth)).slice(0,12),
       menuButtonVisible: (() => { const el = document.querySelector('.mobile-nav-toggle'); return el ? getComputedStyle(el).display !== 'none' : null; })(),
       menuVisible: (() => { const el = document.getElementById('primaryNav'); return el ? getComputedStyle(el).display !== 'none' : null; })()
+      ,mainLandmark: Boolean(document.querySelector('main'))
+      ,unlabelledInputs: [...document.querySelectorAll('input,select,textarea')].filter(el => !el.closest('label') && !el.getAttribute('aria-label') && !el.getAttribute('aria-labelledby')).length
+      ,genericLinks: [...document.querySelectorAll('a')].filter(a => /^(click here|learn more|read more)$/i.test((a.textContent || '').trim())).length
+      ,smallControls: [...document.querySelectorAll('button,a,input,select')].filter(el => { const r=el.getBoundingClientRect(); const s=getComputedStyle(el); return r.width>0 && r.height>0 && (el.tagName==='BUTTON' || el.tagName==='INPUT' || el.tagName==='SELECT') && r.height<40 && s.position!=='absolute'; }).slice(0,8).map(el => ({tag:el.tagName,id:el.id,className:el.className,height:Math.round(el.getBoundingClientRect().height)}))
     }))()`);
     const recentEvents = cdp.events.slice(eventStart);
     const exceptions = recentEvents.filter((event) => event.method === 'Runtime.exceptionThrown').map((event) => event.params?.exceptionDetails?.text || 'runtime exception');
@@ -122,6 +127,9 @@ async function runViewport(cdp, profileName, width, height, mobile) {
     const failures = [];
     if (!state.title) failures.push('missing title');
     if (!state.h1) failures.push('missing h1');
+    if (!state.mainLandmark) failures.push('missing main landmark');
+    if (state.unlabelledInputs) failures.push(`${state.unlabelledInputs} unlabelled form controls`);
+    if (state.genericLinks) failures.push(`${state.genericLinks} generic link labels`);
     if (state.bodyText < 80) failures.push('insufficient visible content');
     if (state.overflow > 2) failures.push(`horizontal overflow ${state.overflow}px: ${JSON.stringify({ outside: state.overflowing, internal: state.internalOverflow })}`);
     if (state.brokenImages.length) failures.push(`broken images: ${state.brokenImages.join(', ')}`);
@@ -141,6 +149,7 @@ async function runViewport(cdp, profileName, width, height, mobile) {
       }
     }
     if (route === '/resources') await capture(cdp, `${profileName}-resources.png`);
+    if (route === '/discover') await capture(cdp, `${profileName}-discover.png`);
   }
   return results;
 }
@@ -159,7 +168,7 @@ try {
   await Promise.all([cdp.call('Page.enable'), cdp.call('Runtime.enable'), cdp.call('Network.enable')]);
   const desktop = await runViewport(cdp, 'desktop', 1440, 1000, false);
   const mobile = await runViewport(cdp, 'mobile', 390, 844, true);
-  const endpointChecks = await Promise.all(['/sitemap.xml', '/feed.xml', '/feed.atom', '/feed.json', '/social-card/entity/topic-rapamycin.png'].map(async (route) => {
+  const endpointChecks = await Promise.all(['/sitemap.xml', '/sitemaps/static.xml', '/sitemaps/research.xml', '/feed.xml', '/feed.atom', '/feed.json', '/feeds/topics/rapamycin.xml', '/datasets/trials.csv', '/datasets/research.json', '/social-card/entity/topic-rapamycin.png'].map(async (route) => {
     const response = await fetch(`${baseUrl}${route}`);
     return { route, status: response.status, contentType: response.headers.get('content-type'), ok: response.ok };
   }));

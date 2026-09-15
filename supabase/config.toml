@@ -53,3 +53,12 @@ verify_jwt = false
 
 [functions.check-resource-health]
 verify_jwt = false
+
+[functions.sync-search-console]
+verify_jwt = false
+
+[functions.subscribe-briefing]
+verify_jwt = false
+
+[functions.deliver-briefings]
+verify_jwt = false

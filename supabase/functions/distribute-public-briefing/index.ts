@@ -47,11 +47,17 @@ Deno.serve(async (req) => {
     const configured = JSON.parse(Deno.env.get('BRIEFING_DISTRIBUTION_WEBHOOKS') || '[]')
     const webhooks = Array.isArray(configured) ? configured.map(safeWebhook).filter(Boolean) as string[] : []
     const briefingUrl = `${SITE}/briefings/${briefing.slug}`
+    const socialText = `${briefing.title}\n\n${briefing.dek}\n\nSource-linked and generated automatically. Research information only.\n${briefingUrl}`
+    const linkedinToken = Deno.env.get('LINKEDIN_PAGE_ACCESS_TOKEN') ?? ''
+    const linkedinAuthor = Deno.env.get('LINKEDIN_PAGE_AUTHOR_URN') ?? ''
+    const xToken = Deno.env.get('X_USER_ACCESS_TOKEN') ?? ''
     const targets = [
-      { channel: 'websub-rss', destination: 'https://pubsubhubbub.appspot.com/', body: new URLSearchParams({ 'hub.mode': 'publish', 'hub.url': `${SITE}/feed.xml` }), type: 'form' },
-      { channel: 'websub-atom', destination: 'https://pubsubhubbub.appspot.com/', body: new URLSearchParams({ 'hub.mode': 'publish', 'hub.url': `${SITE}/feed.atom` }), type: 'form' },
-      { channel: 'indexnow', destination: 'https://api.indexnow.org/indexnow', body: JSON.stringify({ host: 'www.immortal.life', key: INDEXNOW_KEY, keyLocation: `${SITE}/${INDEXNOW_KEY}.txt`, urlList: [briefingUrl] }), type: 'json' },
-      ...webhooks.map((destination) => ({ channel: 'webhook', destination, body: JSON.stringify({ event: 'briefing.published', briefing: { ...briefing, url: briefingUrl }, automation_disclosure: 'Generated and distributed automatically without human review.' }), type: 'json' })),
+      { channel: 'websub-rss', destination: 'https://pubsubhubbub.appspot.com/', body: new URLSearchParams({ 'hub.mode': 'publish', 'hub.url': `${SITE}/feed.xml` }), type: 'form', headers: {} },
+      { channel: 'websub-atom', destination: 'https://pubsubhubbub.appspot.com/', body: new URLSearchParams({ 'hub.mode': 'publish', 'hub.url': `${SITE}/feed.atom` }), type: 'form', headers: {} },
+      { channel: 'indexnow', destination: 'https://api.indexnow.org/indexnow', body: JSON.stringify({ host: 'www.immortal.life', key: INDEXNOW_KEY, keyLocation: `${SITE}/${INDEXNOW_KEY}.txt`, urlList: [briefingUrl] }), type: 'json', headers: {} },
+      ...(linkedinToken && linkedinAuthor ? [{ channel: 'linkedin', destination: 'https://api.linkedin.com/rest/posts', body: JSON.stringify({ author: linkedinAuthor, commentary: socialText, visibility: 'PUBLIC', distribution: { feedDistribution: 'MAIN_FEED', targetEntities: [], thirdPartyDistributionChannels: [] }, lifecycleState: 'PUBLISHED', isReshareDisabledByAuthor: false }), type: 'json', headers: { Authorization: `Bearer ${linkedinToken}`, 'LinkedIn-Version': '202609', 'X-Restli-Protocol-Version': '2.0.0' } }] : []),
+      ...(xToken ? [{ channel: 'x', destination: 'https://api.x.com/2/tweets', body: JSON.stringify({ text: socialText.slice(0, 275) }), type: 'json', headers: { Authorization: `Bearer ${xToken}` } }] : []),
+      ...webhooks.map((destination) => ({ channel: 'webhook', destination, body: JSON.stringify({ event: 'briefing.published', briefing: { ...briefing, url: briefingUrl }, automation_disclosure: 'Generated and distributed automatically without human review.' }), type: 'json', headers: {} })),
     ]
 
     const outcomes: Array<Record<string, unknown>> = []
@@ -62,7 +68,7 @@ Deno.serve(async (req) => {
         continue
       }
       try {
-        const result = await fetch(target.destination, { method: 'POST', headers: { 'Content-Type': target.type === 'form' ? 'application/x-www-form-urlencoded' : 'application/json' }, body: target.body })
+        const result = await fetch(target.destination, { method: 'POST', headers: { 'Content-Type': target.type === 'form' ? 'application/x-www-form-urlencoded' : 'application/json', ...target.headers }, body: target.body })
         const succeeded = result.ok || result.status === 202 || result.status === 204
         await supabase.from('briefing_distribution_log').insert({ briefing_slug: briefing.slug, channel: target.channel, destination: target.destination, succeeded, response_status: result.status, error_code: succeeded ? null : `http_${result.status}` })
         outcomes.push({ channel: target.channel, status: result.status, succeeded })

@@ -52,6 +52,27 @@
       ]
     },
     {
+      "source": "/discover/:path*",
+      "headers": [
+        { "key": "Content-Type", "value": "text/html; charset=utf-8" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://nifbuyoghesveotugday.supabase.co; frame-ancestors 'none';" }
+      ]
+    },
+    {
+      "source": "/discover",
+      "headers": [
+        { "key": "Content-Type", "value": "text/html; charset=utf-8" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://nifbuyoghesveotugday.supabase.co; frame-ancestors 'none';" }
+      ]
+    },
+    {
+      "source": "/reports",
+      "headers": [
+        { "key": "Content-Type", "value": "text/html; charset=utf-8" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://nifbuyoghesveotugday.supabase.co; frame-ancestors 'none';" }
+      ]
+    },
+    {
       "source": "/entities/:path*",
       "headers": [
         { "key": "Content-Type", "value": "text/html; charset=utf-8" },
@@ -60,6 +81,10 @@
     },
     {
       "source": "/sitemap.xml",
+      "headers": [{ "key": "Content-Type", "value": "application/xml; charset=utf-8" }]
+    },
+    {
+      "source": "/sitemaps/:path*",
       "headers": [{ "key": "Content-Type", "value": "application/xml; charset=utf-8" }]
     },
     {
@@ -73,6 +98,14 @@
     {
       "source": "/feed.json",
       "headers": [{ "key": "Content-Type", "value": "application/feed+json; charset=utf-8" }]
+    },
+    {
+      "source": "/feeds/:path*",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=300, s-maxage=900" }]
+    },
+    {
+      "source": "/datasets/:path*",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=300, s-maxage=900" }]
     },
     {
       "source": "/social-card/:path*",
@@ -89,13 +122,26 @@
     { "source": "/integrity/:id", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=record&kind=integrity&id=:id" },
     { "source": "/briefings", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=briefings" },
     { "source": "/briefings/:slug", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=briefings&slug=:slug" },
+    { "source": "/discover", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=discover&view=index" },
+    { "source": "/discover/recruiting-trials", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=discover&view=recruiting" },
+    { "source": "/discover/recruiting-trials/:country", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=discover&view=recruiting&country=:country" },
+    { "source": "/discover/regulatory-status", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=discover&view=regulatory-status" },
+    { "source": "/discover/research-integrity", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=discover&view=research-integrity" },
+    { "source": "/reports", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=reports" },
+    { "source": "/api/subscribe", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/subscribe-briefing" },
     { "source": "/entities/:kind/:slug", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=entity&kind=:kind&slug=:slug" },
     { "source": "/social-card/:kind/:key.png", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/social-card?kind=:kind&key=:key" },
     { "source": "/social-card/:kind/:key.svg", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=social&kind=:kind&key=:key" },
     { "source": "/api/intelligence/:kind/:id", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=api&kind=:kind&id=:id" },
-    { "source": "/sitemap.xml", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=sitemap" },
+    { "source": "/sitemap.xml", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=sitemap&type=index" },
+    { "source": "/sitemaps/:type.xml", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=sitemap&type=:type" },
     { "source": "/feed.xml", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=feed&format=rss" },
     { "source": "/feed.atom", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=feed&format=atom" },
-    { "source": "/feed.json", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=feed&format=json" }
+    { "source": "/feed.json", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=feed&format=json" },
+    { "source": "/feeds/topics/:topic.xml", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=feed&format=rss&topic=:topic" },
+    { "source": "/feeds/topics/:topic.atom", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=feed&format=atom&topic=:topic" },
+    { "source": "/feeds/topics/:topic.json", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=feed&format=json&topic=:topic" },
+    { "source": "/datasets/:kind.csv", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=dataset&format=csv&kind=:kind" },
+    { "source": "/datasets/:kind.json", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=dataset&format=json&kind=:kind" }
   ]
 }

@@ -43,3 +43,25 @@ test('record cards link to indexable first-party detail pages', () => {
   assert.match(script, /`\/regulatory\/\$\{encodeURIComponent\(record\.id\)\}`/);
   assert.match(script, /`\/integrity\/\$\{encodeURIComponent\(record\.id\)\}`/);
 });
+
+test('search-demand utility pages, segmented sitemaps, topic feeds, and datasets are routed', () => {
+  const config = JSON.parse(read('vercel.json'));
+  const sources = new Set(config.rewrites.map((rewrite) => rewrite.source));
+  for (const route of ['/discover', '/discover/recruiting-trials', '/discover/recruiting-trials/:country', '/discover/regulatory-status', '/discover/research-integrity', '/reports', '/sitemaps/:type.xml', '/feeds/topics/:topic.xml', '/datasets/:kind.csv', '/api/subscribe']) {
+    assert.ok(sources.has(route), `missing ${route}`);
+  }
+  const pages = read('supabase/functions/public-pages/index.ts');
+  assert.match(pages, /noindex,follow/);
+  assert.match(pages, /selectedTrials\.length >= 3/);
+  assert.match(pages, /sitemapindex/);
+});
+
+test('Search Console and consent-based briefing delivery are automated and private', () => {
+  const migration = read('supabase/migrations/20260915000700_search_demand_and_utility.sql');
+  assert.match(migration, /immortal-life-search-console-sync/);
+  assert.match(migration, /immortal-life-subscriber-briefing-delivery/);
+  assert.match(migration, /revoke all on table public\.search_console_daily/);
+  assert.match(read('supabase/functions/sync-search-console/index.ts'), /searchAnalytics\/query/);
+  assert.match(read('supabase/functions/subscribe-briefing/index.ts'), /status: 'pending'/);
+  assert.match(read('supabase/functions/deliver-briefings/index.ts'), /RESEND_API_KEY/);
+});
