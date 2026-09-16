@@ -25,7 +25,9 @@ The membership backend is deployed as Supabase Edge Functions. Database state an
 
 The existing newsletter functions (`subscribe`, `confirm`, and `unsubscribe`) are deployed separately. `get-news` is defined here and serves the project-owned, migration-seeded development log.
 
-`sync-intelligence` runs the literature, trial registry, Crossref retraction, EMA, and SÚKL ingestion jobs. `member-intelligence` provides signed-session watchlists and private briefing access. `generate-briefings` is called by the database scheduler every Monday and idempotently generates one briefing per opted-in member and period.
+`sync-intelligence` runs the literature, trial registry, Crossref retraction, EMA, and SÚKL ingestion jobs. `member-intelligence` provides the signed-session Personal Longevity Radar for topics, organisations, countries, individual trials, in-app change alerts, and private briefings. `generate-briefings` is called by the database scheduler every Monday and idempotently generates one briefing per opted-in member and period. `record-utility-event` stores only bounded daily aggregate product events; it receives no visitor identifier.
+
+`distribute-public-briefing` keeps WebSub and IndexNow delivery local, then sends one signed, idempotent `briefing.published` event to the separate Social Media Manager. Immortal.Life must not store or use LinkedIn or X publishing tokens directly.
 
 LinkedIn login uses `start-linkedin-auth` and `auth-linkedin-callback` with the OpenID Connect `openid profile` scopes. Configure `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, and `LINKEDIN_REDIRECT_URI=https://immortal.life/auth/linkedin` as Edge Function secrets after enabling the LinkedIn “Sign in with LinkedIn using OpenID Connect” product.
 
@@ -40,6 +42,8 @@ Set these in Supabase Edge Function secrets:
 - `X_REDIRECT_URI=https://immortal.life/auth/x`
 - `SESSION_SECRET` containing at least 32 random characters
 - `ALLOWED_ORIGINS` only when additional trusted origins are required
+- `SOCIAL_DISTRIBUTION_ENDPOINT` set to the Social Media Manager HTTPS event endpoint
+- `SOCIAL_DISTRIBUTION_WEBHOOK_SECRET` containing the same 32+ character HMAC secret stored by the Social Media Manager
 
 Vercel needs only the public `SUPABASE_PUBLISHABLE_KEY` used by `build.js` to generate `il-config.js`. The legacy `SUPABASE_ANON_KEY` name remains supported.
 

@@ -147,17 +147,23 @@
 
   function setupMemberIntelligence(sessionToken) {
     var topicsRoot = document.getElementById('dashWatchTopics');
+    var entitiesRoot = document.getElementById('dashWatchEntities');
+    var countriesRoot = document.getElementById('dashWatchCountries');
+    var trialsRoot = document.getElementById('dashWatchTrials');
+    var eventsRoot = document.getElementById('dashRadarEvents');
+    var badge = document.getElementById('dashRadarBadge');
     var briefingsRoot = document.getElementById('dashBriefings');
     var enabledInput = document.getElementById('dashBriefingsEnabled');
     var status = document.getElementById('dashWatchStatus');
-    if (!topicsRoot || !briefingsRoot || !enabledInput) return;
+    var markedSeen = false;
+    if (!topicsRoot || !entitiesRoot || !countriesRoot || !trialsRoot || !eventsRoot || !briefingsRoot || !enabledInput) return;
 
     function headers() {
       return Object.assign({}, window.ilFnHeaders(), { Authorization: 'Bearer ' + sessionToken });
     }
 
-    function post(action, values) {
-      status.textContent = 'Saving…';
+    function post(action, values, quiet) {
+      if (!quiet) status.textContent = 'Saving…';
       return fetch(MEMBER_INTELLIGENCE_FN, {
         method: 'POST', headers: headers(), body: JSON.stringify(Object.assign({ action: action }, values || {})),
       }).then(function (response) {
@@ -167,10 +173,51 @@
         if (!response.ok) throw new Error('Save failed');
         return response.json();
       }).then(function (data) {
-        status.textContent = 'Saved. Your next briefing will use this watchlist.';
+        if (!quiet) status.textContent = 'Saved. Your radar and next briefing now use these choices.';
         render(data);
       }).catch(function (error) {
-        if (error.message !== 'Unauthorized') status.textContent = 'Could not save. Please try again.';
+        if (!quiet && error.message !== 'Unauthorized') status.textContent = 'Could not save. Please try again.';
+      });
+    }
+
+    function eventLabel(value) {
+      return ({
+        new_research: 'New research', research_updated: 'Research changed', new_trial: 'New trial',
+        trial_status_changed: 'Trial status changed', new_regulatory_notice: 'Regulatory notice',
+        new_integrity_event: 'Correction or retraction', quality_state_changed: 'Quality status changed',
+      })[value] || String(value || '').replace(/_/g, ' ');
+    }
+
+    function renderOptions(root, type, options, watched) {
+      root.replaceChildren();
+      if (!options.length) {
+        var empty = document.createElement('p'); empty.className = 'm-muted dash-intel-copy'; empty.textContent = 'Options will appear after the next source update.'; root.appendChild(empty); return;
+      }
+      options.forEach(function (option) {
+        var identity = type + ':' + option.key;
+        var active = watched.has(identity);
+        var button = document.createElement('button'); button.type = 'button'; button.className = 'dash-watch-chip' + (active ? ' is-watched' : '');
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        button.title = option.detail || option.label; button.textContent = option.label + (option.count ? ' · ' + option.count : '');
+        button.addEventListener('click', function () {
+          button.disabled = true;
+          if (window.ilTrackUtility) window.ilTrackUtility(active ? 'remove_watch' : 'create_watch');
+          post(active ? 'unwatch' : 'watch', { watch_type: type, watch_key: option.key });
+        });
+        root.appendChild(button);
+      });
+    }
+
+    function renderEvents(events) {
+      eventsRoot.replaceChildren();
+      if (!events.length) {
+        var empty = document.createElement('p'); empty.className = 'm-muted dash-intel-copy'; empty.textContent = 'No new matching changes yet. Monitoring is active.'; eventsRoot.appendChild(empty); return;
+      }
+      events.slice(0, 12).forEach(function (event) {
+        var article = document.createElement('article'); article.className = 'dash-radar-event' + (event.importance === 'important' ? ' is-important' : '');
+        var meta = document.createElement('p'); meta.className = 'dash-radar-event-meta'; meta.textContent = eventLabel(event.event_type) + ' · ' + formatWhen(event.occurred_at);
+        var title = document.createElement('a'); title.href = '/' + event.record_type + '/' + event.record_id; title.textContent = event.title; title.addEventListener('click', function () { if (window.ilTrackUtility) window.ilTrackUtility('open_change'); });
+        article.append(meta, title); eventsRoot.appendChild(article);
       });
     }
 
@@ -214,21 +261,16 @@
     }
 
     function render(data) {
-      var watched = new Set(data.watched_topics || []);
-      topicsRoot.replaceChildren();
-      (data.topics || []).forEach(function (topic) {
-        var button = document.createElement('button');
-        button.type = 'button'; button.className = 'dash-watch-chip' + (watched.has(topic.slug) ? ' is-watched' : '');
-        button.setAttribute('aria-pressed', watched.has(topic.slug) ? 'true' : 'false');
-        button.textContent = topic.name;
-        button.addEventListener('click', function () {
-          button.disabled = true;
-          post(watched.has(topic.slug) ? 'unwatch_topic' : 'watch_topic', { topic: topic.slug });
-        });
-        topicsRoot.appendChild(button);
-      });
+      var watched = new Set((data.watches || []).map(function (watch) { return watch.watch_type + ':' + watch.watch_key; }));
+      renderOptions(topicsRoot, 'topic', (data.topics || []).map(function (topic) { return { key: topic.slug, label: topic.name, count: Number(topic.research_count || 0) + Number(topic.trial_count || 0) }; }), watched);
+      renderOptions(entitiesRoot, 'entity', data.options && data.options.entities || [], watched);
+      renderOptions(countriesRoot, 'country', data.options && data.options.countries || [], watched);
+      renderOptions(trialsRoot, 'trial', data.options && data.options.trials || [], watched);
+      renderEvents(data.radar_events || []);
+      if (badge) { badge.hidden = !data.unread_count; badge.textContent = data.unread_count ? data.unread_count + ' new' : ''; }
       enabledInput.checked = data.briefings_enabled !== false;
       renderBriefings(data.briefings || []);
+      if (!markedSeen && data.generated_at && (data.radar_events || []).length) { markedSeen = true; post('mark_radar_seen', { seen_at: data.generated_at }, true); }
     }
 
     enabledInput.addEventListener('change', function () { post('set_briefings', { enabled: enabledInput.checked }); });

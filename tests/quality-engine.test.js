@@ -90,8 +90,9 @@ test('entity pages, automated social cards, and briefing distribution are wired'
   assert.match(read('supabase/functions/social-card/index.ts'), /ImageResponse/);
   assert.match(distribution, /websub-rss/);
   assert.match(distribution, /briefing\.published/);
-  assert.match(distribution, /api\.linkedin\.com\/rest\/posts/);
-  assert.match(distribution, /api\.x\.com\/2\/tweets/);
+  assert.match(distribution, /SOCIAL_DISTRIBUTION_ENDPOINT/);
+  assert.match(distribution, /X-Distribution-Signature/);
+  assert.doesNotMatch(distribution, /api\.linkedin\.com\/rest\/posts|api\.x\.com\/2\/tweets/);
 });
 
 test('canonical discovery URLs use the deployed www host', () => {

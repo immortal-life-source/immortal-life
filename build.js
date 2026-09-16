@@ -31,6 +31,7 @@ const staticAssets = [
   'news-modal.js',
   'spread-copy.js',
   'widget.js',
+  'telemetry.js',
   'intelligence.css',
   'intelligence.js',
   'favicon.ico',
@@ -64,6 +65,27 @@ function renderTemplate(template, values, rawValues = {}) {
 }
 
 function pageSchema(page) {
+  if (page.PAGE_VIEW === 'dataset') {
+    return JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'DataCatalog',
+      name: 'immortal.life longevity intelligence datasets',
+      description: page.PAGE_DESCRIPTION,
+      url: page.CANONICAL_URL,
+      creator: { '@type': 'Organization', name: 'immortal.life', url: site },
+      dataset: ['research', 'trials', 'regulatory', 'integrity'].map((kind) => ({
+        '@type': 'Dataset',
+        name: `immortal.life ${kind} dataset`,
+        description: `Automatically updated, source-linked ${kind} records that passed the immortal.life publication-quality checks.`,
+        url: `${site}/datasets/${kind}.json`,
+        isAccessibleForFree: true,
+        distribution: [
+          { '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: `${site}/datasets/${kind}.json` },
+          { '@type': 'DataDownload', encodingFormat: 'text/csv', contentUrl: `${site}/datasets/${kind}.csv` },
+        ],
+      })),
+    }).replace(/</g, '\\u003c');
+  }
   return JSON.stringify({
     '@context': 'https://schema.org',
     '@type': page.PAGE_VIEW === 'topic' ? 'CollectionPage' : 'WebPage',
@@ -193,7 +215,7 @@ for (const topic of intelligenceTopics) {
   const dossier = `<section class="intel-section topic-primer" aria-labelledby="topic-question">
     <div class="section-heading"><div><span class="section-index">The question we track</span><h2 id="topic-question">${htmlEscape(topic.question)}</h2></div><a class="section-link" href="/methodology">How records are chosen</a></div>
     <div class="dossier-grid"><article><h3>What the records show</h3><p>${htmlEscape(topic.state)}</p></article><article><h3>What is still uncertain</h3><p>${htmlEscape(topic.limits)}</p></article><article><h3>Regulatory position</h3><p>${htmlEscape(topic.regulatory)}</p></article></div>
-    <aside class="automation-notice"><strong>Built automatically from source records</strong><p>No scientist, clinician, researcher, editor, or human reviewer evaluates this page before publication. Check important details at the linked original source.</p><p><a class="section-link" href="/feeds/topics/${topic.slug}.xml">Follow this topic by RSS</a> · <a class="section-link" href="/feeds/topics/${topic.slug}.json">Use the JSON feed</a></p></aside>
+    <aside class="automation-notice"><strong>Built automatically from source records</strong><p>No scientist, clinician, researcher, editor, or human reviewer evaluates this page before publication. Check important details at the linked original source.</p><p><a class="section-link" href="/feeds/topics/${topic.slug}.xml">Follow this topic by RSS</a> · <a class="section-link" href="/feeds/topics/${topic.slug}.json">Use the JSON feed</a> · <a class="section-link" href="/dashboard">Add it to your private radar</a></p></aside>
   </section>`;
   fs.writeFileSync(
     path.join(topicOutputDir, `${topic.slug}.html`),
@@ -234,13 +256,14 @@ const contentPages = [
   {
     filename: 'data.html', title: 'Open discovery feeds and API — immortal.life', heading: 'Build from the living index.', kicker: 'Machine-readable access',
     description: 'RSS, JSON Feed, sitemap, record JSON, and citation-ready source identifiers from immortal.life.',
-    body: `<h2>Public feeds</h2><p><a href="/feed.xml">RSS 2.0</a>, <a href="/feed.atom">Atom</a>, and <a href="/feed.json">JSON Feed</a> publish the newest eligible research, trial, regulatory, and integrity records automatically. Every topic page also provides its own RSS, Atom, and JSON feed.</p><h2>Download current datasets</h2><p><a href="/datasets/research.csv">Research CSV</a> · <a href="/datasets/trials.csv">Trials CSV</a> · <a href="/datasets/regulatory.csv">Regulatory CSV</a> · <a href="/datasets/integrity.csv">Integrity CSV</a></p><p>The same datasets are available as JSON by replacing <code>.csv</code> with <code>.json</code>. Downloads contain published, quality-eligible records only and refresh automatically.</p><h2>Record JSON and citations</h2><p>Every permanent record URL has a machine-readable counterpart: <code>/api/intelligence/{type}/{id}</code>, where type is research, trials, regulatory, or integrity. Research records also offer BibTeX and RIS exports from their detail page.</p><h2>Embeddable latest-records widget</h2><p>Partners can add <code>&lt;script src=&quot;${site}/widget.js&quot; defer&gt;&lt;/script&gt;</code> and <code>&lt;immortal-life-feed limit=&quot;5&quot;&gt;&lt;/immortal-life-feed&gt;</code>. The widget links every item back to its permanent source-backed record.</p><h2>Discovery and indexing</h2><p><a href="/sitemap.xml">The sitemap index</a> separates topics, research, trials, regulatory records, integrity records, briefings, entities and static pages so discovery health can be measured independently.</p><h2>Responsible reuse</h2><p>Source metadata remains subject to the originating source's terms. Attribute the primary source, preserve integrity and regulatory context, and do not imply that automated inclusion is expert endorsement.</p>`
+    view: 'dataset',
+    body: `<h2>Public feeds</h2><p><a href="/feed.xml">RSS 2.0</a>, <a href="/feed.atom">Atom</a>, and <a href="/feed.json">JSON Feed</a> publish the newest eligible research, trial, regulatory, and integrity records automatically. Every topic page also provides its own RSS, Atom, and JSON feed.</p><h2>Download current datasets</h2><p><a data-il-event="download_dataset" href="/datasets/research.csv">Research CSV</a> · <a data-il-event="download_dataset" href="/datasets/trials.csv">Trials CSV</a> · <a data-il-event="download_dataset" href="/datasets/regulatory.csv">Regulatory CSV</a> · <a data-il-event="download_dataset" href="/datasets/integrity.csv">Integrity CSV</a></p><p>The same datasets are available as JSON by replacing <code>.csv</code> with <code>.json</code>. Downloads contain published, quality-eligible records only and refresh automatically.</p><h2>Record JSON and citations</h2><p>Every permanent record URL has a machine-readable counterpart: <code>/api/intelligence/{type}/{id}</code>, where type is research, trials, regulatory, or integrity. Research records also offer BibTeX and RIS exports from their detail page.</p><h2>Embeddable live widgets</h2><p>Add <code>&lt;script src=&quot;${site}/widget.js&quot; defer&gt;&lt;/script&gt;</code> once, followed by <code>&lt;immortal-life-feed limit=&quot;5&quot;&gt;&lt;/immortal-life-feed&gt;</code>. Add a topic with <code>topic=&quot;rapamycin&quot;</code>, or show a dataset with <code>kind=&quot;trials&quot;</code> and an optional <code>country=&quot;Czechia&quot;</code>. Every item links to its permanent source-backed record.</p><h2>Discovery and indexing</h2><p><a href="/sitemap.xml">The sitemap index</a> separates topics, research, trials, regulatory records, integrity records, briefings, entities and static pages so discovery health can be measured independently.</p><h2>Responsible reuse</h2><p>Source metadata remains subject to the originating source's terms. Attribute the primary source, preserve integrity and regulatory context, and do not imply that automated inclusion is expert endorsement.</p>`
   }
 ];
 
 for (const page of contentPages) {
   const values = { PAGE_TITLE: page.title, PAGE_DESCRIPTION: page.description, CANONICAL_URL: `${site}/${page.filename.replace(/\.html$/, '')}`, PAGE_KICKER: page.kicker, PAGE_HEADING: page.heading };
-  fs.writeFileSync(path.join(outputDir, page.filename), renderTemplate(contentTemplate, values, { BODY_HTML: page.body, SCHEMA_JSON: pageSchema({ ...values, PAGE_VIEW: 'page' }) }));
+  fs.writeFileSync(path.join(outputDir, page.filename), renderTemplate(contentTemplate, values, { BODY_HTML: page.body, SCHEMA_JSON: pageSchema({ ...values, PAGE_VIEW: page.view || 'page' }) }));
 }
 
 fs.writeFileSync(

@@ -57,9 +57,9 @@ function pageShell(input: { title: string; description: string; canonical: strin
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(input.title)}"><meta name="twitter:description" content="${escapeHtml(input.description)}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,300&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="/intelligence.css"><link rel="icon" href="/favicon.ico">
 <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}</script></head><body>
-<header class="intel-header"><a class="intel-logo" href="/" aria-label="immortal.life home"><img src="/linkedin-app-logo.png" width="40" height="40" alt="" decoding="async"><span>immortal.life</span></a><nav class="intel-nav" aria-label="Primary navigation"><a href="/discover">Discover</a><a href="/research">Research</a><a href="/trials">Trial Radar</a><a href="/topics">Topics</a><a href="/regulatory">Regulatory</a><a href="/resources">Resources</a><a href="/briefings">Briefings</a><a href="/methodology">How it works</a><a href="/join">Members</a></nav></header>
+<header class="intel-header"><a class="intel-logo" href="/" aria-label="immortal.life home"><img src="/linkedin-app-logo.png" width="40" height="40" alt="" decoding="async"><span>immortal.life</span></a><nav class="intel-nav" aria-label="Primary navigation"><a href="/discover">Discover</a><a href="/changes">What changed</a><a href="/research">Research</a><a href="/trials">Trial Radar</a><a href="/topics">Topics</a><a href="/regulatory">Regulatory</a><a href="/resources">Resources</a><a href="/briefings">Briefings</a><a href="/methodology">How it works</a><a href="/join">Members</a></nav></header>
 <main><section class="intel-hero record-hero"><div class="intel-kicker">${escapeHtml(input.kicker)}</div><h1>${escapeHtml(input.heading)}</h1><p class="intel-lede">${escapeHtml(input.description)}</p></section>${input.body}</main>
-<footer class="intel-footer"><p><strong>Automated publication.</strong> ${escapeHtml(DISCLOSURE)} Research information only; not medical advice, diagnosis, or treatment guidance.</p><div><a href="/reports">Reports</a><a href="/data">Data & feeds</a><a href="/methodology">Methodology</a><a href="/automation">Automation disclosure</a><a href="/corrections">Corrections</a><span>© 2026 immortal.life</span></div></footer></body></html>`
+<footer class="intel-footer"><p><strong>Automated publication.</strong> ${escapeHtml(DISCLOSURE)} Research information only; not medical advice, diagnosis, or treatment guidance.</p><div><a href="/changes">What changed</a><a href="/reports">Reports</a><a href="/data">Data & feeds</a><a href="/methodology">Methodology</a><a href="/automation">Automation disclosure</a><a href="/corrections">Corrections</a><span>© 2026 immortal.life</span></div></footer><script src="/il-config.js"></script><script src="/telemetry.js"></script></body></html>`
 }
 
 function chips(topics: string[]): string {
@@ -67,7 +67,7 @@ function chips(topics: string[]): string {
 }
 
 function recordBody(rows: Array<[string, unknown]>, summary: unknown, sourceUrl: unknown, topics: string[], citationUrl: string, extra = ''): string {
-  return `<section class="intel-section record-detail"><div class="record-detail-grid"><dl>${rows.filter(([, value]) => value != null && value !== '').map(([name, value]) => `<div><dt>${escapeHtml(name)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl><article><span class="section-index">Automated source synopsis</span><p class="record-summary">${escapeHtml(summary || 'No source synopsis is available.')}</p>${extra}<div class="record-tags">${chips(topics)}</div><div class="record-links"><a class="section-link" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">Open primary source</a><a class="section-link" href="${escapeHtml(citationUrl)}">Export JSON</a></div></article></div><aside class="automation-notice"><strong>How to read this page</strong><p>${escapeHtml(DISCLOSURE)} Verify consequential details at the linked primary source.</p></aside></section>`
+  return `<section class="intel-section record-detail"><div class="record-detail-grid"><dl>${rows.filter(([, value]) => value != null && value !== '').map(([name, value]) => `<div><dt>${escapeHtml(name)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl><article><span class="section-index">Automated source synopsis</span><p class="record-summary">${escapeHtml(summary || 'No source synopsis is available.')}</p>${extra}<div class="record-tags">${chips(topics)}</div><div class="record-links"><a class="section-link" data-il-event="open_source" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">Open primary source</a><a class="section-link" href="${escapeHtml(citationUrl)}">Export JSON</a></div></article></div><aside class="automation-notice"><strong>How to read this page</strong><p>${escapeHtml(DISCLOSURE)} Verify consequential details at the linked primary source.</p></aside></section>`
 }
 
 async function getRecord(supabase: any, kind: string, id: number): Promise<any | null> {
@@ -182,7 +182,7 @@ async function sitemap(supabase: any, type = 'index'): Promise<string> {
   }
   if (!allowed.includes(type)) return sitemapUrlset([])
   if (type === 'static') {
-    return sitemapUrlset(['', '/discover', '/discover/recruiting-trials', '/discover/regulatory-status', '/discover/research-integrity', '/research', '/trials', '/topics', '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/resources', '/entities', '/quality', '/reports', '/methodology', '/automation', '/publication-policy', '/corrections', '/data'].map((path) => ({ path })))
+    return sitemapUrlset(['', '/discover', '/changes', '/discover/recruiting-trials', '/discover/regulatory-status', '/discover/research-integrity', '/research', '/trials', '/topics', '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/resources', '/entities', '/quality', '/reports', '/methodology', '/automation', '/publication-policy', '/corrections', '/data'].map((path) => ({ path })))
   }
   let result: any
   let urls: Array<{ path: string; modified?: string }> = []
@@ -193,8 +193,8 @@ async function sitemap(supabase: any, type = 'index'): Promise<string> {
     result = await supabase.from('public_briefings').select('slug,updated_at').order('period_start', { ascending: false }).limit(500)
     urls = (result.data ?? []).map((row: any) => ({ path: `/briefings/${row.slug}`, modified: row.updated_at }))
   } else if (type === 'entities') {
-    result = await supabase.from('intelligence_entities').select('kind,slug,updated_at').order('updated_at', { ascending: false }).limit(10000)
-    urls = (result.data ?? []).map((row: any) => ({ path: `/entities/${row.kind}/${row.slug}`, modified: row.updated_at }))
+    result = await supabase.from('intelligence_entities').select('kind,slug,updated_at,record_count,metadata').neq('kind', 'topic').order('updated_at', { ascending: false }).limit(10000)
+    urls = (result.data ?? []).filter((row: any) => Number(row.record_count ?? 0) >= Number(row.metadata?.minimum_records ?? 1)).map((row: any) => ({ path: `/entities/${row.kind}/${row.slug}`, modified: row.updated_at }))
   } else {
     const spec: Record<string, { table: string; modified: string; limit: number }> = {
       research: { table: 'research_items', modified: 'last_seen_at', limit: 20000 }, trials: { table: 'clinical_trials', modified: 'last_seen_at', limit: 20000 },
@@ -265,6 +265,35 @@ async function briefingsPage(supabase: any, slug = ''): Promise<string | null> {
   return pageShell({ title: 'Automated weekly longevity briefings — immortal.life', description: 'A weekly, automatically generated record of newly indexed longevity research, trials, regulatory notices, and integrity events.', canonical: `${SITE}/briefings`, kicker: 'Published automatically every Monday', heading: 'Weekly evidence briefings.', body: `${subscribe}<section class="intel-section"><div class="briefing-list">${list}</div></section>` })
 }
 
+function changeLabel(value: string): string {
+  const labels: Record<string, string> = {
+    new_research: 'New research record', research_updated: 'Research record changed', new_trial: 'New trial record',
+    trial_status_changed: 'Trial status changed', new_regulatory_notice: 'New regulatory notice',
+    new_integrity_event: 'Correction or retraction signal', quality_state_changed: 'Publication-quality status changed',
+  }
+  return labels[value] || value.replace(/_/g, ' ')
+}
+
+async function changesPage(supabase: any): Promise<string> {
+  const since = new Date(Date.now() - 30 * 86400000).toISOString()
+  const { data, error } = await supabase.from('intelligence_change_events').select('id,event_type,importance,record_type,record_id,title,occurred_at,topic_slugs,metadata').gte('occurred_at', since).order('occurred_at', { ascending: false }).limit(250)
+  if (error) throw error
+  const events = data ?? []
+  const counts = ['research', 'trials', 'regulatory', 'integrity'].map((kind) => ({ kind, count: events.filter((event: any) => event.record_type === kind).length }))
+  const rows = events.slice(0, 100).map((event: any) => `<li class="change-row${event.importance === 'important' ? ' is-important' : ''}"><div><span class="section-index">${escapeHtml(changeLabel(event.event_type))} · ${escapeHtml(formatDate(event.occurred_at))}</span><h2><a data-il-event="open_change" href="/${escapeHtml(event.record_type)}/${Number(event.record_id)}">${escapeHtml(event.title)}</a></h2>${event.topic_slugs?.length ? `<div class="record-tags">${chips(event.topic_slugs)}</div>` : ''}</div><span class="change-kind">${escapeHtml(event.record_type)}</span></li>`).join('')
+  const body = `<section class="intel-section"><div class="report-metrics">${counts.map(({ kind, count }) => `<div><strong>${count}</strong><span>${escapeHtml(kind)} changes in 30 days</span></div>`).join('')}</div><div class="section-heading report-heading"><div><span class="section-index">Living change log</span><h2>Latest meaningful changes</h2></div><a class="section-link" href="/changes/feed.xml">Follow by RSS</a></div><ol class="change-list">${rows || '<li class="empty-list">No eligible changes have been recorded in this window. Source monitoring continues automatically.</li>'}</ol><aside class="automation-notice"><strong>A factual change log</strong><p>Entries describe source, registry, regulatory, integrity, or publication-rule changes. They do not claim that an intervention works, is safe, or is clinically important.</p></aside></section>`
+  return pageShell({ title: 'What changed in longevity evidence — immortal.life', description: 'An automatically updated log of new research, trial status changes, regulatory notices, corrections, retractions, and publication-quality changes.', canonical: `${SITE}/changes`, kicker: 'Updated from source differences', heading: 'What changed?', body, indexable: events.length >= 3, socialImage: `${SITE}/social-card/changes/latest.png` })
+}
+
+async function changeFeed(supabase: any, format: string): Promise<Response> {
+  const { data, error } = await supabase.from('intelligence_change_events').select('id,event_type,record_type,record_id,title,occurred_at').order('occurred_at', { ascending: false }).limit(50)
+  if (error) throw error
+  const items = data ?? []
+  if (format === 'json') return response(JSON.stringify({ version: 'https://jsonfeed.org/version/1.1', title: 'immortal.life · what changed', home_page_url: `${SITE}/changes`, feed_url: `${SITE}/changes/feed.json`, description: DISCLOSURE, items: items.map((item: any) => ({ id: `${SITE}/changes#${item.id}`, url: `${SITE}/${item.record_type}/${item.record_id}`, title: `${changeLabel(item.event_type)}: ${item.title}`, date_published: item.occurred_at })) }), 'application/feed+json; charset=utf-8')
+  const entries = items.map((item: any) => `<item><guid isPermaLink="false">${xml(`${SITE}/changes#${item.id}`)}</guid><link>${xml(`${SITE}/${item.record_type}/${item.record_id}`)}</link><title>${xml(`${changeLabel(item.event_type)}: ${item.title}`)}</title><pubDate>${xml(new Date(item.occurred_at).toUTCString())}</pubDate><category>${xml(item.record_type)}</category></item>`).join('')
+  return response(`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>immortal.life · what changed</title><link>${SITE}/changes</link><description>${xml(DISCLOSURE)}</description>${entries}</channel></rss>`, 'application/rss+xml; charset=utf-8')
+}
+
 function entityRecordList(items: any[], kind: 'research' | 'trials'): string {
   if (!items.length) return '<p class="empty-list">No currently published records are linked to this entity.</p>'
   return `<ol class="entity-record-list">${items.map((item) => `<li><a href="/${kind}/${Number(item.id)}">${escapeHtml(item.title)}</a><span>${escapeHtml(kind === 'research' ? formatDate(item.published_on) : formatDate(item.last_update_date))} · ${Number(item.relevance_confidence ?? 0)}% match confidence</span></li>`).join('')}</ol>`
@@ -307,8 +336,10 @@ async function entityPage(supabase: any, kind: string, slug: string): Promise<st
   const kindLabels: Record<string, string> = { topic: 'Topic', journal: 'Journal', sponsor: 'Trial sponsor', source: 'Scientific source' }
   const visibleResearch = kind === 'topic' ? (research.data ?? []).filter((item: any) => hasPublicTopicRelation(item, 'research_item_topics', slug)) : (research.data ?? [])
   const visibleTrials = kind === 'topic' ? (trials.data ?? []).filter((item: any) => hasPublicTopicRelation(item, 'clinical_trial_topics', slug)) : (trials.data ?? [])
-  const body = `<section class="intel-section entity-detail"><div class="quality-stat"><span>Type</span><strong>${escapeHtml(kindLabels[kind] || kind)}</strong></div><div class="quality-stat"><span>Records shown below</span><strong>${visibleResearch.length + visibleTrials.length}</strong></div><h2>Research</h2>${entityRecordList(visibleResearch, 'research')}<h2>Clinical trials</h2>${entityRecordList(visibleTrials, 'trials')}<aside class="automation-notice"><strong>Built automatically from source records</strong><p>Names and links come directly from source information. No human reviewer merges identities or evaluates individual records.</p></aside></section>`
-  return pageShell({ title: `${entity.name} — immortal.life entity`, description: entity.description, canonical, kicker: kindLabels[kind] || 'Evidence directory', heading: entity.name, body, socialImage: `${SITE}/social-card/entity/${kind}-${slug}.png` })
+  const recordCount = visibleResearch.length + visibleTrials.length
+  const minimumRecords = Number(entity.metadata?.minimum_records ?? (kind === 'journal' ? 3 : kind === 'sponsor' ? 2 : 1))
+  const body = `<section class="intel-section entity-detail"><div class="quality-stat"><span>Type</span><strong>${escapeHtml(kindLabels[kind] || kind)}</strong></div><div class="quality-stat"><span>Eligible records</span><strong>${recordCount}</strong></div><h2>Research</h2>${entityRecordList(visibleResearch, 'research')}<h2>Clinical trials</h2>${entityRecordList(visibleTrials, 'trials')}<aside class="automation-notice"><strong>Built automatically from source records</strong><p>Names and links come directly from source information. No human reviewer merges identities or evaluates individual records. Pages below their ${minimumRecords}-record usefulness threshold remain out of search results.</p>${kind === 'topic' ? `<p><a class="section-link" href="/topics/${encodeURIComponent(slug)}">Open the full topic guide</a> · <a class="section-link" href="/dashboard">Follow in your private radar</a></p>` : ''}</aside></section>`
+  return pageShell({ title: `${entity.name} — immortal.life entity`, description: entity.description, canonical, kicker: kindLabels[kind] || 'Evidence directory', heading: entity.name, body, socialImage: `${SITE}/social-card/entity/${kind}-${slug}.png`, indexable: kind !== 'topic' && recordCount >= minimumRecords })
 }
 
 function slugify(value: unknown): string {
@@ -458,6 +489,8 @@ Deno.serve(async (req) => {
   try {
     if (mode === 'sitemap') return response(await sitemap(supabase, url.searchParams.get('type') || 'index'), 'application/xml; charset=utf-8')
     if (mode === 'feed') return await feed(supabase, url.searchParams.get('format') || 'rss', url.searchParams.get('topic') || '')
+    if (mode === 'changes') return response(await changesPage(supabase), 'text/html; charset=utf-8')
+    if (mode === 'change-feed') return await changeFeed(supabase, url.searchParams.get('format') || 'rss')
     if (mode === 'discover') return response(await discoveryPage(supabase, url.searchParams.get('view') || 'index', url.searchParams.get('country') || ''), 'text/html; charset=utf-8')
     if (mode === 'reports') return response(await reportsPage(supabase), 'text/html; charset=utf-8')
     if (mode === 'dataset') {

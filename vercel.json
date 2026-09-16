@@ -4,6 +4,9 @@
   "buildCommand": "node build.js",
   "outputDirectory": "dist",
   "installCommand": "",
+  "redirects": [
+    { "source": "/interventions/:slug", "destination": "/topics/:slug", "permanent": true }
+  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -129,6 +132,9 @@
     { "source": "/integrity/:id", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=record&kind=integrity&id=:id" },
     { "source": "/briefings", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=briefings" },
     { "source": "/briefings/:slug", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=briefings&slug=:slug" },
+    { "source": "/changes", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=changes" },
+    { "source": "/changes/feed.xml", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=change-feed&format=rss" },
+    { "source": "/changes/feed.json", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=change-feed&format=json" },
     { "source": "/discover", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=discover&view=index" },
     { "source": "/discover/recruiting-trials", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=discover&view=recruiting" },
     { "source": "/discover/recruiting-trials/:country", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=discover&view=recruiting&country=:country" },

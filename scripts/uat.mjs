@@ -12,7 +12,7 @@ mkdirSync(artifacts, { recursive: true });
 
 const defaultRoutes = [
   '/', '/research', '/trials', '/topics', '/topics/rapamycin',
-  '/discover', '/discover/recruiting-trials', '/discover/regulatory-status', '/discover/research-integrity', '/reports',
+  '/discover', '/changes', '/discover/recruiting-trials', '/discover/regulatory-status', '/discover/research-integrity', '/reports',
   '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/methodology',
   '/resources', '/entities', '/entities/topic/rapamycin', '/quality', '/automation', '/publication-policy', '/corrections', '/data', '/join',
   '/auth/x', '/auth/linkedin', '/leaderboard', '/privacy',
@@ -192,7 +192,7 @@ try {
   await cdp.call('Network.enable');
   const desktop = await runViewport(cdp, 'desktop', 1440, 1000, false);
   const mobile = await runViewport(cdp, 'mobile', 390, 844, true);
-  const endpointChecks = await Promise.all(['/sitemap.xml', '/sitemaps/static.xml', '/sitemaps/research.xml', '/feed.xml', '/feed.atom', '/feed.json', '/feeds/topics/rapamycin.xml', '/datasets/trials.csv', '/datasets/research.json', '/api/subscribe?action=confirm&token=bad', '/social-card/entity/topic-rapamycin.png'].map(async (route) => {
+  const endpointChecks = await Promise.all(['/sitemap.xml', '/sitemaps/static.xml', '/sitemaps/research.xml', '/feed.xml', '/feed.atom', '/feed.json', '/changes/feed.xml', '/changes/feed.json', '/feeds/topics/rapamycin.xml', '/datasets/trials.csv', '/datasets/research.json', '/api/subscribe?action=confirm&token=bad', '/social-card/entity/topic-rapamycin.png', '/social-card/changes/latest.png'].map(async (route) => {
     const response = await fetch(`${baseUrl}${route}`);
     return { route, status: response.status, contentType: response.headers.get('content-type'), ok: response.ok };
   }));

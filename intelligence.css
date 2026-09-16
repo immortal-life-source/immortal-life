@@ -264,6 +264,13 @@ body[data-view="topics"] .intel-section { padding-top: clamp(38px, 4vw, 58px); }
 .report-ranking { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--border); }
 .report-ranking li { display: grid; grid-template-columns: 44px 1fr auto; gap: 20px; align-items: center; padding: 18px 0; border-bottom: 1px solid var(--border); }
 .report-ranking li > span { color: var(--muted); font-size: 11px; }
+.change-list { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--border); }
+.change-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 24px; align-items: start; padding: 24px 0; border-bottom: 1px solid var(--border); }
+.change-row.is-important { border-left: 2px solid var(--gold); padding-left: 20px; }
+.change-row h2 { margin: 8px 0 0; font: 300 clamp(22px,3vw,34px)/1.15 var(--serif); }
+.change-row h2 a { text-decoration: none; }
+.change-row h2 a:hover { color: var(--gold); }
+.change-kind { color: var(--muted); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
 .report-ranking a { font: 300 24px var(--serif); text-decoration: none; }
 .report-ranking a:hover { color: var(--gold); }
 .report-ranking strong { color: var(--gold); font-weight: 400; }
@@ -307,6 +314,7 @@ body[data-view="topics"] .intel-section { padding-top: clamp(38px, 4vw, 58px); }
   .resource-map-wrap { overflow-x: auto; }
   .entity-record-list li { flex-direction: column; gap: 7px; }
   .entity-record-list span { text-align: left; }
+  .change-row { grid-template-columns: 1fr; gap: 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

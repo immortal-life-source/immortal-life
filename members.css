@@ -1203,6 +1203,22 @@ details.dash-acc summary {
 .dash-watch-chip { border: 1px solid rgba(237,233,224,.14); color: rgba(237,233,224,.58); background: transparent; padding: 9px 11px; cursor: pointer; font: 400 10px 'Instrument Sans', sans-serif; letter-spacing: .08em; text-transform: uppercase; }
 .dash-watch-chip:hover, .dash-watch-chip.is-watched { border-color: #b8955a; color: #b8955a; background: rgba(184,149,90,.08); }
 .dash-watch-chip.is-watched::before { content: '✓ '; }
+.dash-radar-badge { display: inline-flex; margin-left: 8px; padding: 3px 7px; border: 1px solid rgba(184,149,90,.45); border-radius: 999px; color: #b8955a; font-size: 9px; letter-spacing: .08em; vertical-align: middle; }
+.dash-radar-picker { display: grid; gap: 14px; }
+.dash-radar-picker details { border-top: 1px solid rgba(237,233,224,.1); padding-top: 12px; }
+.dash-radar-picker summary { color: rgba(237,233,224,.76); cursor: pointer; font-size: 12px; letter-spacing: .04em; }
+.dash-radar-picker details .dash-watch-topics { padding-top: 12px; }
+.dash-radar-group-title { margin: 0 0 10px; color: rgba(237,233,224,.58); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+.dash-watch-trials { max-height: 270px; overflow: auto; padding-right: 4px; }
+.dash-watch-trials .dash-watch-chip { max-width: 100%; text-align: left; line-height: 1.45; text-transform: none; letter-spacing: .02em; }
+.dash-radar-updates { margin-top: 28px; padding: 20px; border: 1px solid rgba(237,233,224,.1); background: rgba(255,255,255,.015); }
+.dash-radar-updates-head { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; }
+.dash-radar-events { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 20px; }
+.dash-radar-event { padding: 13px 0; border-top: 1px solid rgba(237,233,224,.08); }
+.dash-radar-event.is-important { border-left: 2px solid #b8955a; padding-left: 12px; }
+.dash-radar-event-meta { margin: 0 0 5px; color: #b8955a; font-size: 9px; letter-spacing: .07em; text-transform: uppercase; }
+.dash-radar-event a { color: rgba(237,233,224,.86); text-decoration: none; font: 300 17px/1.25 'Cormorant', Georgia, serif; }
+.dash-radar-event a:hover { color: #b8955a; }
 .dash-briefing-toggle { display: flex; align-items: center; gap: 10px; margin-top: 22px; color: rgba(237,233,224,.75); font-size: 13px; cursor: pointer; }
 .dash-briefing-toggle input { accent-color: #b8955a; }
 .dash-watch-status { min-height: 18px; margin: 10px 0 0; color: #b8955a; font-size: 11px; }
@@ -1218,6 +1234,9 @@ details.dash-acc summary {
 
 @media (max-width: 680px) {
   .dash-intel-head { flex-direction: column; }
+  .dash-radar-events { grid-template-columns: 1fr; }
+  .dash-radar-updates { padding: 16px; }
+  .dash-radar-updates-head { align-items: flex-start; flex-direction: column; }
 }
 
 .dash-news-trigger {

@@ -152,6 +152,7 @@
       const action = el('div', 'record-action');
       action.append(el('span', 'record-status', evidenceLabel(record.evidence_level, record.status)));
       const source = link('source-link', 'Open source record', record.source_url);
+      source.dataset.ilEvent = 'open_source';
       source.target = '_blank';
       source.rel = 'noopener noreferrer';
       action.append(source);
@@ -201,6 +202,7 @@
       const action = el('div', 'record-action');
       action.append(el('span', 'record-status', readableStatus(record.overall_status)));
       const source = link('source-link', 'Open registry record', record.source_url);
+      source.dataset.ilEvent = 'open_source';
       source.target = '_blank';
       source.rel = 'noopener noreferrer';
       action.append(source);
@@ -231,6 +233,7 @@
       const action = el('div', 'record-action');
       action.append(el('span', 'record-status', record.category));
       const source = link('source-link', 'Open official notice', record.source_url);
+      source.dataset.ilEvent = 'open_source';
       source.target = '_blank'; source.rel = 'noopener noreferrer'; action.append(source);
       card.append(meta, main, action); elements.regulatoryList.append(card);
     });
@@ -255,6 +258,7 @@
       const action = el('div', 'record-action');
       action.append(el('span', 'record-status record-status--alert', record.event_type));
       const source = link('source-link', 'Open integrity notice', record.source_url);
+      source.dataset.ilEvent = 'open_source';
       source.target = '_blank'; source.rel = 'noopener noreferrer'; action.append(source);
       card.append(meta, main, action); elements.integrityList.append(card);
     });

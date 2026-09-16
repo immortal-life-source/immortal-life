@@ -17,6 +17,7 @@ const browserScripts = [
   'news-modal.js',
   'spread-copy.js',
   'widget.js',
+  'telemetry.js',
 ];
 
 const edgeScripts = [
@@ -45,6 +46,7 @@ const edgeScripts = [
   'supabase/functions/sync-search-console/index.ts',
   'supabase/functions/subscribe-briefing/index.ts',
   'supabase/functions/deliver-briefings/index.ts',
+  'supabase/functions/record-utility-event/index.ts',
 ];
 
 for (const file of browserScripts) {
@@ -79,6 +81,7 @@ const requiredFiles = [
   'supabase/migrations/20260915000500_link_resource_ingestion_health.sql',
   'supabase/migrations/20260915000600_repair_resource_links.sql',
   'supabase/migrations/20260915000700_search_demand_and_utility.sql',
+  'supabase/migrations/20260916000100_reader_growth_loops.sql',
   'supabase/audits/membership-integrity.sql',
   'intelligence-template.html',
   'content-template.html',
