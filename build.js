@@ -116,27 +116,27 @@ const intelligencePages = [
   {
     filename: 'research.html',
     PAGE_TITLE: 'Longevity Research Intelligence — immortal.life',
-    PAGE_DESCRIPTION: 'Explore automatically updated longevity research and clinical trials, with a direct link to every original source.',
+    PAGE_DESCRIPTION: 'A plain map of new longevity papers and clinical studies. Every item links to the original source so you can check the details yourself.',
     CANONICAL_URL: `${site}/research`,
     PAGE_VIEW: 'overview',
     TOPIC_SLUG: '',
     PAGE_KICKER: 'Longevity research, updated automatically',
-    PAGE_HEADING: 'See what is changing in longevity research.',
+    PAGE_HEADING: 'Follow new longevity research without getting lost.',
   },
   {
     filename: 'trials.html',
     PAGE_TITLE: 'Longevity Trial Radar — immortal.life',
-    PAGE_DESCRIPTION: 'Find clinical studies connected to longevity and healthy ageing, sourced from official trial registries.',
+    PAGE_DESCRIPTION: 'Find longevity-related clinical studies from official registries, then open the source record for eligibility, phase, status, and locations.',
     CANONICAL_URL: `${site}/trials`,
     PAGE_VIEW: 'trials',
     TOPIC_SLUG: '',
     PAGE_KICKER: 'Clinical studies from official registries',
-    PAGE_HEADING: 'Find longevity-related clinical trials.',
+    PAGE_HEADING: 'See which longevity trials are being registered.',
   },
   {
     filename: 'topics.html',
     PAGE_TITLE: 'Longevity Evidence Topics — immortal.life',
-    PAGE_DESCRIPTION: 'Choose a topic to see its latest research, clinical trials, limitations, and regulatory context.',
+    PAGE_DESCRIPTION: 'Choose one longevity question at a time and see the latest source-linked papers, trials, uncertainties, and regulatory notes.',
     CANONICAL_URL: `${site}/topics`,
     PAGE_VIEW: 'topics',
     TOPIC_SLUG: '',
@@ -166,7 +166,7 @@ const intelligencePages = [
   {
     filename: 'evidence-graph.html',
     PAGE_TITLE: 'Visual Longevity Evidence Graph — immortal.life',
-    PAGE_DESCRIPTION: 'An automatically updated visual map connecting longevity topics, research, trials, regulatory notices, and integrity events.',
+    PAGE_DESCRIPTION: 'A visual map showing how longevity topics connect to papers, trials, regulatory notices, and corrections.',
     CANONICAL_URL: `${site}/evidence-graph`,
     PAGE_VIEW: 'graph',
     TOPIC_SLUG: '',
@@ -186,17 +186,17 @@ const intelligencePages = [
   {
     filename: 'universities.html',
     PAGE_TITLE: 'Global University Longevity Research Index — immortal.life',
-    PAGE_DESCRIPTION: 'Compare universities worldwide by source-matched longevity research activity, topic breadth, recent momentum, and transparent citation context.',
+    PAGE_DESCRIPTION: 'Explore which universities appear most often in source-matched longevity research, with filters by topic, country, and region.',
     CANONICAL_URL: `${site}/universities`,
     PAGE_VIEW: 'universities',
     TOPIC_SLUG: '',
     PAGE_KICKER: 'Global University Research Index',
-    PAGE_HEADING: 'Where is longevity research happening?',
+    PAGE_HEADING: 'Where can you learn from university research?',
   },
   {
     filename: 'resources.html',
     PAGE_TITLE: 'Global Longevity Resource Atlas — immortal.life',
-    PAGE_DESCRIPTION: 'Find official global research databases, trial registries, and medicines regulators, with clear notes about geographic coverage.',
+    PAGE_DESCRIPTION: 'Find official databases, trial registries, regulators, reviews, and ageing datasets. Each source explains what region or task it covers.',
     CANONICAL_URL: `${site}/resources`,
     PAGE_VIEW: 'resources',
     TOPIC_SLUG: '',
@@ -243,6 +243,11 @@ for (const topic of intelligenceTopics) {
 }
 
 const contentPages = [
+  {
+    filename: 'learn.html', title: 'Longevity 101 — immortal.life', heading: 'Start learning longevity here.', kicker: 'A student guide to the field',
+    description: 'A plain-language route through longevity science, evidence, clinical trials, universities, safety signals, and official sources.',
+    body: `<section class="learn-path"><div class="learn-intro"><span class="section-index">New to the field</span><h2>Use immortal.life as a map, not as medical advice.</h2><p>Longevity research asks whether ageing biology can be measured, slowed, repaired, or made less harmful. The field is exciting, but it is also full of early results, animal work, incomplete trials, and claims that can sound stronger than the evidence. This page gives you a calm route through the website.</p></div><div class="learn-steps"><article><span>01</span><h3>Understand the basic question</h3><p>Start with the idea that ageing is a set of biological processes: inflammation, cellular senescence, DNA damage, protein quality control, metabolism, stem-cell exhaustion, and tissue repair. No single topic explains everything.</p><a class="section-link" href="/topics">Explore topic guides</a></article><article><span>02</span><h3>Learn how evidence levels differ</h3><p>A mouse study, a cell study, an observational human study, and a randomized human trial do not answer the same question. Look for population, study design, endpoints, duration, and whether the record is peer reviewed.</p><a class="section-link" href="/research">Read research records</a></article><article><span>03</span><h3>Use trials carefully</h3><p>A registered trial means someone planned or ran a study. It does not prove that a treatment works, is safe, is complete, or is approved. Always open the registry source for eligibility, intervention, location, and status.</p><a class="section-link" href="/trials">Open Trial Radar</a></article><article><span>04</span><h3>See where universities are active</h3><p>The university index helps you discover institutions publishing in longevity topics. Treat it as a landscape map, not a ranking of teaching quality, clinical care, or scientific truth.</p><a class="section-link" href="/universities">Compare universities</a></article><article><span>05</span><h3>Check safety and regulation</h3><p>Regulatory pages point to official notices and authorities. A therapy may be studied in one setting and still not be approved for longevity use. The original authority is the source that matters.</p><a class="section-link" href="/regulatory">Check regulatory updates</a></article><article><span>06</span><h3>Follow changes over time</h3><p>Research changes: trials are updated, papers are corrected, and weak matches are held back. Use the change log, quality page, and weekly briefings to see what moved recently.</p><a class="section-link" href="/changes">See what changed</a></article></div><aside class="automation-notice"><strong>How this website works</strong><p>immortal.life is fully automated. It collects and organises source-linked records without scientists, clinicians, editors, or human reviewers approving individual items. That is why every important page asks you to open the original source.</p></aside></section><section class="intel-section"><div class="section-heading"><div><span class="section-index">Suggested first session</span><h2>A 30-minute route through the site</h2></div><a class="section-link" href="/resources">Find official sources</a></div><ol class="student-route"><li><strong>5 minutes:</strong> pick one topic that interests you, such as rapamycin, senolytics, exercise, or epigenetic clocks.</li><li><strong>10 minutes:</strong> open three research records and compare study type, population, and uncertainty.</li><li><strong>5 minutes:</strong> check whether any related trials are recruiting and what the registry actually says.</li><li><strong>5 minutes:</strong> open the university index to see which institutions appear in that topic.</li><li><strong>5 minutes:</strong> look at regulation, corrections, and source limitations before forming an opinion.</li></ol></section><section class="intel-section color-routes"><div><span>Biology</span><p>Mechanisms, cells, repair, metabolism, ageing clocks.</p></div><div><span>Evidence</span><p>Papers, trials, systematic reviews, uncertainty.</p></div><div><span>Safety</span><p>Regulation, corrections, retractions, limitations.</p></div><div><span>Landscape</span><p>Universities, sources, datasets, briefings.</p></div></section>`
+  },
   {
     filename: 'methodology.html', title: 'How immortal.life works', heading: 'How records reach the website.', kicker: 'A transparent automatic process',
     description: 'How immortal.life automatically discovers, classifies, links, updates, and publishes longevity intelligence without human review.',

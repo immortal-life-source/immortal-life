@@ -30,6 +30,7 @@
       <span>Menu</span><i aria-hidden="true"></i>
     </button>
     <nav class="intel-nav" id="intelNav" aria-label="Primary navigation">
+      <a href="/learn">Start here</a>
       <a href="/discover">Discover</a>
       <a href="/changes">What changed</a>
       <a href="/research" data-nav="research">Research</a>
@@ -46,6 +47,15 @@
 
   <main>
     <section class="intel-hero">
+      <div class="bio-ambient bio-ambient--intel" aria-hidden="true">
+        <div class="bio-dna">
+          <span></span><span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div class="bio-human">
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+      </div>
       <div class="intel-kicker">{{PAGE_KICKER}}</div>
       <h1>{{PAGE_HEADING}}</h1>
       <p class="intel-lede">{{PAGE_DESCRIPTION}}</p>
@@ -53,6 +63,24 @@
         <span class="freshness-dot" aria-hidden="true"></span>
         <span id="freshnessText">Checking source freshness…</span>
       </div>
+    </section>
+
+    <section class="reader-guide" aria-label="How to use this page">
+      <article>
+        <span>First read</span>
+        <h2>Start with the question.</h2>
+        <p>Each page is organised around a practical research question: what changed, where the evidence comes from, and which source to open next.</p>
+      </article>
+      <article>
+        <span>Important limit</span>
+        <h2>Indexing is not endorsement.</h2>
+        <p>A record appearing here means it matched the automated topic rules. It does not mean the intervention is safe, effective, approved, or recommended.</p>
+      </article>
+      <article>
+        <span>Best habit</span>
+        <h2>Open the original source.</h2>
+        <p>Use immortal.life as a map. For decisions, assignments, or citations, verify the details at the linked journal, registry, regulator, or dataset.</p>
+      </article>
     </section>
 
     {{TOPIC_DOSSIER_HTML}}

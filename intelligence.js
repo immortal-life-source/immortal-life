@@ -2,6 +2,25 @@
 
 (function initIntelligencePortal() {
   const body = document.body;
+  const navToggleOnly = document.getElementById('intelNavToggle');
+  const navOnly = document.getElementById('intelNav');
+
+  function setNavigationOnly(open) {
+    if (!navToggleOnly || !navOnly) return;
+    navToggleOnly.setAttribute('aria-expanded', String(open));
+    navOnly.dataset.open = String(open);
+  }
+
+  navToggleOnly?.addEventListener('click', () => setNavigationOnly(navToggleOnly.getAttribute('aria-expanded') !== 'true'));
+  navOnly?.addEventListener('click', (event) => {
+    if (event.target instanceof Element && event.target.closest('a')) setNavigationOnly(false);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') setNavigationOnly(false);
+  });
+
+  if (!body.dataset.view) return;
+
   const view = body.dataset.view || 'overview';
   const topicSlug = body.dataset.topic || '';
   const endpoint = `${window.IL_FN_BASE}/public-intelligence`;
@@ -74,14 +93,6 @@
     elements.navToggle.setAttribute('aria-expanded', String(open));
     elements.nav.dataset.open = String(open);
   }
-
-  elements.navToggle?.addEventListener('click', () => setNavigation(elements.navToggle.getAttribute('aria-expanded') !== 'true'));
-  elements.nav?.addEventListener('click', (event) => {
-    if (event.target instanceof Element && event.target.closest('a')) setNavigation(false);
-  });
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') setNavigation(false);
-  });
 
   function el(tag, className, text) {
     const node = document.createElement(tag);

@@ -11,7 +11,7 @@ const artifacts = join(tmpdir(), 'immortal-life-uat-artifacts');
 mkdirSync(artifacts, { recursive: true });
 
 const defaultRoutes = [
-  '/', '/research', '/trials', '/topics', '/topics/rapamycin',
+  '/', '/learn', '/research', '/trials', '/topics', '/topics/rapamycin',
   '/discover', '/changes', '/discover/recruiting-trials', '/discover/regulatory-status', '/discover/research-integrity', '/reports',
   '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/methodology',
   '/resources', '/universities', '/entities', '/entities/topic/rapamycin', '/quality', '/automation', '/publication-policy', '/corrections', '/data', '/join',

@@ -19,6 +19,10 @@
   --gold-mid:    rgba(184, 149, 90, 0.35);
   --white:       #ede9e0;
   --off:         #aaa79a;
+  --teal:        #6eb7a8;
+  --violet:      #9f8ad6;
+  --coral:       #c98277;
+  --sage:        #86a57c;
   --border:      rgba(237, 233, 224, 0.08);
   --border-mid:  rgba(237, 233, 224, 0.14);
   --error:       rgba(180, 70, 70, 0.75);
@@ -596,6 +600,161 @@ h1 {
   z-index: 1;
   pointer-events: none;
   overflow: hidden;
+}
+
+.bio-ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bio-dna {
+  position: absolute;
+  right: clamp(80px, 18vw, 290px);
+  top: 11%;
+  width: 88px;
+  height: 470px;
+  opacity: .34;
+  transform: rotate(-18deg);
+  animation: dnaFloat 16s ease-in-out infinite;
+}
+
+.bio-dna span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--i, 0) * 8%);
+  height: 1px;
+  background: linear-gradient(90deg, rgba(110,183,168,.05), rgba(110,183,168,.7), rgba(184,149,90,.7), rgba(159,138,214,.05));
+  transform: rotate(calc(var(--twist, 0deg))) scaleX(calc(.34 + var(--scale, .5)));
+  transform-origin: center;
+}
+
+.bio-dna span::before,
+.bio-dna span::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--teal);
+  box-shadow: 0 0 18px rgba(110,183,168,.35);
+  animation: bioPulse 3.8s ease-in-out infinite;
+}
+
+.bio-dna span::before { left: -2px; }
+.bio-dna span::after { right: -2px; background: var(--gold); box-shadow: 0 0 18px rgba(184,149,90,.38); }
+.bio-dna span:nth-child(1) { --i: 0; --twist: -34deg; --scale: .55; }
+.bio-dna span:nth-child(2) { --i: 1; --twist: -22deg; --scale: .62; }
+.bio-dna span:nth-child(3) { --i: 2; --twist: -8deg; --scale: .78; }
+.bio-dna span:nth-child(4) { --i: 3; --twist: 10deg; --scale: .92; }
+.bio-dna span:nth-child(5) { --i: 4; --twist: 24deg; --scale: .72; }
+.bio-dna span:nth-child(6) { --i: 5; --twist: 36deg; --scale: .48; }
+.bio-dna span:nth-child(7) { --i: 6; --twist: 24deg; --scale: .72; }
+.bio-dna span:nth-child(8) { --i: 7; --twist: 10deg; --scale: .92; }
+.bio-dna span:nth-child(9) { --i: 8; --twist: -8deg; --scale: .78; }
+.bio-dna span:nth-child(10) { --i: 9; --twist: -22deg; --scale: .62; }
+.bio-dna span:nth-child(11) { --i: 10; --twist: -34deg; --scale: .55; }
+.bio-dna span:nth-child(12) { --i: 11; --twist: -12deg; --scale: .82; }
+
+.bio-human {
+  position: absolute;
+  right: clamp(-40px, 5vw, 80px);
+  top: 14%;
+  width: clamp(210px, 25vw, 360px);
+  height: clamp(460px, 54vw, 690px);
+  opacity: .22;
+  filter: drop-shadow(0 0 30px rgba(184,149,90,.15));
+  animation: humanAssemble 12s ease-in-out infinite;
+}
+
+.bio-human::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 8%, rgba(237,233,224,.42) 0 8%, transparent 9%),
+    radial-gradient(ellipse at 50% 31%, rgba(184,149,90,.18) 0 20%, transparent 21%),
+    radial-gradient(ellipse at 31% 34%, rgba(237,233,224,.12) 0 9%, transparent 10%),
+    radial-gradient(ellipse at 69% 34%, rgba(237,233,224,.12) 0 9%, transparent 10%),
+    radial-gradient(ellipse at 42% 74%, rgba(110,183,168,.13) 0 13%, transparent 14%),
+    radial-gradient(ellipse at 58% 74%, rgba(159,138,214,.11) 0 13%, transparent 14%);
+  mask-image: radial-gradient(ellipse at 50% 13%, #000 0 11%, transparent 12%),
+    radial-gradient(ellipse at 50% 43%, #000 0 26%, transparent 27%),
+    radial-gradient(ellipse at 33% 50%, #000 0 13%, transparent 14%),
+    radial-gradient(ellipse at 67% 50%, #000 0 13%, transparent 14%),
+    radial-gradient(ellipse at 43% 82%, #000 0 18%, transparent 19%),
+    radial-gradient(ellipse at 57% 82%, #000 0 18%, transparent 19%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 13%, #000 0 11%, transparent 12%),
+    radial-gradient(ellipse at 50% 43%, #000 0 26%, transparent 27%),
+    radial-gradient(ellipse at 33% 50%, #000 0 13%, transparent 14%),
+    radial-gradient(ellipse at 67% 50%, #000 0 13%, transparent 14%),
+    radial-gradient(ellipse at 43% 82%, #000 0 18%, transparent 19%),
+    radial-gradient(ellipse at 57% 82%, #000 0 18%, transparent 19%);
+}
+
+.bio-human i {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(237,233,224,.7);
+  box-shadow: 0 0 18px rgba(184,149,90,.36);
+  animation: bioPulse 4.4s ease-in-out infinite;
+}
+
+.bio-human i:nth-child(1) { left: 50%; top: 9%; }
+.bio-human i:nth-child(2) { left: 43%; top: 27%; animation-delay: .3s; }
+.bio-human i:nth-child(3) { left: 57%; top: 27%; animation-delay: .6s; }
+.bio-human i:nth-child(4) { left: 35%; top: 45%; animation-delay: .9s; }
+.bio-human i:nth-child(5) { left: 65%; top: 45%; animation-delay: 1.2s; }
+.bio-human i:nth-child(6) { left: 50%; top: 55%; animation-delay: 1.5s; background: var(--gold); }
+.bio-human i:nth-child(7) { left: 42%; top: 80%; animation-delay: 1.8s; background: var(--teal); }
+.bio-human i:nth-child(8) { left: 58%; top: 80%; animation-delay: 2.1s; background: var(--violet); }
+
+.hero-start {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 26px;
+  max-width: 680px;
+  opacity: 0;
+  animation: fadeUp 1s ease forwards 1.25s;
+}
+
+.hero-start a {
+  color: var(--bg);
+  background: var(--gold);
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  font-size: 10px;
+  padding: 13px 16px;
+  white-space: nowrap;
+}
+
+.hero-start span {
+  color: rgba(237,233,224,.68);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+@keyframes dnaFloat {
+  0%, 100% { transform: translateY(0) rotate(-18deg); opacity: .2; }
+  45% { transform: translateY(28px) rotate(-12deg); opacity: .44; }
+}
+
+@keyframes humanAssemble {
+  0%, 100% { transform: translateY(18px) scale(.985); opacity: .1; }
+  45%, 60% { transform: translateY(0) scale(1); opacity: .24; }
+}
+
+@keyframes bioPulse {
+  0%, 100% { opacity: .32; transform: scale(.75); }
+  50% { opacity: 1; transform: scale(1.1); }
 }
 
 /* ============================================================
@@ -1265,7 +1424,12 @@ h1 {
   .hero-orbit-visual,
   .hero-orbit-core::before,
   .hero-orbit-rotator,
-  .hero-orbit-node-copy {
+  .hero-orbit-node-copy,
+  .bio-dna,
+  .bio-human,
+  .bio-human i,
+  .bio-dna span::before,
+  .bio-dna span::after {
     animation: none;
     opacity: 1;
   }
@@ -1276,6 +1440,8 @@ h1 {
   .s1-footer { transform: none; }
 
   .hero-orbit { transform: translateY(-49%); }
+  .bio-human { opacity: .12; }
+  .bio-dna { opacity: .18; }
 
   .reveal {
     opacity: 1;
@@ -1423,6 +1589,33 @@ h1 {
   .hero-orbit-core small { font-size: 6px; }
 
   .hero-orbit-logo { width: 50px; height: 50px; }
+
+  .bio-dna {
+    right: 24px;
+    top: 23%;
+    height: 340px;
+    opacity: .24;
+  }
+
+  .bio-human {
+    right: -110px;
+    top: 7%;
+    width: 310px;
+    height: 620px;
+    opacity: .18;
+  }
+
+  .hero-start {
+    flex-direction: column;
+    align-items: flex-start;
+    margin-top: 24px;
+  }
+
+  .hero-start a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
 
   .email-input {
     font-size: 16px;
