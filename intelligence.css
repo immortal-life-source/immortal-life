@@ -38,6 +38,14 @@ button { font: inherit; }
 
 .intel-logo { color: var(--gold); text-decoration: none; letter-spacing: .11em; font-size: 13px; display: inline-flex; align-items: center; gap: 10px; }
 .intel-logo img { width: 40px; height: 40px; object-fit: contain; filter: drop-shadow(0 0 12px rgba(184,149,90,.18)); }
+.intel-nav-toggle { display: none; color: var(--gold); background: transparent; border: 1px solid var(--border-strong); min-height: 44px; padding: 0 14px; align-items: center; gap: 12px; text-transform: uppercase; letter-spacing: .15em; font-size: 10px; cursor: pointer; }
+.intel-nav-toggle i, .intel-nav-toggle i::before, .intel-nav-toggle i::after { width: 15px; height: 1px; display: block; background: currentColor; content: ''; transition: transform .2s ease, opacity .2s ease; }
+.intel-nav-toggle i { position: relative; }
+.intel-nav-toggle i::before { position: absolute; top: -5px; }
+.intel-nav-toggle i::after { position: absolute; top: 5px; }
+.intel-nav-toggle[aria-expanded="true"] i { background: transparent; }
+.intel-nav-toggle[aria-expanded="true"] i::before { transform: translateY(5px) rotate(45deg); }
+.intel-nav-toggle[aria-expanded="true"] i::after { transform: translateY(-5px) rotate(-45deg); }
 .intel-nav { display: flex; align-items: center; gap: clamp(12px, 1.7vw, 25px); }
 .intel-nav a { color: var(--muted); text-decoration: none; text-transform: uppercase; letter-spacing: .13em; font-size: 10px; padding: 10px 0; }
 .intel-nav a:hover, .intel-nav a[aria-current="page"] { color: var(--gold); }
@@ -344,12 +352,13 @@ body[data-view="topics"] .intel-section { padding-top: clamp(38px, 4vw, 58px); }
 .university-work-list span { color: var(--muted); font-size: 9px; }
 
 @media (max-width: 860px) {
-  .intel-header { min-height: 0; position: sticky; align-items: flex-start; flex-direction: column; gap: 10px; padding: 14px 0 0; }
-  .intel-logo { margin: 0 22px; }
+  .intel-header { min-height: 68px; position: sticky; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 12px; padding: 12px 22px; }
+  .intel-logo { margin: 0; }
   .intel-logo img { width: 36px; height: 36px; }
-  .intel-nav { width: 100%; display: flex; gap: 24px; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: none; padding: 0 22px 12px; scroll-snap-type: inline proximity; }
-  .intel-nav::-webkit-scrollbar { display: none; }
-  .intel-nav a { flex: 0 0 auto; min-width: 0; padding: 6px 0; line-height: 1.35; scroll-snap-align: start; white-space: nowrap; }
+  .intel-nav-toggle { display: inline-flex; }
+  .intel-nav { grid-column: 1 / -1; width: 100%; display: none; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 0; padding: 8px 0 4px; border-top: 1px solid var(--border); }
+  .intel-nav[data-open="true"] { display: grid; }
+  .intel-nav a { min-height: 44px; padding: 13px 10px; display: flex; align-items: center; border-bottom: 1px solid var(--border); line-height: 1.35; }
   .intel-hero { padding-top: 44px; padding-bottom: 42px; }
   .intel-hero h1 { font-size: clamp(44px, 12vw, 66px); line-height: 1; }
   .intel-stats { grid-template-columns: 1fr; }

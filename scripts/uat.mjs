@@ -14,7 +14,7 @@ const defaultRoutes = [
   '/', '/research', '/trials', '/topics', '/topics/rapamycin',
   '/discover', '/changes', '/discover/recruiting-trials', '/discover/regulatory-status', '/discover/research-integrity', '/reports',
   '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/methodology',
-  '/resources', '/entities', '/entities/topic/rapamycin', '/quality', '/automation', '/publication-policy', '/corrections', '/data', '/join',
+  '/resources', '/universities', '/entities', '/entities/topic/rapamycin', '/quality', '/automation', '/publication-policy', '/corrections', '/data', '/join',
   '/auth/x', '/auth/linkedin', '/leaderboard', '/privacy',
 ];
 const routes = process.env.UAT_ROUTES ? process.env.UAT_ROUTES.split(',').map((route) => route.trim()).filter(Boolean) : defaultRoutes;
@@ -23,6 +23,9 @@ if (!process.env.UAT_ROUTES) {
     const sitemap = await (await fetch(`${baseUrl}/sitemaps/research.xml`)).text();
     const sample = sitemap.match(/<loc>https?:\/\/[^<]+(\/research\/\d+)<\/loc>/)?.[1];
     if (sample) routes.splice(2, 0, sample);
+    const universities = await (await fetch(`${baseUrl}/sitemaps/universities.xml`)).text();
+    const universitySample = universities.match(/<loc>https?:\/\/[^<]+(\/universities\/[^<]+)<\/loc>/)?.[1];
+    if (universitySample) routes.splice(routes.indexOf('/universities') + 1, 0, universitySample);
   } catch (_) { /* Dynamic record discovery is best-effort for local previews. */ }
 }
 
@@ -193,7 +196,7 @@ try {
   await cdp.call('Network.enable');
   const desktop = await runViewport(cdp, 'desktop', 1440, 1000, false);
   const mobile = await runViewport(cdp, 'mobile', 390, 844, true);
-  const endpointChecks = await Promise.all(['/sitemap.xml', '/sitemaps/static.xml', '/sitemaps/research.xml', '/feed.xml', '/feed.atom', '/feed.json', '/changes/feed.xml', '/changes/feed.json', '/feeds/topics/rapamycin.xml', '/datasets/trials.csv', '/datasets/research.json', '/api/subscribe?action=confirm&token=bad', '/social-card/entity/topic-rapamycin.png', '/social-card/changes/latest.png'].map(async (route) => {
+  const endpointChecks = await Promise.all(['/sitemap.xml', '/sitemaps/static.xml', '/sitemaps/research.xml', '/sitemaps/universities.xml', '/feed.xml', '/feed.atom', '/feed.json', '/changes/feed.xml', '/changes/feed.json', '/feeds/topics/rapamycin.xml', '/datasets/trials.csv', '/datasets/research.json', '/datasets/universities.csv', '/datasets/universities.json', '/api/subscribe?action=confirm&token=bad', '/social-card/entity/topic-rapamycin.png', '/social-card/changes/latest.png', '/social-card/university/harvard-university-i136199984.png'].map(async (route) => {
     const response = await fetch(`${baseUrl}${route}`);
     return { route, status: response.status, contentType: response.headers.get('content-type'), ok: response.ok };
   }));

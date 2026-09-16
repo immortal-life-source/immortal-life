@@ -9,6 +9,8 @@
   const numberFormatter = new Intl.NumberFormat('en');
 
   const elements = {
+    navToggle: document.getElementById('intelNavToggle'),
+    nav: document.getElementById('intelNav'),
     loading: document.getElementById('loadingState'),
     error: document.getElementById('errorState'),
     retry: document.getElementById('retryButton'),
@@ -66,6 +68,20 @@
   };
 
   document.querySelector(`[data-nav="${view === 'overview' || view === 'topic' ? 'research' : view}"]`)?.setAttribute('aria-current', 'page');
+
+  function setNavigation(open) {
+    if (!elements.navToggle || !elements.nav) return;
+    elements.navToggle.setAttribute('aria-expanded', String(open));
+    elements.nav.dataset.open = String(open);
+  }
+
+  elements.navToggle?.addEventListener('click', () => setNavigation(elements.navToggle.getAttribute('aria-expanded') !== 'true'));
+  elements.nav?.addEventListener('click', (event) => {
+    if (event.target instanceof Element && event.target.closest('a')) setNavigation(false);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') setNavigation(false);
+  });
 
   function el(tag, className, text) {
     const node = document.createElement(tag);

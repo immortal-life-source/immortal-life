@@ -26,7 +26,10 @@
 <body data-view="{{PAGE_VIEW}}" data-topic="{{TOPIC_SLUG}}">
   <header class="intel-header">
     <a class="intel-logo" href="/" aria-label="immortal.life home"><img src="/linkedin-app-logo.png" width="40" height="40" alt="" decoding="async" /><span>immortal.life</span></a>
-    <nav class="intel-nav" aria-label="Primary navigation">
+    <button class="intel-nav-toggle" id="intelNavToggle" type="button" aria-expanded="false" aria-controls="intelNav">
+      <span>Menu</span><i aria-hidden="true"></i>
+    </button>
+    <nav class="intel-nav" id="intelNav" aria-label="Primary navigation">
       <a href="/discover">Discover</a>
       <a href="/changes">What changed</a>
       <a href="/research" data-nav="research">Research</a>
