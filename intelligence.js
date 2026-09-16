@@ -33,6 +33,21 @@
     graphFallback: document.getElementById('graphFallback'),
     entitiesSection: document.getElementById('entitiesSection'),
     entityGrid: document.getElementById('entityGrid'),
+    universitiesSection: document.getElementById('universitiesSection'),
+    universityStats: document.getElementById('universityStats'),
+    universityMapNodes: document.getElementById('universityMapNodes'),
+    universityMapSummary: document.getElementById('universityMapSummary'),
+    universityControls: document.getElementById('universityControls'),
+    universitySearch: document.getElementById('universitySearch'),
+    universityTopic: document.getElementById('universityTopic'),
+    universityCountry: document.getElementById('universityCountry'),
+    universityContinent: document.getElementById('universityContinent'),
+    universitySort: document.getElementById('universitySort'),
+    universityResult: document.getElementById('universityResult'),
+    universityList: document.getElementById('universityList'),
+    universityCompare: document.getElementById('universityCompare'),
+    universityCompareGrid: document.getElementById('universityCompareGrid'),
+    clearUniversityCompare: document.getElementById('clearUniversityCompare'),
     resourcesSection: document.getElementById('resourcesSection'),
     resourceStats: document.getElementById('resourceStats'),
     resourceMapNodes: document.getElementById('resourceMapNodes'),
@@ -380,6 +395,155 @@
     elements.entitiesSection.hidden = false;
   }
 
+  let universityRows = [];
+  let universityControlsReady = false;
+  const comparedUniversities = new Map();
+
+  function percentage(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? `${Math.round(number)}%` : 'Not available';
+  }
+
+  function renderUniversityStats(coverage) {
+    elements.universityStats.replaceChildren();
+    [
+      ['Universities indexed', coverage?.universities || 0],
+      ['Countries represented', coverage?.countries || 0],
+      ['Longevity-topic links', coverage?.indexed_topic_links || 0],
+      ['Five-year work links', coverage?.indexed_works_five_year || 0],
+    ].forEach(([label, value]) => {
+      const card = el('div', 'atlas-stat');
+      card.append(el('strong', '', numberFormatter.format(Number(value))), el('span', '', label));
+      elements.universityStats.append(card);
+    });
+  }
+
+  function renderUniversityMap(rows) {
+    elements.universityMapNodes.replaceChildren();
+    const ns = 'http://www.w3.org/2000/svg';
+    const visible = rows.filter((item) => Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude))).slice(0, 180);
+    visible.forEach((university) => {
+      const x = 50 + ((Number(university.longitude) + 180) / 360) * 1100;
+      const y = 38 + ((90 - Number(university.latitude)) / 180) * 420;
+      const group = document.createElementNS(ns, 'a');
+      group.setAttribute('href', `/universities/${encodeURIComponent(university.slug)}`);
+      group.setAttribute('class', 'university-map-node');
+      group.setAttribute('aria-label', `${university.name}, ${university.country_name || 'country unavailable'}: ${university.indexed_works_five_year} indexed work links`);
+      const circle = document.createElementNS(ns, 'circle');
+      circle.setAttribute('cx', String(x)); circle.setAttribute('cy', String(y));
+      circle.setAttribute('r', String(3.5 + Math.min(11, Math.log1p(Number(university.indexed_works_five_year || 0)) * 1.4)));
+      const title = document.createElementNS(ns, 'title');
+      title.textContent = `${university.name} · ${numberFormatter.format(Number(university.indexed_works_five_year || 0))} indexed work links`;
+      circle.append(title); group.append(circle); elements.universityMapNodes.append(group);
+    });
+    elements.universityMapSummary.textContent = visible.length
+      ? `${numberFormatter.format(visible.length)} leading universities from the current result are shown. Select a circle to open its profile; use the filters below for the complete returned ranking.`
+      : 'University locations will appear after the next automated source refresh.';
+  }
+
+  function metricForSort(university) {
+    const sort = elements.universitySort?.value || 'index';
+    if (sort === 'activity') return { value: university.indexed_works_five_year, label: 'five-year work links' };
+    if (sort === 'breadth') return { value: university.indexed_topic_count, label: 'topics represented' };
+    if (sort === 'momentum') return { value: percentage(university.momentum_score), label: 'recent momentum' };
+    if (sort === 'open-access') return { value: percentage(university.representative_open_access_share), label: 'open-access sample' };
+    return { value: Number(university.research_index_score || 0).toFixed(1), label: 'transparent index score' };
+  }
+
+  function renderUniversityComparison() {
+    elements.universityCompareGrid.replaceChildren();
+    const selected = [...comparedUniversities.values()];
+    elements.universityCompare.hidden = selected.length < 2;
+    selected.forEach((university) => {
+      const card = el('article', 'university-compare-card');
+      card.append(el('span', 'section-index', university.country_name || university.country_code || 'Location unavailable'));
+      const heading = el('h3'); heading.append(link('', university.name, `/universities/${encodeURIComponent(university.slug)}`));
+      const metrics = el('dl');
+      [
+        ['Index score', Number(university.research_index_score || 0).toFixed(1)],
+        ['Five-year work links', numberFormatter.format(Number(university.indexed_works_five_year || 0))],
+        ['Topics', numberFormatter.format(Number(university.indexed_topic_count || 0))],
+        ['Recent momentum', percentage(university.momentum_score)],
+        ['Open-access sample', percentage(university.representative_open_access_share)],
+      ].forEach(([label, value]) => { const row = el('div'); row.append(el('dt', '', label), el('dd', '', value)); metrics.append(row); });
+      card.append(heading, metrics); elements.universityCompareGrid.append(card);
+    });
+  }
+
+  function renderUniversityRows() {
+    const search = String(elements.universitySearch?.value || '').trim().toLowerCase();
+    const visible = universityRows.filter((university) => !search || `${university.name} ${university.city || ''} ${university.country_name || ''}`.toLowerCase().includes(search));
+    elements.universityList.replaceChildren();
+    if (!visible.length) elements.universityList.append(el('li', 'empty-list', universityRows.length ? 'No university in this result matches that name or location.' : 'The first automated university index refresh is pending. This page will populate without manual editing.'));
+    visible.forEach((university, index) => {
+      const item = el('li', 'university-row');
+      const rank = el('span', 'university-rank', String(index + 1).padStart(2, '0'));
+      const main = el('div', 'university-main');
+      const location = [university.city, university.country_name || university.country_code].filter(Boolean).join(', ') || 'Location unavailable';
+      main.append(el('span', 'section-index', location));
+      const heading = el('h3'); heading.append(link('', university.name, `/universities/${encodeURIComponent(university.slug)}`)); main.append(heading);
+      const topicMetrics = Array.isArray(university.university_research_topic_metrics) ? university.university_research_topic_metrics : [];
+      const topicNames = topicMetrics.sort((left, right) => Number(right.works_five_year || 0) - Number(left.works_five_year || 0)).slice(0, 4).map((metric) => metric.topic_slug.replaceAll('-', ' '));
+      main.append(el('p', '', topicNames.length ? `Strongest indexed activity: ${topicNames.join(', ')}.` : `${numberFormatter.format(Number(university.indexed_topic_count || 0))} longevity topics represented.`));
+      const signals = el('div', 'university-signals');
+      signals.append(
+        el('span', '', `${numberFormatter.format(Number(university.indexed_works_five_year || 0))} five-year work links`),
+        el('span', '', `${numberFormatter.format(Number(university.indexed_topic_count || 0))} topics`),
+        el('span', '', `${percentage(university.momentum_score)} momentum`),
+      );
+      main.append(signals);
+      const score = el('div', 'university-score');
+      const metric = metricForSort(university); score.append(el('strong', '', metric.value), el('span', '', metric.label));
+      const compare = el('label', 'university-compare-control');
+      const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = comparedUniversities.has(university.openalex_id);
+      checkbox.setAttribute('aria-label', `Compare ${university.name}`);
+      checkbox.onchange = () => {
+        if (checkbox.checked) {
+          if (comparedUniversities.size >= 3) { checkbox.checked = false; return; }
+          comparedUniversities.set(university.openalex_id, university);
+        } else comparedUniversities.delete(university.openalex_id);
+        renderUniversityComparison();
+      };
+      compare.append(checkbox, el('span', '', 'Compare'));
+      item.append(rank, main, score, compare); elements.universityList.append(item);
+    });
+    elements.universityResult.textContent = `Showing ${numberFormatter.format(visible.length)} of ${numberFormatter.format(universityRows.length)} returned universities. Up to 500 are returned for each filter combination.`;
+    renderUniversityMap(visible);
+  }
+
+  async function fetchUniversityIndex() {
+    elements.universityResult.textContent = 'Updating the university view…';
+    const url = new URL(endpoint);
+    url.searchParams.set('view', 'universities'); url.searchParams.set('limit', '500');
+    if (elements.universityTopic?.value) url.searchParams.set('topic', elements.universityTopic.value);
+    if (elements.universityCountry?.value) url.searchParams.set('country', elements.universityCountry.value);
+    if (elements.universityContinent?.value) url.searchParams.set('continent', elements.universityContinent.value);
+    if (elements.universitySort?.value) url.searchParams.set('sort', elements.universitySort.value);
+    const response = await fetch(url, { headers: window.ilFnHeaders() });
+    if (!response.ok) throw new Error(`University index request failed with ${response.status}`);
+    const data = await response.json();
+    universityRows = Array.isArray(data.universities) ? data.universities : [];
+    renderUniversityStats(data.coverage || {});
+    if (!universityControlsReady) {
+      (data.topics || []).forEach((topic) => elements.universityTopic.append(new Option(topic.name, topic.slug)));
+      (data.countries || []).forEach((country) => elements.universityCountry.append(new Option(`${country.name} · ${country.universities}`, country.code)));
+      [...new Set((data.countries || []).map((country) => country.continent).filter(Boolean))].sort().forEach((continent) => elements.universityContinent.append(new Option(continent, continent)));
+      elements.universitySearch.addEventListener('input', renderUniversityRows);
+      [elements.universityTopic, elements.universityCountry, elements.universityContinent, elements.universitySort].forEach((control) => control.addEventListener('change', () => fetchUniversityIndex().catch(showUniversityError)));
+      elements.clearUniversityCompare.onclick = () => { comparedUniversities.clear(); renderUniversityComparison(); renderUniversityRows(); };
+      universityControlsReady = true;
+    }
+    renderUniversityRows();
+    elements.freshness.dataset.health = data.sources?.[0]?.health || 'pending';
+    elements.freshnessText.textContent = data.coverage?.last_updated_at ? `University index refreshed ${formatTimestamp(data.coverage.last_updated_at)} from OpenAlex affiliation data.` : 'The first automated OpenAlex university refresh is pending.';
+    elements.universitiesSection.hidden = false;
+  }
+
+  function showUniversityError(error) {
+    console.error('University index filter failed:', error);
+    elements.universityResult.textContent = 'This university view could not refresh. The previous result remains visible; try again shortly.';
+  }
+
   function resourceLabel(value) {
     return String(value || '').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
   }
@@ -599,6 +763,8 @@
         const data = await request('entities', 100);
         renderEntities(data.entities || []);
         renderSources(data.sources || [], false);
+      } else if (view === 'universities') {
+        await fetchUniversityIndex();
       } else if (view === 'resources') {
         const data = await request('resources', 100);
         renderResources(data);

@@ -57,7 +57,7 @@ function pageShell(input: { title: string; description: string; canonical: strin
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(input.title)}"><meta name="twitter:description" content="${escapeHtml(input.description)}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,300&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="/intelligence.css"><link rel="icon" href="/favicon.ico">
 <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}</script></head><body>
-<header class="intel-header"><a class="intel-logo" href="/" aria-label="immortal.life home"><img src="/linkedin-app-logo.png" width="40" height="40" alt="" decoding="async"><span>immortal.life</span></a><nav class="intel-nav" aria-label="Primary navigation"><a href="/discover">Discover</a><a href="/changes">What changed</a><a href="/research">Research</a><a href="/trials">Trial Radar</a><a href="/topics">Topics</a><a href="/regulatory">Regulatory</a><a href="/resources">Resources</a><a href="/briefings">Briefings</a><a href="/methodology">How it works</a><a href="/join">Members</a></nav></header>
+<header class="intel-header"><a class="intel-logo" href="/" aria-label="immortal.life home"><img src="/linkedin-app-logo.png" width="40" height="40" alt="" decoding="async"><span>immortal.life</span></a><nav class="intel-nav" aria-label="Primary navigation"><a href="/discover">Discover</a><a href="/changes">What changed</a><a href="/research">Research</a><a href="/trials">Trial Radar</a><a href="/topics">Topics</a><a href="/universities">Universities</a><a href="/regulatory">Regulatory</a><a href="/resources">Resources</a><a href="/briefings">Briefings</a><a href="/methodology">How it works</a><a href="/join">Members</a></nav></header>
 <main><section class="intel-hero record-hero"><div class="intel-kicker">${escapeHtml(input.kicker)}</div><h1>${escapeHtml(input.heading)}</h1><p class="intel-lede">${escapeHtml(input.description)}</p></section>${input.body}</main>
 <footer class="intel-footer"><p><strong>Automated publication.</strong> ${escapeHtml(DISCLOSURE)} Research information only; not medical advice, diagnosis, or treatment guidance.</p><div><a href="/changes">What changed</a><a href="/reports">Reports</a><a href="/data">Data & feeds</a><a href="/methodology">Methodology</a><a href="/automation">Automation disclosure</a><a href="/corrections">Corrections</a><span>© 2026 immortal.life</span></div></footer><script src="/il-config.js"></script><script src="/telemetry.js"></script></body></html>`
 }
@@ -176,13 +176,13 @@ function sitemapUrlset(urls: Array<{ path: string; modified?: string }>): string
 }
 
 async function sitemap(supabase: any, type = 'index'): Promise<string> {
-  const allowed = ['static', 'topics', 'research', 'trials', 'regulatory', 'integrity', 'briefings', 'entities']
+  const allowed = ['static', 'topics', 'research', 'trials', 'regulatory', 'integrity', 'briefings', 'entities', 'universities']
   if (type === 'index') {
     return `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${allowed.map((name) => `<sitemap><loc>${SITE}/sitemaps/${name}.xml</loc></sitemap>`).join('')}</sitemapindex>`
   }
   if (!allowed.includes(type)) return sitemapUrlset([])
   if (type === 'static') {
-    return sitemapUrlset(['', '/discover', '/changes', '/discover/recruiting-trials', '/discover/regulatory-status', '/discover/research-integrity', '/research', '/trials', '/topics', '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/resources', '/entities', '/quality', '/reports', '/methodology', '/automation', '/publication-policy', '/corrections', '/data'].map((path) => ({ path })))
+    return sitemapUrlset(['', '/discover', '/changes', '/discover/recruiting-trials', '/discover/regulatory-status', '/discover/research-integrity', '/research', '/trials', '/topics', '/universities', '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/resources', '/entities', '/quality', '/reports', '/methodology', '/automation', '/publication-policy', '/corrections', '/data'].map((path) => ({ path })))
   }
   let result: any
   let urls: Array<{ path: string; modified?: string }> = []
@@ -195,6 +195,9 @@ async function sitemap(supabase: any, type = 'index'): Promise<string> {
   } else if (type === 'entities') {
     result = await supabase.from('intelligence_entities').select('kind,slug,updated_at,record_count,metadata').neq('kind', 'topic').order('updated_at', { ascending: false }).limit(10000)
     urls = (result.data ?? []).filter((row: any) => Number(row.record_count ?? 0) >= Number(row.metadata?.minimum_records ?? 1)).map((row: any) => ({ path: `/entities/${row.kind}/${row.slug}`, modified: row.updated_at }))
+  } else if (type === 'universities') {
+    result = await supabase.from('university_research_institutions').select('slug,updated_at').eq('is_eligible', true).order('research_index_score', { ascending: false }).limit(10000)
+    urls = (result.data ?? []).map((row: any) => ({ path: `/universities/${row.slug}`, modified: row.updated_at }))
   } else {
     const spec: Record<string, { table: string; modified: string; limit: number }> = {
       research: { table: 'research_items', modified: 'last_seen_at', limit: 20000 }, trials: { table: 'clinical_trials', modified: 'last_seen_at', limit: 20000 },
@@ -342,6 +345,36 @@ async function entityPage(supabase: any, kind: string, slug: string): Promise<st
   return pageShell({ title: `${entity.name} — immortal.life entity`, description: entity.description, canonical, kicker: kindLabels[kind] || 'Evidence directory', heading: entity.name, body, socialImage: `${SITE}/social-card/entity/${kind}-${slug}.png`, indexable: kind !== 'topic' && recordCount >= minimumRecords })
 }
 
+async function universityPage(supabase: any, slug: string): Promise<string | null> {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return null
+  const { data: university, error } = await supabase.from('university_research_institutions').select('*').eq('slug', slug).eq('is_eligible', true).maybeSingle()
+  if (error) throw error
+  if (!university) return null
+  const { data: scopedMetrics, error: scopedError } = await supabase.from('university_research_topic_metrics')
+    .select('topic_slug,works_five_year,works_two_year,representative_work_count,representative_citations,representative_open_access_count,representative_works,intelligence_topics(name,description)')
+    .eq('openalex_id', university.openalex_id).order('works_five_year', { ascending: false })
+  if (scopedError) throw scopedError
+  const rows = scopedMetrics ?? []
+  const maxWorks = Math.max(1, ...rows.map((metric: any) => Number(metric.works_five_year ?? 0)))
+  const topicRows = rows.map((metric: any) => {
+    const works = Number(metric.works_five_year ?? 0)
+    const recent = Number(metric.works_two_year ?? 0)
+    const topicName = metric.intelligence_topics?.name || metric.topic_slug.replace(/-/g, ' ')
+    const representative = Array.isArray(metric.representative_works) ? metric.representative_works.slice(0, 5) : []
+    const workList = representative.length ? `<ul class="university-work-list">${representative.map((work: any) => `<li><a href="${escapeHtml(work.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(work.title)}</a> <span>${work.publication_year ? `· ${Number(work.publication_year)}` : ''}${work.cited_by_count != null ? ` · ${Number(work.cited_by_count)} OpenAlex citations` : ''}${work.is_open_access ? ' · open access' : ''}</span></li>`).join('')}</ul>` : '<p>No representative work was retained in the current sample.</p>'
+    return `<article class="university-topic-row"><div><h3><a href="/topics/${encodeURIComponent(metric.topic_slug)}">${escapeHtml(topicName)}</a></h3><p>${works} source-matched work links since 2022 · ${recent} since 2025 · ${Number(metric.representative_citations ?? 0)} citations across the representative sample</p>${workList}</div><div class="university-topic-bar" aria-label="Relative activity for ${escapeHtml(topicName)}"><i style="width:${Math.max(3, Math.round(100 * works / maxWorks))}%"></i></div><strong class="utility-value">${works}</strong></article>`
+  }).join('')
+  const location = [university.city, university.region, university.country_name || university.country_code].filter(Boolean).join(', ') || 'Location unavailable'
+  const links = [
+    university.homepage_url ? `<a class="section-link" href="${escapeHtml(university.homepage_url)}" target="_blank" rel="noopener noreferrer">University website</a>` : '',
+    `<a class="section-link" href="${escapeHtml(university.openalex_url)}" target="_blank" rel="noopener noreferrer">OpenAlex institution record</a>`,
+    university.ror_id ? `<a class="section-link" href="${escapeHtml(university.ror_id)}" target="_blank" rel="noopener noreferrer">ROR identity record</a>` : '',
+  ].filter(Boolean).join('')
+  const body = `<section class="intel-section"><div class="university-profile-metrics"><div><strong>${Number(university.research_index_score ?? 0).toFixed(1)}</strong><span>Transparent research index score</span></div><div><strong>${Number(university.indexed_works_five_year ?? 0)}</strong><span>Five-year longevity work links</span></div><div><strong>${Number(university.indexed_topic_count ?? 0)}</strong><span>Longevity topics represented</span></div><div><strong>${Number(university.momentum_score ?? 0).toFixed(0)}%</strong><span>Share indexed since 2025</span></div><div><strong>${university.representative_open_access_share == null ? 'N/A' : `${Number(university.representative_open_access_share).toFixed(0)}%`}</strong><span>Open-access representative sample</span></div></div><div class="record-links">${links}</div><p class="quality-intro">${escapeHtml(location)}. This profile is generated from OpenAlex work affiliations resolved against ROR institution identities.</p><section class="university-topic-profile"><div class="section-heading"><div><span class="section-index">Topic profile</span><h2>Where the indexed activity appears</h2></div><a class="section-link" href="/universities">Compare universities</a></div>${topicRows || '<p class="empty-list">Topic metrics will appear after the next automated refresh.</p>'}</section><aside class="automation-notice"><strong>Activity is not quality</strong><p>This index does not rank teaching, clinical care, study quality, safety, effectiveness, or institutional quality. Counts can overlap when several universities appear on one paper. OpenAlex affiliation matching, citations, open-access status, and publication dates can be incomplete or incorrect. Representative works are a source-linked sample, not a review of the institution’s research.</p></aside></section>`
+  const description = `${university.name} longevity research profile: ${university.indexed_works_five_year} source-matched work links across ${university.indexed_topic_count} tracked topics, with transparent methodology and representative sources.`
+  return pageShell({ title: `${university.name} longevity research — immortal.life`, description, canonical: `${SITE}/universities/${slug}`, kicker: 'Global University Research Index', heading: university.name, body, socialImage: `${SITE}/social-card/university/${slug}.png`, indexable: Number(university.indexed_works_five_year ?? 0) >= 3 })
+}
+
 function slugify(value: unknown): string {
   return String(value ?? '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 }
@@ -402,7 +435,7 @@ async function discoveryPage(supabase: any, view: string, countrySlug = ''): Pro
   const regulatoryValue = regulatory.length ? regulatory.length : '0 notices'
   const regulatoryCopy = jurisdictions.size ? `Navigate official-source notices across ${jurisdictions.size} jurisdictions.` : 'Navigate official-source notices as they enter the verified index.'
   const integrityValue = recentIntegrity.length ? recentIntegrity.length : '0 changes'
-  const body = `<section class="intel-section utility-grid">${utilityCard('Recruiting longevity trials', `${trials.length} available now`, 'Find active registry records globally or by eligible country.', '/discover/recruiting-trials', 'Browse recruiting trials')}${utilityCard('Regulatory status by jurisdiction', regulatoryValue, regulatoryCopy, '/discover/regulatory-status', 'Check regulatory notices')}${utilityCard('Retractions and corrections', integrityValue, 'Track corrections, retractions, and other evidence changes detected in the last 90 days.', '/discover/research-integrity', 'See corrections and retractions')}${utilityCard('Weekly evidence briefing', 'Every Monday', 'Review what changed across research, trials, regulation, and integrity.', '/briefings', 'Read weekly briefings')}${utilityCard('Downloadable datasets', 'CSV and JSON', 'Download current source-linked records for your own analysis.', '/data', 'Download the data')}${utilityCard('Evidence reports', 'Updated live', 'See current counts and the topics with the most indexed activity.', '/reports', 'Open evidence reports')}</section><section class="intel-section"><h2 class="plain-heading">How to use these pages</h2><div class="dossier-grid"><article><h3>Start with a question</h3><p>Choose recruiting trials, regulatory notices, or recent evidence changes.</p></article><article><h3>Check what applies</h3><p>Read the date, country or region, topic-match percentage, and source limitations.</p></article><article><h3>Open the original source</h3><p>Confirm important details at the linked source. Appearing in the index is not a recommendation or endorsement.</p></article></div></section>`
+  const body = `<section class="intel-section utility-grid">${utilityCard('Global University Research Index', 'Worldwide', 'Compare universities by longevity research activity, topic breadth, momentum, and transparent source context.', '/universities', 'Explore universities')}${utilityCard('Recruiting longevity trials', `${trials.length} available now`, 'Find active registry records globally or by eligible country.', '/discover/recruiting-trials', 'Browse recruiting trials')}${utilityCard('Regulatory status by jurisdiction', regulatoryValue, regulatoryCopy, '/discover/regulatory-status', 'Check regulatory notices')}${utilityCard('Retractions and corrections', integrityValue, 'Track corrections, retractions, and other evidence changes detected in the last 90 days.', '/discover/research-integrity', 'See corrections and retractions')}${utilityCard('Weekly evidence briefing', 'Every Monday', 'Review what changed across research, trials, regulation, and integrity.', '/briefings', 'Read weekly briefings')}${utilityCard('Downloadable datasets', 'CSV and JSON', 'Download current source-linked records for your own analysis.', '/data', 'Download the data')}${utilityCard('Evidence reports', 'Updated live', 'See current counts and the topics with the most indexed activity.', '/reports', 'Open evidence reports')}</section><section class="intel-section"><h2 class="plain-heading">How to use these pages</h2><div class="dossier-grid"><article><h3>Start with a question</h3><p>Choose universities, recruiting trials, regulatory notices, or recent evidence changes.</p></article><article><h3>Check what applies</h3><p>Read the date, country or region, topic-match percentage, and source limitations.</p></article><article><h3>Open the original source</h3><p>Confirm important details at the linked source. Appearing in the index is not a recommendation or endorsement.</p></article></div></section>`
   return pageShell({ title: 'Explore longevity evidence — immortal.life', description: 'Practical, automatically updated paths into recruiting longevity trials, regulatory notices, integrity events, weekly changes and reusable data.', canonical: `${SITE}/discover`, kicker: 'Start with a question', heading: 'What do you want to understand?', body })
 }
 
@@ -426,6 +459,16 @@ function csvCell(value: unknown): string {
 }
 
 async function dataset(supabase: any, kind: string, format: string): Promise<Response | null> {
+  if (kind === 'universities') {
+    const fields = 'openalex_id,slug,name,ror_id,country_code,country_name,continent,region,city,homepage_url,openalex_url,indexed_works_five_year,indexed_works_two_year,indexed_topic_count,representative_citations,representative_open_access_share,activity_score,breadth_score,momentum_score,citation_context_score,research_index_score,ranking_method_version,updated_at'
+    const { data, error } = await supabase.from('university_research_institutions').select(fields).eq('is_eligible', true).order('research_index_score', { ascending: false }).limit(10000)
+    if (error) throw error
+    const records = data ?? []
+    if (format === 'json') return response(JSON.stringify({ generated_at: new Date().toISOString(), kind, count: records.length, records, methodology: 'Activity index derived from OpenAlex/ROR affiliation data; not a rating of institutional or research quality.', automation_disclosure: DISCLOSURE }), 'application/json; charset=utf-8', 200, 'public, max-age=900')
+    const columns = records.length ? Object.keys(records[0]) : fields.split(',')
+    const csv = [columns.map(csvCell).join(','), ...records.map((record: any) => columns.map((column) => csvCell(record[column])).join(','))].join('\r\n')
+    return response(csv, 'text/csv; charset=utf-8', 200, 'public, max-age=900')
+  }
   const specs: Record<string, { table: string; fields: string }> = {
     research: { table: 'research_items', fields: 'id,title,published_on,journal,doi,evidence_level,status,relevance_confidence,source_url,last_seen_at' },
     trials: { table: 'clinical_trials', fields: 'id,external_id,title,overall_status,phases,sponsor,countries,last_update_date,relevance_confidence,source_url' },
@@ -474,6 +517,11 @@ async function socialCard(supabase: any, kind: string, key: string): Promise<str
     if (error) throw error
     return data ? socialCardSvg(data.name, `${data.kind} entity`) : null
   }
+  if (kind === 'university') {
+    const { data, error } = await supabase.from('university_research_institutions').select('name,research_index_score').eq('slug', key).eq('is_eligible', true).maybeSingle()
+    if (error) throw error
+    return data ? socialCardSvg(data.name, 'Global University Research Index', Number(data.research_index_score ?? 0)) : null
+  }
   const id = safeId(key)
   if (!id || !['research', 'trials', 'regulatory', 'integrity'].includes(kind)) return null
   const record = await getRecord(supabase, kind, id)
@@ -503,6 +551,10 @@ Deno.serve(async (req) => {
     }
     if (mode === 'entity') {
       const html = await entityPage(supabase, url.searchParams.get('kind') || '', url.searchParams.get('slug') || '')
+      return html ? response(html, 'text/html; charset=utf-8') : response('Not found', 'text/plain', 404, 'no-store')
+    }
+    if (mode === 'university') {
+      const html = await universityPage(supabase, url.searchParams.get('slug') || '')
       return html ? response(html, 'text/html; charset=utf-8') : response('Not found', 'text/plain', 404, 'no-store')
     }
     if (mode === 'social') {

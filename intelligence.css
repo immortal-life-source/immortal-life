@@ -293,6 +293,56 @@ body[data-view="topics"] .intel-section { padding-top: clamp(38px, 4vw, 58px); }
 .subscribe-form button { min-height: 50px; border: 1px solid var(--gold); background: var(--gold); color: var(--bg); font: 500 11px var(--sans); letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
 .subscribe-form button:hover { background: transparent; color: var(--gold); }
 
+.university-index { padding-top: 0; }
+.university-summary { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0 calc(clamp(22px, 5vw, 72px) * -1) 88px; border-bottom: 1px solid var(--border); }
+.university-intro { max-width: 850px; margin: -20px 0 42px; color: var(--muted); font-size: 14px; line-height: 1.8; }
+.university-map-wrap { border: 1px solid var(--border); background: radial-gradient(circle at 50% 45%, rgba(184,149,90,.08), transparent 55%), var(--surface); overflow: hidden; }
+.university-map { display: block; width: 100%; height: auto; min-height: 340px; }
+.university-map-node circle { fill: rgba(184,149,90,.34); stroke: var(--gold); stroke-width: 1.2; transition: fill .18s ease, stroke-width .18s ease; }
+.university-map-node:hover circle, .university-map-node:focus circle { fill: var(--gold); stroke-width: 2.5; }
+.university-controls { display: grid; grid-template-columns: 1.4fr repeat(4, 1fr); gap: 12px; margin: 42px 0 0; }
+.university-controls label { display: flex; flex-direction: column; gap: 9px; color: var(--muted); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
+.university-controls input, .university-controls select { width: 100%; min-height: 48px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); color: var(--text); font: 300 12px var(--sans); }
+.university-controls input:focus, .university-controls select:focus { outline: 1px solid var(--gold); outline-offset: 1px; }
+.university-ranking { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--border-strong); }
+.university-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) 170px 86px; gap: clamp(18px, 3vw, 44px); align-items: center; padding: 28px 0; border-bottom: 1px solid var(--border); }
+.university-rank { color: rgba(184,149,90,.65); font: 300 28px var(--serif); }
+.university-main h3 { margin: 8px 0 8px; font: 300 clamp(25px, 3vw, 36px)/1.08 var(--serif); }
+.university-main h3 a { text-decoration: none; }
+.university-main h3 a:hover { color: var(--gold); }
+.university-main p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; text-transform: capitalize; }
+.university-signals { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 14px; color: var(--muted); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.university-score { text-align: right; }
+.university-score strong { display: block; color: var(--gold); font: 300 42px/1 var(--serif); }
+.university-score span { display: block; margin-top: 8px; color: var(--muted); font-size: 8px; line-height: 1.45; letter-spacing: .1em; text-transform: uppercase; }
+.university-compare-control { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; color: var(--muted); cursor: pointer; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.university-compare-control input { width: 18px; height: 18px; accent-color: var(--gold); }
+.university-compare { margin: 44px 0; padding: 34px; border: 1px solid rgba(184,149,90,.28); background: rgba(184,149,90,.035); }
+.university-compare .section-heading { margin-bottom: 28px; }
+.university-compare-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
+.university-compare-card { padding: 24px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.university-compare-card h3 { margin: 16px 0 24px; font: 300 28px/1.08 var(--serif); }
+.university-compare-card h3 a { text-decoration: none; }
+.university-compare-card dl { margin: 0; }
+.university-compare-card dl div { display: flex; justify-content: space-between; gap: 20px; padding: 10px 0; border-top: 1px solid var(--border); }
+.university-compare-card dt { color: var(--muted); font-size: 10px; }
+.university-compare-card dd { margin: 0; color: var(--gold); font-size: 11px; }
+.university-profile-metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
+.university-profile-metrics > div { min-width: 0; padding: clamp(22px,3vw,38px); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.university-profile-metrics strong { display: block; color: var(--gold); font: 300 clamp(30px,4vw,50px)/1 var(--serif); overflow-wrap: anywhere; }
+.university-profile-metrics span { display: block; margin-top: 11px; color: var(--muted); font-size: 9px; line-height: 1.5; letter-spacing: .1em; text-transform: uppercase; }
+.university-topic-profile { margin-top: 60px; }
+.university-topic-row { display: grid; grid-template-columns: minmax(180px, .7fr) 1.3fr auto; gap: 28px; padding: 26px 0; border-bottom: 1px solid var(--border); }
+.university-topic-row h3 { margin: 0; font: 300 29px var(--serif); }
+.university-topic-row p { margin: 6px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.university-topic-bar { height: 7px; align-self: center; background: var(--surface-raised); overflow: hidden; }
+.university-topic-bar i { display: block; height: 100%; background: var(--gold); }
+.university-work-list { margin: 14px 0 0; padding: 0; list-style: none; }
+.university-work-list li { margin: 10px 0; }
+.university-work-list a { color: var(--text); text-decoration: none; }
+.university-work-list a:hover { color: var(--gold); }
+.university-work-list span { color: var(--muted); font-size: 9px; }
+
 @media (max-width: 860px) {
   .intel-header { min-height: 0; position: sticky; align-items: flex-start; flex-direction: column; gap: 10px; padding: 14px 0 0; }
   .intel-logo { margin: 0 22px; }
@@ -328,6 +378,18 @@ body[data-view="topics"] .intel-section { padding-top: clamp(38px, 4vw, 58px); }
   .entity-record-list li { flex-direction: column; gap: 7px; }
   .entity-record-list span { text-align: left; }
   .change-row { grid-template-columns: 1fr; gap: 8px; }
+  .university-summary { grid-template-columns: repeat(2, 1fr); margin-bottom: 58px; }
+  .university-summary .atlas-stat:nth-child(2) { border-right: 0; }
+  .university-summary .atlas-stat:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
+  .university-controls { grid-template-columns: 1fr; }
+  .university-map { min-width: 680px; }
+  .university-map-wrap { overflow-x: auto; }
+  .university-row { grid-template-columns: 46px minmax(0,1fr); gap: 14px 16px; }
+  .university-score { grid-column: 2; text-align: left; }
+  .university-compare-control { grid-column: 2; }
+  .university-compare { padding: 22px; }
+  .university-compare-grid, .university-profile-metrics { grid-template-columns: 1fr; }
+  .university-topic-row { grid-template-columns: 1fr; gap: 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

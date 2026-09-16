@@ -32,6 +32,7 @@
       <a href="/research" data-nav="research">Research</a>
       <a href="/trials" data-nav="trials">Trial Radar</a>
       <a href="/topics" data-nav="topics">Topics</a>
+      <a href="/universities" data-nav="universities">Universities</a>
       <a href="/regulatory" data-nav="regulatory">Regulatory</a>
       <a href="/resources" data-nav="resources">Resources</a>
       <a href="/briefings">Briefings</a>
@@ -121,6 +122,42 @@
     <section class="intel-section" id="entitiesSection" hidden>
       <div class="section-heading"><div><span class="section-index">Evidence directory</span><h2>People, organisations, and topics</h2></div><span class="graph-hint">Built automatically from source records</span></div>
       <div class="entity-grid" id="entityGrid"></div>
+    </section>
+
+    <section class="intel-section university-index" id="universitiesSection" hidden>
+      <div class="university-summary" id="universityStats" aria-label="University index coverage"></div>
+      <div class="section-heading">
+        <div><span class="section-index">Global research landscape</span><h2>Universities active in longevity research.</h2></div>
+        <a href="/data#university-data" class="section-link">Download the index</a>
+      </div>
+      <p class="university-intro">Explore universities through several lenses instead of relying on a single unexplained league table. The index counts source-matched scholarly works, recent activity, breadth across longevity topics, and citation context from representative works.</p>
+      <div class="university-map-wrap">
+        <svg class="university-map" viewBox="0 0 1200 520" role="img" aria-labelledby="universityMapTitle universityMapDescription">
+          <title id="universityMapTitle">Universities represented in the longevity research index</title>
+          <desc id="universityMapDescription">A world map showing universities with source-matched longevity research. Larger circles indicate more indexed activity.</desc>
+          <g class="map-land" aria-hidden="true">
+            <path d="M90 165l88-66 131 13 61 53-43 53-87 9-38 78-79-27-48-63z" /><path d="M329 302l61 31 33 70-20 91-44-30-25-85-34-34z" />
+            <path d="M523 137l73-35 102 18 26 43-64 35-16 55-76-8-47-45z" /><path d="M594 257l86 12 51 68-36 112-62 25-36-83-54-62z" />
+            <path d="M711 128l151-40 174 35 86 77-78 77-119-20-68 56-108-44-43-68z" /><path d="M947 360l93-24 70 55-23 66-112 2-54-53z" />
+          </g>
+          <g id="universityMapNodes"></g>
+        </svg>
+        <p class="map-summary" id="universityMapSummary"></p>
+      </div>
+      <form class="university-controls" id="universityControls" role="search" aria-label="Filter universities">
+        <label><span>Find a university</span><input id="universitySearch" type="search" placeholder="University, city, or country" autocomplete="off" /></label>
+        <label><span>Longevity topic</span><select id="universityTopic"><option value="">All topics</option></select></label>
+        <label><span>Country</span><select id="universityCountry"><option value="">All countries</option></select></label>
+        <label><span>Continent</span><select id="universityContinent"><option value="">All continents</option></select></label>
+        <label><span>Rank by</span><select id="universitySort"><option value="index">Balanced research index</option><option value="activity">Indexed activity</option><option value="breadth">Topic breadth</option><option value="momentum">Recent momentum</option><option value="open-access">Open-access sample</option></select></label>
+      </form>
+      <p class="filter-result" id="universityResult" aria-live="polite"></p>
+      <section class="university-compare" id="universityCompare" hidden aria-live="polite">
+        <div class="section-heading"><div><span class="section-index">Side-by-side</span><h2>Compare selected universities</h2></div><button class="filter-chip" id="clearUniversityCompare" type="button">Clear comparison</button></div>
+        <div class="university-compare-grid" id="universityCompareGrid"></div>
+      </section>
+      <ol class="university-ranking" id="universityList"></ol>
+      <aside class="automation-notice"><strong>What this ranking does—and does not—mean</strong><p>The index measures publication activity within the configured longevity topics. It does not rank teaching, clinical care, study quality, safety, effectiveness, or the value of an institution. OpenAlex affiliation matching can miss or misassign organizations, and highly collaborative works can be credited to several universities. Select any university to inspect its topic and source details.</p></aside>
     </section>
 
     <section class="intel-section resource-atlas" id="resourcesSection" hidden>

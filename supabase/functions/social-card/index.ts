@@ -27,6 +27,10 @@ async function cardData(supabase: any, kind: string, key: string): Promise<{ tit
     const { data } = await supabase.from('intelligence_entities').select('name,kind').eq('kind', entityKind).eq('slug', slug).maybeSingle()
     return data ? { title: data.name, kicker: `${data.kind} entity` } : null
   }
+  if (kind === 'university') {
+    const { data } = await supabase.from('university_research_institutions').select('name').eq('slug', key).eq('is_eligible', true).maybeSingle()
+    return data ? { title: data.name, kicker: 'Global University Research Index' } : null
+  }
   if (!/^[0-9]{1,18}$/.test(key)) return null
   const tables: Record<string, string> = { research: 'research_items', trials: 'clinical_trials', regulatory: 'regulatory_events', integrity: 'research_integrity_events' }
   const table = tables[kind]

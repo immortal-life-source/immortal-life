@@ -90,6 +90,13 @@
       ]
     },
     {
+      "source": "/universities/:path*",
+      "headers": [
+        { "key": "Content-Type", "value": "text/html; charset=utf-8" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; script-src 'self'; img-src 'self' data: https:; connect-src 'self' https://nifbuyoghesveotugday.supabase.co; frame-ancestors 'none';" }
+      ]
+    },
+    {
       "source": "/sitemap.xml",
       "headers": [{ "key": "Content-Type", "value": "application/xml; charset=utf-8" }]
     },
@@ -150,6 +157,7 @@
     { "source": "/reports", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=reports" },
     { "source": "/api/subscribe", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/subscribe-briefing" },
     { "source": "/entities/:kind/:slug", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=entity&kind=:kind&slug=:slug" },
+    { "source": "/universities/:slug", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=university&slug=:slug" },
     { "source": "/social-card/:kind/:key.png", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/social-card?kind=:kind&key=:key" },
     { "source": "/social-card/:kind/:key.svg", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=social&kind=:kind&key=:key" },
     { "source": "/api/intelligence/:kind/:id", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=api&kind=:kind&id=:id" },

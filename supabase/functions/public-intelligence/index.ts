@@ -170,6 +170,62 @@ Deno.serve(async (req) => {
       })
     }
 
+    if (view === 'universities') {
+      const country = cleanText(url.searchParams.get('country') ?? '', 2).toUpperCase()
+      const continent = cleanText(url.searchParams.get('continent') ?? '', 40)
+      const sort = cleanText(url.searchParams.get('sort') ?? 'index', 20)
+      const universityLimit = Math.min(Math.max(parsedLimit || 100, 1), 500)
+      const relation = topic
+        ? 'university_research_topic_metrics!inner(topic_slug,works_five_year,works_two_year,representative_citations,representative_open_access_count,representative_work_count)'
+        : 'university_research_topic_metrics(topic_slug,works_five_year,works_two_year,representative_citations,representative_open_access_count,representative_work_count)'
+      let query = supabase.from('university_research_institutions')
+        .select(`openalex_id,slug,name,ror_id,country_code,country_name,continent,region,city,latitude,longitude,homepage_url,openalex_url,indexed_works_five_year,indexed_works_two_year,indexed_topic_count,representative_citations,representative_open_access_share,activity_score,breadth_score,momentum_score,citation_context_score,research_index_score,ranking_method_version,updated_at,${relation}`, { count: 'exact' })
+        .eq('is_eligible', true)
+        .limit(universityLimit)
+      if (topic) query = query.eq('university_research_topic_metrics.topic_slug', topic)
+      if (/^[A-Z]{2}$/.test(country)) query = query.eq('country_code', country)
+      if (continent) query = query.eq('continent', continent)
+      if (sort === 'activity') query = query.order('indexed_works_five_year', { ascending: false }).order('research_index_score', { ascending: false })
+      else if (sort === 'momentum') query = query.order('momentum_score', { ascending: false }).order('indexed_works_two_year', { ascending: false })
+      else if (sort === 'breadth') query = query.order('indexed_topic_count', { ascending: false }).order('indexed_works_five_year', { ascending: false })
+      else if (sort === 'open-access') query = query.order('representative_open_access_share', { ascending: false, nullsFirst: false }).order('indexed_works_five_year', { ascending: false })
+      else query = query.order('research_index_score', { ascending: false }).order('indexed_works_five_year', { ascending: false })
+      const [{ data, error, count }, coverage, topicsResult, countriesResult, { data: sources, error: sourcesError }] = await Promise.all([
+        query,
+        supabase.rpc('get_university_index_coverage'),
+        supabase.from('intelligence_topics').select('slug,name,sort_order').eq('enabled', true).order('sort_order'),
+        supabase.from('university_research_institutions').select('country_code,country_name,continent').eq('is_eligible', true).order('country_name').limit(5000),
+        sourcesPromise,
+      ])
+      for (const result of [coverage, topicsResult, countriesResult]) if (result.error) throw result.error
+      if (error) throw error
+      if (sourcesError) throw sourcesError
+      const countryMap = new Map<string, { code: string; name: string; continent: string; universities: number }>()
+      for (const row of countriesResult.data ?? []) {
+        if (!row.country_code) continue
+        const current = countryMap.get(row.country_code) ?? { code: row.country_code, name: row.country_name || row.country_code, continent: row.continent || 'Unspecified', universities: 0 }
+        current.universities += 1
+        countryMap.set(row.country_code, current)
+      }
+      return response(req, {
+        generated_at: new Date().toISOString(),
+        total_matching: count ?? 0,
+        coverage: coverage.data ?? {},
+        filters: { topic: topic || null, country: country || null, continent: continent || null, sort },
+        topics: topicsResult.data ?? [],
+        countries: [...countryMap.values()].sort((left, right) => left.name.localeCompare(right.name)),
+        universities: data ?? [],
+        methodology: {
+          label: 'Global University Research Index',
+          source: 'OpenAlex affiliations resolved to ROR institutions',
+          window: 'Works published from 2022 onward; recent momentum uses 2025 onward',
+          score: '50% indexed activity, 20% topic breadth, 15% recent momentum, 15% citation context from representative works',
+          limitations: 'The score measures activity in the configured longevity topics. It does not rate teaching, clinical care, study quality, safety, effectiveness, or institutional quality. Affiliation matching and citation data can be incomplete or incorrect.',
+        },
+        sources: (sources ?? []).filter((source: any) => source.id === 'openalex').map(publicSourceState),
+      })
+    }
+
     if (view === 'topics') {
       const [{ data: topics, error }, { data: sources, error: sourcesError }] = await Promise.all([
         supabase.rpc('get_intelligence_topic_counts'),

@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.deliver-briefings]
 verify_jwt = false
+
+[functions.sync-university-index]
+verify_jwt = false

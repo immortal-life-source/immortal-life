@@ -73,7 +73,7 @@ function pageSchema(page) {
       description: page.PAGE_DESCRIPTION,
       url: page.CANONICAL_URL,
       creator: { '@type': 'Organization', name: 'immortal.life', url: site },
-      dataset: ['research', 'trials', 'regulatory', 'integrity'].map((kind) => ({
+      dataset: ['research', 'trials', 'regulatory', 'integrity', 'universities'].map((kind) => ({
         '@type': 'Dataset',
         name: `immortal.life ${kind} dataset`,
         description: `Automatically updated, source-linked ${kind} records that passed the immortal.life publication-quality checks.`,
@@ -184,6 +184,16 @@ const intelligencePages = [
     PAGE_HEADING: 'Explore the topics and sources in the index.',
   },
   {
+    filename: 'universities.html',
+    PAGE_TITLE: 'Global University Longevity Research Index — immortal.life',
+    PAGE_DESCRIPTION: 'Compare universities worldwide by source-matched longevity research activity, topic breadth, recent momentum, and transparent citation context.',
+    CANONICAL_URL: `${site}/universities`,
+    PAGE_VIEW: 'universities',
+    TOPIC_SLUG: '',
+    PAGE_KICKER: 'Global University Research Index',
+    PAGE_HEADING: 'Where is longevity research happening?',
+  },
+  {
     filename: 'resources.html',
     PAGE_TITLE: 'Global Longevity Resource Atlas — immortal.life',
     PAGE_DESCRIPTION: 'Find official global research databases, trial registries, and medicines regulators, with clear notes about geographic coverage.',
@@ -257,7 +267,7 @@ const contentPages = [
     filename: 'data.html', title: 'Open discovery feeds and API — immortal.life', heading: 'Build from the living index.', kicker: 'Machine-readable access',
     description: 'RSS, JSON Feed, sitemap, record JSON, and citation-ready source identifiers from immortal.life.',
     view: 'dataset',
-    body: `<h2>Public feeds</h2><p><a href="/feed.xml">RSS 2.0</a>, <a href="/feed.atom">Atom</a>, and <a href="/feed.json">JSON Feed</a> publish the newest eligible research, trial, regulatory, and integrity records automatically. Every topic page also provides its own RSS, Atom, and JSON feed.</p><h2>Download current datasets</h2><p><a data-il-event="download_dataset" href="/datasets/research.csv">Research CSV</a> · <a data-il-event="download_dataset" href="/datasets/trials.csv">Trials CSV</a> · <a data-il-event="download_dataset" href="/datasets/regulatory.csv">Regulatory CSV</a> · <a data-il-event="download_dataset" href="/datasets/integrity.csv">Integrity CSV</a></p><p>The same datasets are available as JSON by replacing <code>.csv</code> with <code>.json</code>. Downloads contain published, quality-eligible records only and refresh automatically.</p><h2>Record JSON and citations</h2><p>Every permanent record URL has a machine-readable counterpart: <code>/api/intelligence/{type}/{id}</code>, where type is research, trials, regulatory, or integrity. Research records also offer BibTeX and RIS exports from their detail page.</p><h2>Embeddable live widgets</h2><p>Add <code>&lt;script src=&quot;${site}/widget.js&quot; defer&gt;&lt;/script&gt;</code> once, followed by <code>&lt;immortal-life-feed limit=&quot;5&quot;&gt;&lt;/immortal-life-feed&gt;</code>. Add a topic with <code>topic=&quot;rapamycin&quot;</code>, or show a dataset with <code>kind=&quot;trials&quot;</code> and an optional <code>country=&quot;Czechia&quot;</code>. Every item links to its permanent source-backed record.</p><h2>Discovery and indexing</h2><p><a href="/sitemap.xml">The sitemap index</a> separates topics, research, trials, regulatory records, integrity records, briefings, entities and static pages so discovery health can be measured independently.</p><h2>Responsible reuse</h2><p>Source metadata remains subject to the originating source's terms. Attribute the primary source, preserve integrity and regulatory context, and do not imply that automated inclusion is expert endorsement.</p>`
+    body: `<h2>Public feeds</h2><p><a href="/feed.xml">RSS 2.0</a>, <a href="/feed.atom">Atom</a>, and <a href="/feed.json">JSON Feed</a> publish the newest eligible research, trial, regulatory, and integrity records automatically. Every topic page also provides its own RSS, Atom, and JSON feed.</p><h2>Download current datasets</h2><p><a data-il-event="download_dataset" href="/datasets/research.csv">Research CSV</a> · <a data-il-event="download_dataset" href="/datasets/trials.csv">Trials CSV</a> · <a data-il-event="download_dataset" href="/datasets/regulatory.csv">Regulatory CSV</a> · <a data-il-event="download_dataset" href="/datasets/integrity.csv">Integrity CSV</a></p><p>The same datasets are available as JSON by replacing <code>.csv</code> with <code>.json</code>. Downloads contain published, quality-eligible records only and refresh automatically.</p><h2 id="university-data">Global University Research Index</h2><p><a data-il-event="download_dataset" href="/datasets/universities.csv">University index CSV</a> · <a data-il-event="download_dataset" href="/datasets/universities.json">University index JSON</a></p><p>The university export includes source identifiers, location, five-year activity, topic breadth, recent momentum, open-access sample, citation context, and the transparent composite score. These are bibliometric discovery signals, not ratings of institutional or research quality.</p><h2>Record JSON and citations</h2><p>Every permanent record URL has a machine-readable counterpart: <code>/api/intelligence/{type}/{id}</code>, where type is research, trials, regulatory, or integrity. Research records also offer BibTeX and RIS exports from their detail page.</p><h2>Embeddable live widgets</h2><p>Add <code>&lt;script src=&quot;${site}/widget.js&quot; defer&gt;&lt;/script&gt;</code> once, followed by <code>&lt;immortal-life-feed limit=&quot;5&quot;&gt;&lt;/immortal-life-feed&gt;</code>. Add a topic with <code>topic=&quot;rapamycin&quot;</code>, or show a dataset with <code>kind=&quot;trials&quot;</code> and an optional <code>country=&quot;Czechia&quot;</code>. Every item links to its permanent source-backed record.</p><h2>Discovery and indexing</h2><p><a href="/sitemap.xml">The sitemap index</a> separates topics, research, trials, regulatory records, integrity records, briefings, universities, entities and static pages so discovery health can be measured independently.</p><h2>Responsible reuse</h2><p>Source metadata remains subject to the originating source's terms. Attribute the primary source, preserve integrity and regulatory context, and do not imply that automated inclusion is expert endorsement.</p>`
   }
 ];
 
