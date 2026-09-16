@@ -76,6 +76,13 @@
       ]
     },
     {
+      "source": "/changes",
+      "headers": [
+        { "key": "Content-Type", "value": "text/html; charset=utf-8" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; script-src 'self'; img-src 'self' data: https:; connect-src 'self' https://nifbuyoghesveotugday.supabase.co; frame-ancestors 'none';" }
+      ]
+    },
+    {
       "source": "/entities/:path*",
       "headers": [
         { "key": "Content-Type", "value": "text/html; charset=utf-8" },

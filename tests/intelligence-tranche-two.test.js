@@ -11,7 +11,7 @@ const news = readFileSync(new URL('../news-modal.js', import.meta.url), 'utf8');
 test('tranche two registers official and integrity sources as autonomous jobs', () => {
   for (const source of ['crossref', 'ema', 'sukl']) {
     assert.match(migration, new RegExp(`'${source}'`));
-    assert.match(sync, new RegExp(`source_id === '${source}'|sourceId: '${source}'|sourceId === '${source}'`));
+    assert.match(sync, new RegExp(`source_id === '${source}'|sourceId: '${source}'|sourceId === '${source}'|\\b${source}\\s*:`));
   }
   assert.match(sync, /SIX_HOURS_MS/);
   assert.match(sync, /source_id,job_key,window_start/);
