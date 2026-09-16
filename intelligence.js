@@ -401,7 +401,8 @@
   function renderResourceMap(coverage) {
     elements.resourceMapNodes.replaceChildren();
     const positions = {
-      Global: { x: 600, y: 82 }, Europe: { x: 635, y: 196 }, Americas: { x: 250, y: 220 }, 'Asia-Pacific': { x: 970, y: 280 },
+      Global: { x: 600, y: 68 }, Europe: { x: 620, y: 178 }, Americas: { x: 250, y: 220 },
+      'Asia-Pacific': { x: 990, y: 270 }, Africa: { x: 650, y: 365 }, 'Middle East': { x: 765, y: 235 },
     };
     const ns = 'http://www.w3.org/2000/svg';
     Object.entries(coverage?.by_region || {}).forEach(([region, count]) => {
@@ -472,6 +473,9 @@
       elements.resourceGrid.append(card);
     });
     elements.resourceResult.textContent = `Showing ${numberFormatter.format(visible.length)} of ${numberFormatter.format(atlasResources.length)} official resources.`;
+    document.querySelectorAll('[data-resource-preset]').forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.resourcePreset === type));
+    });
   }
 
   function renderResources(data) {
@@ -485,6 +489,16 @@
     const initialRegion = new URLSearchParams(location.search).get('region');
     if (regions.includes(initialRegion)) elements.resourceRegion.value = initialRegion;
     elements.resourceControls.addEventListener('input', renderFilteredResources);
+    document.querySelectorAll('[data-resource-preset]').forEach((button) => {
+      button.onclick = () => {
+        elements.resourceSearch.value = '';
+        elements.resourceRegion.value = '';
+        elements.resourceIntegration.value = '';
+        elements.resourceType.value = button.dataset.resourcePreset || '';
+        renderFilteredResources();
+        elements.resourceResult.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      };
+    });
     renderFilteredResources();
     const states = atlasResources.map((resource) => resource.health);
     const healthy = states.filter((state) => state === 'healthy').length;

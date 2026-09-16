@@ -1,0 +1,230 @@
+-- Expand the public Resource Atlas into a genuinely global, task-oriented
+-- directory. WHO-recognised primary registries are labelled separately from
+-- regulators, evidence services, systematic-review tools, and ageing datasets.
+
+alter table public.global_resources drop constraint if exists global_resources_region_check;
+alter table public.global_resources add constraint global_resources_region_check
+  check (region in ('Global', 'Europe', 'Americas', 'Asia-Pacific', 'Africa', 'Middle East'));
+
+alter table public.global_resources drop constraint if exists global_resources_resource_type_check;
+alter table public.global_resources add constraint global_resources_resource_type_check
+  check (resource_type in (
+    'international_organization', 'regulator', 'trial_registry',
+    'evidence_infrastructure', 'ageing_data', 'systematic_reviews'
+  ));
+
+-- Primary registries listed by the WHO ICTRP network. Registration is not a
+-- quality or approval signal; the limitations on every card say so explicitly.
+insert into public.global_resources
+  (id, name, resource_type, geographic_scope, jurisdiction_code, jurisdiction_name,
+   region, authority_tier, description, limitations, homepage_url, data_url,
+   terms_url, access_mode, reuse_status, integration_status, update_cadence, healthcheck_url)
+values
+  ('rebec', 'Brazilian Clinical Trials Registry (ReBEC)', 'trial_registry', 'national', 'BR', 'Brazil', 'Americas', 1,
+   'WHO-recognised primary registry for clinical trials conducted in Brazil, providing public protocol and registration information.',
+   'Registry content is submitted by study teams. Registration does not establish completion, scientific quality, safety, effectiveness, or regulatory approval.',
+   'https://ensaiosclinicos.gov.br/', 'https://ensaiosclinicos.gov.br/', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://ensaiosclinicos.gov.br/'),
+  ('chictr', 'Chinese Clinical Trial Registry (ChiCTR)', 'trial_registry', 'national', 'CN', 'China', 'Asia-Pacific', 1,
+   'WHO-recognised primary registry providing public registration records for clinical research in China and accepted international submissions.',
+   'Registry records are sponsor or investigator supplied and may have variable English metadata. Registration is not evidence of safety, effectiveness, or approval.',
+   'https://www.chictr.org.cn/', 'https://www.chictr.org.cn/', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://www.chictr.org.cn/'),
+  ('cris-korea', 'Clinical Research Information Service (CRiS)', 'trial_registry', 'national', 'KR', 'Republic of Korea', 'Asia-Pacific', 1,
+   'WHO-recognised primary registry operated within the Korean national health research infrastructure for public clinical-study registration.',
+   'Information is supplied by registrants and applies to the registered protocol. It does not establish study quality, completion, safety, effectiveness, or approval.',
+   'https://cris.nih.go.kr/', 'https://cris.nih.go.kr/', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://cris.nih.go.kr/'),
+  ('ctri-india', 'Clinical Trials Registry – India (CTRI)', 'trial_registry', 'national', 'IN', 'India', 'Asia-Pacific', 1,
+   'WHO-recognised primary registry maintained for prospective public registration of clinical studies conducted in India.',
+   'Registry data are submitted by study teams and can change over time. Registration does not establish completion, quality, safety, effectiveness, or authorization.',
+   'https://ctri.nic.in/', 'https://ctri.nic.in/', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://ctri.nic.in/'),
+  ('rpcec-cuba', 'Cuban Public Registry of Clinical Trials (RPCEC)', 'trial_registry', 'national', 'CU', 'Cuba', 'Americas', 1,
+   'WHO-recognised primary registry publishing protocol information for clinical trials registered through Cuba’s public trial system.',
+   'Spanish or English coverage varies and records are registrant supplied. Registration is not proof of study quality, safety, effectiveness, completion, or approval.',
+   'https://rpcec.sld.cu/', 'https://rpcec.sld.cu/', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://rpcec.sld.cu/'),
+  ('eu-ctr', 'EU Clinical Trials Register', 'trial_registry', 'regional', 'EU', 'European Union and EEA – legacy trials', 'Europe', 1,
+   'Official European register for many directive-era interventional medicine trials, complementing the newer Clinical Trials Information System.',
+   'Coverage is primarily for trials under the former EU clinical-trials framework. Newer records may belong in CTIS, and registration is not an effectiveness finding.',
+   'https://www.clinicaltrialsregister.eu/', 'https://www.clinicaltrialsregister.eu/ctr-search/search', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://www.clinicaltrialsregister.eu/'),
+  ('drks', 'German Clinical Trials Register (DRKS)', 'trial_registry', 'national', 'DE', 'Germany', 'Europe', 1,
+   'WHO-recognised primary registry for clinical studies in Germany, with public protocol records and German and English search interfaces.',
+   'Registry information is submitted by study teams. A listing does not establish trial quality, completion, safety, effectiveness, or medicine authorization.',
+   'https://www.drks.de/', 'https://www.drks.de/search/en', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://www.drks.de/'),
+  ('irct', 'Iranian Registry of Clinical Trials (IRCT)', 'trial_registry', 'national', 'IR', 'Iran', 'Middle East', 1,
+   'WHO-recognised primary registry publishing protocol information for clinical trials registered in Iran.',
+   'English metadata and update timing may vary. Registration is based on submitted protocol information and does not prove quality, safety, effectiveness, or approval.',
+   'https://www.irct.ir/', 'https://www.irct.ir/', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://www.irct.ir/'),
+  ('itmctr', 'International Traditional Medicine Clinical Trial Registry', 'trial_registry', 'national', 'CN', 'China / international traditional medicine', 'Asia-Pacific', 1,
+   'WHO-recognised primary registry dedicated to public registration of clinical trials involving traditional medicine interventions.',
+   'The registry describes submitted protocols; it does not validate traditional medicine claims or establish study completion, safety, effectiveness, or approval.',
+   'https://itmctr.ccebtcm.org.cn/', 'https://itmctr.ccebtcm.org.cn/', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://itmctr.ccebtcm.org.cn/'),
+  ('lbctr', 'Lebanese Clinical Trials Registry (LBCTR)', 'trial_registry', 'national', 'LB', 'Lebanon', 'Middle East', 1,
+   'WHO-recognised primary registry supported by the Lebanese Ministry of Public Health for public clinical-trial registration.',
+   'Registry records are supplied by responsible registrants. They do not establish study quality, completion, safety, effectiveness, or regulatory approval.',
+   'https://lbctr.moph.gov.lb/', 'https://lbctr.moph.gov.lb/', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://lbctr.moph.gov.lb/'),
+  ('tctr', 'Thai Clinical Trials Registry (TCTR)', 'trial_registry', 'national', 'TH', 'Thailand', 'Asia-Pacific', 1,
+   'WHO-recognised primary registry publishing searchable protocol information for clinical studies registered in Thailand.',
+   'Records are registrant supplied and may change. Registration does not demonstrate scientific quality, study completion, safety, effectiveness, or authorization.',
+   'https://www.thaiclinicaltrials.org/', 'https://www.thaiclinicaltrials.org/', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://www.thaiclinicaltrials.org/'),
+  ('pactr', 'Pan African Clinical Trials Registry (PACTR)', 'trial_registry', 'regional', 'AFR', 'Africa', 'Africa', 1,
+   'WHO-recognised regional primary registry providing open public registration for clinical trials conducted across Africa.',
+   'Coverage depends on responsible registration and national requirements. A record does not establish study quality, completion, safety, effectiveness, or approval.',
+   'https://pactr.samrc.ac.za/', 'https://pactr.samrc.ac.za/', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://pactr.samrc.ac.za/'),
+  ('repec', 'Peruvian Clinical Trial Registry (REPEC)', 'trial_registry', 'national', 'PE', 'Peru', 'Americas', 1,
+   'WHO-recognised primary registry operated through Peru’s national health research authority for public clinical-trial information.',
+   'The Spanish-language source record controls. Registration data do not establish scientific quality, study completion, safety, effectiveness, or approval.',
+   'https://ensayosclinicos-repec.ins.gob.pe/', 'https://ensayosclinicos-repec.ins.gob.pe/', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://ensayosclinicos-repec.ins.gob.pe/'),
+  ('slctr', 'Sri Lanka Clinical Trials Registry (SLCTR)', 'trial_registry', 'national', 'LK', 'Sri Lanka', 'Asia-Pacific', 1,
+   'WHO-recognised primary registry providing searchable public protocol information for clinical trials registered in Sri Lanka.',
+   'Records are submitted by trial teams and may be updated. Registration is not evidence of scientific quality, completion, safety, effectiveness, or authorization.',
+   'https://www.slctr.lk/', 'https://www.slctr.lk/', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://www.slctr.lk/')
+on conflict (id) do update set
+  name = excluded.name, resource_type = excluded.resource_type,
+  geographic_scope = excluded.geographic_scope, jurisdiction_code = excluded.jurisdiction_code,
+  jurisdiction_name = excluded.jurisdiction_name, region = excluded.region,
+  authority_tier = excluded.authority_tier, description = excluded.description,
+  limitations = excluded.limitations, homepage_url = excluded.homepage_url,
+  data_url = excluded.data_url, terms_url = excluded.terms_url,
+  access_mode = excluded.access_mode, reuse_status = excluded.reuse_status,
+  integration_status = excluded.integration_status, update_cadence = excluded.update_cadence,
+  healthcheck_url = excluded.healthcheck_url, consecutive_failures = 0,
+  updated_at = now();
+
+-- Ageing-specific datasets and evidence tools. These are research resources,
+-- not treatment recommendation services.
+insert into public.global_resources
+  (id, name, resource_type, geographic_scope, jurisdiction_code, jurisdiction_name,
+   region, authority_tier, description, limitations, homepage_url, data_url,
+   terms_url, access_mode, reuse_status, integration_status, update_cadence, healthcheck_url)
+values
+  ('who-ageing-data', 'WHO Ageing Data Portal', 'ageing_data', 'global', 'INT', 'International', 'Global', 1,
+   'World Health Organization portal bringing together global indicators on the health and well-being of people aged 60 years and over.',
+   'Indicators combine multiple source systems and are intended for population monitoring. They do not predict an individual’s health or support personal treatment decisions.',
+   'https://platform.who.int/data/maternal-newborn-child-adolescent-ageing/ageing-data',
+   'https://platform.who.int/data/maternal-newborn-child-adolescent-ageing/ageing-data',
+   'https://www.who.int/about/policies/publishing-policies/copyright', 'download', 'terms-apply', 'directory', 'Source-defined',
+   'https://platform.who.int/data/maternal-newborn-child-adolescent-ageing/ageing-data'),
+  ('who-gho', 'WHO Global Health Observatory', 'ageing_data', 'global', 'INT', 'International', 'Global', 1,
+   'World Health Organization data platform for comparable mortality, morbidity, risk-factor, health-system, and demographic indicators.',
+   'Country estimates vary in completeness, collection method, and revision timing. Population indicators should not be interpreted as individual medical guidance.',
+   'https://www.who.int/data/gho', 'https://data.who.int/',
+   'https://www.who.int/about/policies/publishing-policies/copyright', 'download', 'terms-apply', 'directory', 'Source-defined', 'https://data.who.int/'),
+  ('hagr', 'Human Ageing Genomic Resources', 'ageing_data', 'global', 'INT', 'International research resource', 'Global', 2,
+   'Academic collection of curated databases covering genes, interventions, cellular senescence, and comparative biology relevant to ageing research.',
+   'Entries aggregate published research and model-organism findings. Database inclusion does not establish causation, human benefit, safety, or clinical readiness.',
+   'https://genomics.senescence.info/', 'https://genomics.senescence.info/', null, 'search', 'terms-apply', 'directory', 'Source-defined', 'https://genomics.senescence.info/'),
+  ('gateway-global-aging', 'Gateway to Global Aging Data', 'ageing_data', 'global', 'INT', 'International harmonized studies', 'Global', 2,
+   'Research platform harmonising major longitudinal ageing and retirement studies to support cross-country population research.',
+   'Availability, access approval, variables, and survey methods differ by contributing study. Harmonised measures can still contain cross-country comparability limits.',
+   'https://g2aging.org/', 'https://g2aging.org/', null, 'search', 'terms-apply', 'directory', 'Source-defined', 'https://g2aging.org/'),
+  ('uk-biobank', 'UK Biobank', 'ageing_data', 'national', 'GB', 'United Kingdom', 'Europe', 2,
+   'Large prospective biomedical cohort combining health records, imaging, biomarkers, genetics, lifestyle, and environmental measures for approved research.',
+   'Access requires an approved research application and fees may apply. The volunteer cohort is not fully representative of the general population.',
+   'https://www.ukbiobank.ac.uk/', 'https://www.ukbiobank.ac.uk/enable-your-research', null, 'download', 'terms-apply', 'directory', 'Source-defined', 'https://www.ukbiobank.ac.uk/'),
+  ('share-eric', 'Survey of Health, Ageing and Retirement in Europe (SHARE)', 'ageing_data', 'regional', 'EU', 'Europe and Israel', 'Europe', 2,
+   'Cross-national longitudinal survey of health, social, economic, and family conditions among people aged 50 and over across Europe.',
+   'Data access requires registration and compliance with study terms. Survey participation, national sampling, waves, and available variables differ by country.',
+   'https://share-eric.eu/', 'https://share-eric.eu/data/', null, 'download', 'terms-apply', 'directory', 'Source-defined', 'https://share-eric.eu/'),
+  ('clsa', 'Canadian Longitudinal Study on Aging', 'ageing_data', 'national', 'CA', 'Canada', 'Americas', 2,
+   'National longitudinal research platform with questionnaire, physical, biomarker, genomic, epigenetic, metabolomic, imaging, and linked health data.',
+   'Access is application based, eligibility rules and fees apply, and ethics approval is required before release. The dataset is for approved research, not individual care.',
+   'https://www.clsa-elcv.ca/', 'https://www.clsa-elcv.ca/data-access/', null, 'download', 'terms-apply', 'directory', 'Source-defined', 'https://www.clsa-elcv.ca/'),
+  ('hrs', 'U.S. Health and Retirement Study', 'ageing_data', 'national', 'US', 'United States', 'Americas', 2,
+   'Long-running national longitudinal study of ageing, health, work, retirement, economic circumstances, family networks, and cognition.',
+   'Some files require registration or restricted-data approval. Survey design, attrition, self-report, and population scope must be considered in analysis.',
+   'https://hrs.isr.umich.edu/', 'https://hrs.isr.umich.edu/data-products', null, 'download', 'terms-apply', 'directory', 'Source-defined', 'https://hrs.isr.umich.edu/'),
+  ('cochrane-library', 'Cochrane Library', 'systematic_reviews', 'global', 'INT', 'International', 'Global', 2,
+   'International collection of systematic reviews and controlled-trial evidence designed to support evidence-informed health decisions.',
+   'Reviews answer defined questions and can become outdated; access to full content varies. A review is not personalised medical advice or a universal treatment recommendation.',
+   'https://www.cochranelibrary.com/', 'https://www.cochranelibrary.com/advanced-search', null, 'search', 'terms-apply', 'directory', 'Source-defined', 'https://www.cochranelibrary.com/'),
+  ('epistemonikos', 'Epistemonikos', 'systematic_reviews', 'global', 'INT', 'International', 'Global', 2,
+   'Multilingual collaborative database designed to organise systematic reviews and the studies connected to them for health evidence discovery.',
+   'Coverage and linkage depend on indexed publications and automated processes. Search results require appraisal and do not provide individual medical recommendations.',
+   'https://www.epistemonikos.org/', 'https://www.epistemonikos.org/', null, 'search', 'terms-apply', 'directory', 'Source-defined', 'https://www.epistemonikos.org/'),
+  ('openalex', 'OpenAlex', 'evidence_infrastructure', 'global', 'INT', 'International', 'Global', 2,
+   'Open scholarly catalogue connecting works, authors, institutions, topics, sources, publishers, funders, and citation relationships.',
+   'Metadata are aggregated from multiple sources and can contain gaps, duplicates, or classification errors. Indexing is not peer review or a quality assessment.',
+   'https://openalex.org/', 'https://api.openalex.org/', 'https://docs.openalex.org/additional-help/terms-and-conditions', 'api', 'open', 'directory', 'Source-defined', 'https://api.openalex.org/works?per-page=1')
+on conflict (id) do update set
+  name = excluded.name, resource_type = excluded.resource_type,
+  geographic_scope = excluded.geographic_scope, jurisdiction_code = excluded.jurisdiction_code,
+  jurisdiction_name = excluded.jurisdiction_name, region = excluded.region,
+  authority_tier = excluded.authority_tier, description = excluded.description,
+  limitations = excluded.limitations, homepage_url = excluded.homepage_url,
+  data_url = excluded.data_url, terms_url = excluded.terms_url,
+  access_mode = excluded.access_mode, reuse_status = excluded.reuse_status,
+  integration_status = excluded.integration_status, update_cadence = excluded.update_cadence,
+  healthcheck_url = excluded.healthcheck_url, consecutive_failures = 0,
+  updated_at = now();
+
+-- Major official medicine regulators that complement the existing EU, US,
+-- Canadian, UK, Czech, Swiss, Japanese, and Australian sources.
+insert into public.global_resources
+  (id, name, resource_type, geographic_scope, jurisdiction_code, jurisdiction_name,
+   region, authority_tier, description, limitations, homepage_url, data_url,
+   terms_url, access_mode, reuse_status, integration_status, update_cadence, healthcheck_url)
+values
+  ('anvisa', 'Brazilian Health Regulatory Agency (ANVISA)', 'regulator', 'national', 'BR', 'Brazil', 'Americas', 1,
+   'Official Brazilian authority and public consultation system for registered medicines, biologics, health products, safety information, and regulatory status.',
+   'ANVISA status applies in Brazil and to the exact product, presentation, indication, and date. Portuguese source records and official decisions control.',
+   'https://www.gov.br/anvisa/pt-br', 'https://www.gov.br/anvisa/pt-br/sistemas/consulta-a-registro', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://www.gov.br/anvisa/pt-br'),
+  ('cdsco', 'Central Drugs Standard Control Organisation (CDSCO)', 'regulator', 'national', 'IN', 'India', 'Asia-Pacific', 1,
+   'Official Indian national medicines authority source for approved new drugs, safety alerts, standards, clinical-trial regulation, and regulatory notices.',
+   'Indian approval applies only to the listed product and use in India. Source documents, dates, national rules, and any state-level requirements must be checked.',
+   'https://cdsco.gov.in/', 'https://www.cdsco.gov.in/opencms/opencms/en/Approval_new/Approved-New-Drugs/', null, 'download', 'link-only', 'directory', 'Source-defined', 'https://cdsco.gov.in/'),
+  ('sahpra', 'South African Health Products Regulatory Authority', 'regulator', 'national', 'ZA', 'South Africa', 'Africa', 1,
+   'Official South African authority for medicines, medical devices, in-vitro diagnostics, clinical trials, safety communications, and registered products.',
+   'SAHPRA decisions apply in South Africa and to the named product and indication. Current official registers and notices must be checked before relying on status.',
+   'https://www.sahpra.org.za/', 'https://www.sahpra.org.za/registered-health-products/', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://www.sahpra.org.za/'),
+  ('medsafe', 'Medsafe New Zealand', 'regulator', 'national', 'NZ', 'New Zealand', 'Asia-Pacific', 1,
+   'Official New Zealand medicines and medical-device safety authority source for product information, data sheets, recalls, alerts, and regulatory guidance.',
+   'New Zealand consent and safety information apply only within New Zealand and to the exact product and use described in the current official record.',
+   'https://www.medsafe.govt.nz/', 'https://www.medsafe.govt.nz/Medicines/infoSearch.asp', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://www.medsafe.govt.nz/'),
+  ('hsa-singapore', 'Singapore Health Sciences Authority', 'regulator', 'national', 'SG', 'Singapore', 'Asia-Pacific', 1,
+   'Official Singapore authority source for therapeutic-product registration, product safety, recalls, adverse-event information, and regulatory guidance.',
+   'Singapore registration applies only to the listed product and indication in Singapore. The current official register and safety notices control.',
+   'https://www.hsa.gov.sg/', 'https://www.hsa.gov.sg/therapeutic-products/register', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://www.hsa.gov.sg/'),
+  ('mfds-korea', 'Korean Ministry of Food and Drug Safety', 'regulator', 'national', 'KR', 'Republic of Korea', 'Asia-Pacific', 1,
+   'Official Korean regulator source for medicine approvals, safety information, recalls, standards, and health-product regulation.',
+   'English coverage can be selective and Korean source material may control. Authorization applies in Korea and only to the exact product and indication.',
+   'https://www.mfds.go.kr/eng/index.do', 'https://www.mfds.go.kr/eng/index.do', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://www.mfds.go.kr/eng/index.do'),
+  ('nmpa-china', 'National Medical Products Administration of China', 'regulator', 'national', 'CN', 'China', 'Asia-Pacific', 1,
+   'Official Chinese national authority source for drugs, medical devices, cosmetics, approvals, standards, inspections, and safety information.',
+   'Chinese-language official records may control and authorization applies only in China to the exact product, manufacturer, indication, and current status.',
+   'https://www.nmpa.gov.cn/', 'https://www.nmpa.gov.cn/datasearch/home-index.html', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://www.nmpa.gov.cn/'),
+  ('sfda-saudi', 'Saudi Food and Drug Authority', 'regulator', 'national', 'SA', 'Saudi Arabia', 'Middle East', 1,
+   'Official Saudi authority source for registered medicines, medical devices, safety alerts, recalls, pharmacovigilance, and regulatory requirements.',
+   'Saudi registration and safety decisions apply in Saudi Arabia and to the exact listed product, use, manufacturer, and publication date.',
+   'https://www.sfda.gov.sa/en', 'https://www.sfda.gov.sa/en/drugs-list', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://www.sfda.gov.sa/en'),
+  ('aifa', 'Italian Medicines Agency (AIFA)', 'regulator', 'national', 'IT', 'Italy', 'Europe', 1,
+   'Official Italian medicines authority and searchable database for authorised medicines, product information, safety notices, shortages, and reimbursement status.',
+   'Italian authorization and reimbursement apply only in Italy and to the current product record. Official Italian documents and Gazette decisions control.',
+   'https://www.aifa.gov.it/', 'https://medicinali.aifa.gov.it/', null, 'search', 'terms-apply', 'directory', 'Source-defined', 'https://www.aifa.gov.it/'),
+  ('aemps', 'Spanish Agency of Medicines and Medical Devices', 'regulator', 'national', 'ES', 'Spain', 'Europe', 1,
+   'Official Spanish authority source for authorised medicines, product information, pharmacovigilance, safety alerts, shortages, and clinical research.',
+   'Spanish authorization applies only in Spain and to the exact product and indication. Current AEMPS records and official Spanish notices control.',
+   'https://www.aemps.gob.es/', 'https://cima.aemps.es/cima/publico/home.html', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://www.aemps.gob.es/'),
+  ('bfarm', 'German Federal Institute for Drugs and Medical Devices', 'regulator', 'national', 'DE', 'Germany', 'Europe', 1,
+   'Official German authority and PharmNet.Bund access point for medicinal-product information, approvals, safety, shortages, and regulatory notices.',
+   'German and EU authorization routes differ. Users must verify the exact product, procedure, indication, current status, and controlling official documents.',
+   'https://www.bfarm.de/', 'https://www.pharmnet.bund.de/', null, 'search', 'link-only', 'directory', 'Source-defined', 'https://www.bfarm.de/')
+on conflict (id) do update set
+  name = excluded.name, resource_type = excluded.resource_type,
+  geographic_scope = excluded.geographic_scope, jurisdiction_code = excluded.jurisdiction_code,
+  jurisdiction_name = excluded.jurisdiction_name, region = excluded.region,
+  authority_tier = excluded.authority_tier, description = excluded.description,
+  limitations = excluded.limitations, homepage_url = excluded.homepage_url,
+  data_url = excluded.data_url, terms_url = excluded.terms_url,
+  access_mode = excluded.access_mode, reuse_status = excluded.reuse_status,
+  integration_status = excluded.integration_status, update_cadence = excluded.update_cadence,
+  healthcheck_url = excluded.healthcheck_url, consecutive_failures = 0,
+  updated_at = now();
+
+-- Repair the jRCT endpoint to the current WHO-listed public registry address.
+update public.global_resources
+set homepage_url = 'https://jrct.mhlw.go.jp/',
+    data_url = 'https://jrct.mhlw.go.jp/',
+    healthcheck_url = 'https://jrct.mhlw.go.jp/',
+    consecutive_failures = 0,
+    updated_at = now()
+where id = 'jrct';
+
+select public.refresh_global_resource_eligibility();

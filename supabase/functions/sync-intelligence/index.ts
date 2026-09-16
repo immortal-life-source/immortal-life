@@ -30,8 +30,21 @@ type Job = {
 }
 
 const SIX_HOURS_MS = 6 * 60 * 60 * 1000
-const MAX_JOBS_PER_RUN = 30
+const MAX_JOBS_PER_RUN = 45
 const USER_AGENT = 'immortal.life-intelligence/1.0 (contact: research@immortal.life)'
+
+const REGULATORY_FEEDS = {
+  ema: { url: 'https://www.ema.europa.eu/en/news.xml', jurisdiction: 'European Union', name: 'European Medicines Agency', language: 'en' },
+  sukl: { url: 'https://sukl.gov.cz/feed/', jurisdiction: 'Czech Republic', name: 'SÚKL', language: 'cs' },
+  'fda-medwatch': { url: 'https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/medwatch/rss.xml', jurisdiction: 'United States', name: 'U.S. Food and Drug Administration (MedWatch)', language: 'en' },
+  mhra: { url: 'https://www.gov.uk/drug-safety-update.atom', jurisdiction: 'United Kingdom', name: 'Medicines and Healthcare products Regulatory Agency', language: 'en' },
+  'health-canada-safety': { url: 'https://recalls-rappels.canada.ca/en/feed/health-products-alerts-recalls', jurisdiction: 'Canada', name: 'Health Canada', language: 'en' },
+  'tga-safety': { url: 'https://www.tga.gov.au/feeds/alert/safety-alerts.xml', jurisdiction: 'Australia', name: 'Therapeutic Goods Administration', language: 'en' },
+} as const
+
+type RegulatorySourceId = keyof typeof REGULATORY_FEEDS
+const TOPIC_SOURCE_IDS = new Set(['europe-pmc', 'pubmed', 'clinicaltrials-gov'])
+let lastNcbiRequestAt = 0
 
 function constantTimeSecretMatch(supplied: string, expected: string): boolean {
   if (!expected || supplied.length !== expected.length) return false
@@ -96,6 +109,20 @@ function xmlText(block: string, tag: string): string {
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
     .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'"), 1200)
+}
+
+function xmlTexts(block: string, tag: string, maxItems = 80): string[] {
+  const matches = [...block.matchAll(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`, 'gi'))]
+  return uniqueStrings(matches.map((match) => cleanText((match[1] ?? '')
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'"), 1200)), maxItems)
+}
+
+async function throttleNcbi(): Promise<void> {
+  const waitMs = Math.max(0, 400 - (Date.now() - lastNcbiRequestAt))
+  if (waitMs) await new Promise((resolve) => setTimeout(resolve, waitMs))
+  lastNcbiRequestAt = Date.now()
 }
 
 async function stableId(value: string): Promise<string> {
@@ -168,10 +195,8 @@ async function syncCrossref(supabase: any): Promise<{ seen: number; written: num
   return { seen: notices.length, written: events.length }
 }
 
-async function syncRegulatoryFeed(supabase: any, sourceId: 'ema' | 'sukl'): Promise<{ seen: number; written: number }> {
-  const source = sourceId === 'ema'
-    ? { url: 'https://www.ema.europa.eu/en/news.xml', jurisdiction: 'European Union', name: 'European Medicines Agency' }
-    : { url: 'https://sukl.gov.cz/feed/', jurisdiction: 'Czech Republic', name: 'SÚKL' }
+async function syncRegulatoryFeed(supabase: any, sourceId: RegulatorySourceId): Promise<{ seen: number; written: number }> {
+  const source = REGULATORY_FEEDS[sourceId]
   const xml = await fetchText(new URL(source.url))
   const blocks = xml.match(/<item\b[\s\S]*?<\/item>/gi) ?? xml.match(/<entry\b[\s\S]*?<\/entry>/gi) ?? []
   const records: any[] = []
@@ -206,7 +231,7 @@ async function syncRegulatoryFeed(supabase: any, sourceId: 'ema' | 'sukl'): Prom
       source_url: link,
       matched_topics: matchedTopics,
       last_seen_at: new Date().toISOString(),
-      metadata: { source_language: sourceId === 'sukl' ? 'cs' : 'en' },
+      metadata: { source_language: source.language, official_source: source.name },
       relevance_confidence: confidence,
       source_quality_score: sourceQualityScore(sourceId),
       freshness_score: freshnessScore(Number.isNaN(parsedDate.getTime()) ? null : parsedDate.toISOString()),
@@ -226,6 +251,143 @@ function sourceDateWindow(days: number): { from: string; to: string } {
   const to = new Date()
   const from = new Date(to.getTime() - days * 24 * 60 * 60 * 1000)
   return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) }
+}
+
+function pubmedPublicationDate(block: string): string | null {
+  const articleDate = block.match(/<ArticleDate[^>]*>([\s\S]*?)<\/ArticleDate>/i)?.[1]
+  const pubDate = articleDate || block.match(/<PubDate[^>]*>([\s\S]*?)<\/PubDate>/i)?.[1] || ''
+  const year = xmlText(pubDate, 'Year')
+  if (!year) return null
+  const monthValue = xmlText(pubDate, 'Month')
+  const monthNames: Record<string, string> = {
+    jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+    jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+  }
+  const month = /^\d{1,2}$/.test(monthValue)
+    ? monthValue.padStart(2, '0')
+    : monthNames[monthValue.slice(0, 3).toLowerCase()] ?? '01'
+  const dayValue = xmlText(pubDate, 'Day')
+  return dateOnly(`${year}-${month}-${/^\d{1,2}$/.test(dayValue) ? dayValue.padStart(2, '0') : '01'}`)
+}
+
+async function syncPubMed(supabase: any, topic: Topic): Promise<{ seen: number; written: number }> {
+  const searchUrl = new URL('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi')
+  searchUrl.searchParams.set('db', 'pubmed')
+  searchUrl.searchParams.set('term', topic.literature_query)
+  searchUrl.searchParams.set('datetype', 'pdat')
+  searchUrl.searchParams.set('reldate', '90')
+  searchUrl.searchParams.set('retmax', '50')
+  searchUrl.searchParams.set('sort', 'pub_date')
+  searchUrl.searchParams.set('retmode', 'json')
+  searchUrl.searchParams.set('tool', 'immortal_life')
+  searchUrl.searchParams.set('email', 'research@immortal.life')
+  const apiKey = Deno.env.get('NCBI_API_KEY')?.trim()
+  if (apiKey) searchUrl.searchParams.set('api_key', apiKey)
+
+  await throttleNcbi()
+  const searchPayload = await fetchJson(searchUrl)
+  const ids = uniqueStrings(searchPayload?.esearchresult?.idlist, 50)
+  if (!ids.length) return { seen: 0, written: 0 }
+
+  const fetchUrl = new URL('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi')
+  fetchUrl.searchParams.set('db', 'pubmed')
+  fetchUrl.searchParams.set('id', ids.join(','))
+  fetchUrl.searchParams.set('rettype', 'abstract')
+  fetchUrl.searchParams.set('retmode', 'xml')
+  fetchUrl.searchParams.set('tool', 'immortal_life')
+  fetchUrl.searchParams.set('email', 'research@immortal.life')
+  if (apiKey) fetchUrl.searchParams.set('api_key', apiKey)
+  await throttleNcbi()
+  const xml = await fetchText(fetchUrl)
+  const articles = xml.match(/<PubmedArticle\b[\s\S]*?<\/PubmedArticle>/gi) ?? []
+  const now = new Date().toISOString()
+  const assessments = new Map<string, ReturnType<typeof assessTopicMatch>>()
+  const records = articles.map((article) => {
+    const externalId = xmlText(article, 'PMID')
+    const title = xmlText(article, 'ArticleTitle')
+    if (!externalId || !title) return null
+    const abstractText = xmlTexts(article, 'AbstractText', 20).join(' ') || null
+    const publicationTypes = xmlTexts(article, 'PublicationType', 20)
+    const meshTerms = xmlTexts(article, 'DescriptorName', 60)
+    const keywordTerms = xmlTexts(article, 'Keyword', 30)
+    const controlledTerms = uniqueStrings([...meshTerms, ...keywordTerms], 80)
+    const publicationType = publicationTypes.join('; ')
+    const publishedOn = pubmedPublicationDate(article)
+    const doi = cleanText(article.match(/<ArticleId[^>]+IdType=["']doi["'][^>]*>([\s\S]*?)<\/ArticleId>/i)?.[1], 240) || null
+    const authors = [...article.matchAll(/<Author\b[^>]*>([\s\S]*?)<\/Author>/gi)].map((match) => {
+      const collective = xmlText(match[1], 'CollectiveName')
+      if (collective) return collective
+      return [xmlText(match[1], 'ForeName'), xmlText(match[1], 'LastName')].filter(Boolean).join(' ')
+    }).filter(Boolean).slice(0, 30).join(', ') || null
+    const journal = xmlText(article, 'Title') || null
+    const status = publicationTypes.some((value) => /retracted publication/i.test(value)) ? 'retracted' : 'published'
+    const level = classifyEvidence(publicationType, title, 'pubmed')
+    const assessment = assessTopicMatch(topic.slug, {
+      title,
+      abstract: abstractText,
+      controlledTerms,
+      studyType: publicationType,
+      sourceId: 'pubmed',
+      sourceDate: publishedOn,
+    })
+    assessments.set(externalId, assessment)
+    return {
+      source_id: 'pubmed',
+      external_id: externalId,
+      title,
+      authors,
+      journal,
+      published_on: publishedOn,
+      doi,
+      publication_type: publicationType || null,
+      abstract_text: abstractText,
+      controlled_terms: controlledTerms,
+      evidence_level: level,
+      source_url: `https://pubmed.ncbi.nlm.nih.gov/${encodeURIComponent(externalId)}/`,
+      is_open_access: null,
+      cited_by_count: null,
+      editorial_summary: researchEditorialSummary(level, journal),
+      source_updated_at: now,
+      last_seen_at: now,
+      status,
+      relevance_confidence: assessment.relevanceScore,
+      source_quality_score: assessment.sourceQualityScore,
+      freshness_score: assessment.freshnessScore,
+      publication_state: assessment.publish ? 'published' : 'quarantined',
+      match_explanation: assessment.explanation,
+      quality_checked_at: now,
+      duplicate_cluster_key: duplicateClusterKey(title, doi),
+      metadata: { pmid: externalId, mesh_terms: meshTerms, source: 'NCBI PubMed E-utilities' },
+    }
+  }).filter(Boolean)
+
+  if (!records.length) return { seen: articles.length, written: 0 }
+  const { data, error } = await supabase
+    .from('research_items')
+    .upsert(records, { onConflict: 'source_id,external_id', defaultToNull: false })
+    .select('id,external_id')
+  if (error) throw error
+  const topicLinks = (data ?? []).map((record: { id: number; external_id: string }) => {
+    const assessment = assessments.get(record.external_id) ?? assessTopicMatch(topic.slug, { title: '', sourceId: 'pubmed' })
+    return {
+      research_item_id: record.id,
+      topic_slug: topic.slug,
+      matched_by: 'source-query',
+      relevance_score: assessment.relevanceScore,
+      match_reasons: assessment.reasons,
+      matched_fields: assessment.matchedFields,
+      is_published: assessment.publish,
+      evaluated_at: now,
+    }
+  })
+  if (topicLinks.length) {
+    const { error: linkError } = await supabase.from('research_item_topics')
+      .upsert(topicLinks, { onConflict: 'research_item_id,topic_slug', defaultToNull: false })
+    if (linkError) throw linkError
+    const { error: qualityError } = await supabase.rpc('refresh_research_quality', { record_ids: topicLinks.map((link) => link.research_item_id) })
+    if (qualityError) throw qualityError
+  }
+  return { seen: articles.length, written: records.length }
 }
 
 async function syncEuropePmc(supabase: any, topic: Topic): Promise<{ seen: number; written: number }> {
@@ -491,7 +653,7 @@ Deno.serve(async (req) => {
 
     const slot = new Date(Math.floor(Date.now() / SIX_HOURS_MS) * SIX_HOURS_MS).toISOString()
     const queued = sources.flatMap((source: { id: string }) => {
-      if (source.id === 'europe-pmc' || source.id === 'clinicaltrials-gov') {
+      if (TOPIC_SOURCE_IDS.has(source.id)) {
         return (topics ?? []).map((topic: Topic) => ({ source_id: source.id, topic_slug: topic.slug, job_key: topic.slug, window_start: slot }))
       }
       return [{ source_id: source.id, topic_slug: null, job_key: source.id === 'crossref' ? 'retractions' : 'official-feed', window_start: slot }]
@@ -526,7 +688,7 @@ Deno.serve(async (req) => {
 
     for (const job of (jobs ?? []) as Job[]) {
       const topic = job.topic_slug ? topicBySlug.get(job.topic_slug) : null
-      if ((job.source_id === 'europe-pmc' || job.source_id === 'clinicaltrials-gov') && !topic) continue
+      if (TOPIC_SOURCE_IDS.has(job.source_id) && !topic) continue
       const attempt = job.attempts + 1
       const lockedAt = new Date().toISOString()
       const { data: locked } = await supabase
@@ -542,9 +704,10 @@ Deno.serve(async (req) => {
       try {
         let outcome: { seen: number; written: number }
         if (job.source_id === 'europe-pmc') outcome = await syncEuropePmc(supabase, topic as Topic)
+        else if (job.source_id === 'pubmed') outcome = await syncPubMed(supabase, topic as Topic)
         else if (job.source_id === 'clinicaltrials-gov') outcome = await syncClinicalTrials(supabase, topic as Topic)
         else if (job.source_id === 'crossref') outcome = await syncCrossref(supabase)
-        else if (job.source_id === 'ema' || job.source_id === 'sukl') outcome = await syncRegulatoryFeed(supabase, job.source_id)
+        else if (job.source_id in REGULATORY_FEEDS) outcome = await syncRegulatoryFeed(supabase, job.source_id as RegulatorySourceId)
         else throw new Error(`Unsupported source ${job.source_id}`)
         seen += outcome.seen
         written += outcome.written

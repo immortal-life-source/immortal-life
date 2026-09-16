@@ -129,10 +129,18 @@
         <div><span class="section-index">Coverage map</span><h2>Trusted public sources, by region.</h2></div>
         <a href="/entities" class="section-link">Explore the evidence directory</a>
       </div>
+      <p class="atlas-intro">Start with what you need. Find a registered trial, verify a medicine with the relevant national authority, read a systematic review, or explore datasets built for ageing research. Every link opens the original source.</p>
+      <nav class="resource-pathways" aria-label="Choose a resource task">
+        <button type="button" data-resource-preset="" aria-pressed="true"><strong>Browse everything</strong><span>All qualified public resources</span></button>
+        <button type="button" data-resource-preset="trial_registry" aria-pressed="false"><strong>Find registered trials</strong><span>WHO-recognised and official registries</span></button>
+        <button type="button" data-resource-preset="regulator" aria-pressed="false"><strong>Check medicines</strong><span>Approvals, labels, recalls, and safety</span></button>
+        <button type="button" data-resource-preset="systematic_reviews" aria-pressed="false"><strong>Read evidence summaries</strong><span>Systematic reviews and connected studies</span></button>
+        <button type="button" data-resource-preset="ageing_data" aria-pressed="false"><strong>Explore ageing data</strong><span>Cohorts, indicators, and research datasets</span></button>
+      </nav>
       <div class="resource-map-wrap">
         <svg class="resource-map" viewBox="0 0 1200 520" role="img" aria-labelledby="resourceMapTitle resourceMapDescription">
           <title id="resourceMapTitle">Geographic coverage of resources indexed by immortal.life</title>
-          <desc id="resourceMapDescription">A schematic map showing the number of authoritative resources covering global, European, American, and Asia-Pacific jurisdictions.</desc>
+          <desc id="resourceMapDescription">A schematic map showing authoritative-resource coverage across global, European, American, Asia-Pacific, African, and Middle Eastern jurisdictions.</desc>
           <g class="map-land" aria-hidden="true">
             <path d="M90 165l88-66 131 13 61 53-43 53-87 9-38 78-79-27-48-63z" />
             <path d="M329 302l61 31 33 70-20 91-44-30-25-85-34-34z" />
@@ -153,7 +161,7 @@
       </form>
       <p class="filter-result" id="resourceResult" aria-live="polite"></p>
       <div class="resource-grid" id="resourceGrid"></div>
-      <aside class="automation-notice"><strong>How sources are included</strong><p>We list official or widely recognised public sources and check their links every six hours. A listing is not an endorsement. Regulatory information applies only to the country or region, product, and use named by the original authority.</p></aside>
+      <aside class="automation-notice"><strong>How sources are included</strong><p>We list official authorities, WHO-recognised trial registries, and established public research infrastructure. Links are checked automatically every six hours. A listing is not an endorsement. Registry inclusion does not prove that a treatment works. Regulatory information applies only to the country or region, product, and use named by the original authority.</p></aside>
     </section>
 
     <section class="intel-section" id="qualitySection" hidden>

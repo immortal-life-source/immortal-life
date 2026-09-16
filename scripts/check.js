@@ -82,6 +82,8 @@ const requiredFiles = [
   'supabase/migrations/20260915000600_repair_resource_links.sql',
   'supabase/migrations/20260915000700_search_demand_and_utility.sql',
   'supabase/migrations/20260916000100_reader_growth_loops.sql',
+  'supabase/migrations/20260916000200_expand_live_sources.sql',
+  'supabase/migrations/20260916000300_global_resource_atlas_expansion.sql',
   'supabase/audits/membership-integrity.sql',
   'intelligence-template.html',
   'content-template.html',

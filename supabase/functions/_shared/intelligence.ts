@@ -65,7 +65,12 @@ export function sourceQualityScore(sourceId: string): number {
     'clinicaltrials-gov': 100,
     ema: 100,
     sukl: 100,
+    'fda-medwatch': 100,
+    mhra: 100,
+    'health-canada-safety': 100,
+    'tga-safety': 100,
     crossref: 95,
+    pubmed: 95,
     'europe-pmc': 90,
   }
   return scores[sourceId] ?? 70

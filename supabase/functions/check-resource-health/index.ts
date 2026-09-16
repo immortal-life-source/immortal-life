@@ -5,10 +5,20 @@ const ALLOWED_HOSTS = new Set([
   'www.who.int', 'trialsearch.who.int', 'europepmc.org', 'www.ebi.ac.uk',
   'pubmed.ncbi.nlm.nih.gov', 'eutils.ncbi.nlm.nih.gov', 'www.ncbi.nlm.nih.gov',
   'www.crossref.org', 'api.crossref.org', 'clinicaltrials.gov',
-  'www.canada.ca', 'health-products.canada.ca', 'open.canada.ca',
+  'www.canada.ca', 'health-products.canada.ca', 'open.canada.ca', 'recalls-rappels.canada.ca',
   'www.ema.europa.eu', 'euclinicaltrials.eu', 'www.fda.gov', 'open.fda.gov', 'api.fda.gov',
   'www.gov.uk', 'www.nationalarchives.gov.uk', 'sukl.gov.cz', 'www.swissmedic.ch',
   'www.tga.gov.au', 'www.pmda.go.jp', 'www.isrctn.com', 'www.anzctr.org.au', 'jrct.niph.go.jp',
+  'www.ensaiosclinicos.gov.br', 'www.chictr.org.cn', 'cris.nih.go.kr', 'ctri.nic.in',
+  'rpcec.sld.cu', 'www.clinicaltrialsregister.eu', 'www.drks.de', 'www.irct.ir',
+  'itmctr.ccebtcm.org.cn', 'lbctr.moph.gov.lb', 'www.thaiclinicaltrials.org',
+  'pactr.samrc.ac.za', 'ensayosclinicos-repec.ins.gob.pe', 'www.slctr.lk', 'jrct.mhlw.go.jp',
+  'platform.who.int', 'data.who.int', 'genomics.senescence.info', 'g2aging.org',
+  'www.ukbiobank.ac.uk', 'share-eric.eu', 'www.clsa-elcv.ca', 'hrs.isr.umich.edu',
+  'www.cochranelibrary.com', 'www.epistemonikos.org', 'openalex.org', 'api.openalex.org',
+  'www.gov.br', 'cdsco.gov.in', 'www.sahpra.org.za', 'www.medsafe.govt.nz',
+  'www.hsa.gov.sg', 'www.mfds.go.kr', 'www.nmpa.gov.cn', 'www.sfda.gov.sa',
+  'www.aifa.gov.it', 'www.aemps.gob.es', 'www.bfarm.de',
 ])
 
 function constantTimeMatch(left: string, right: string): boolean {
@@ -75,7 +85,12 @@ Deno.serve(async (req) => {
   try {
     const { data: resources, error } = await supabase.from('global_resources').select('id,healthcheck_url,consecutive_failures').order('id')
     if (error) throw error
-    const results = await Promise.all((resources ?? []).map(check))
+    const results: Record<string, unknown>[] = []
+    const batchSize = 8
+    for (let index = 0; index < (resources ?? []).length; index += batchSize) {
+      const batch = (resources ?? []).slice(index, index + batchSize)
+      results.push(...await Promise.all(batch.map(check)))
+    }
     const checkedAt = new Date().toISOString()
     for (const result of results) {
       const current = (resources ?? []).find((resource: any) => resource.id === result.id)
