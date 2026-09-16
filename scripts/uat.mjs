@@ -78,10 +78,11 @@ class Cdp {
   call(method, params = {}) {
     const id = ++this.id;
     return new Promise((resolve, reject) => {
+      const timeoutMs = method === 'Page.navigate' ? 30000 : 15000;
       const timeout = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`CDP timed out: ${method}`));
-      }, 15000);
+      }, timeoutMs);
       this.pending.set(id, {
         method,
         resolve: (value) => { clearTimeout(timeout); resolve(value); },
