@@ -15,7 +15,7 @@ const defaultRoutes = [
   '/discover', '/changes', '/discover/recruiting-trials', '/discover/regulatory-status', '/discover/research-integrity', '/reports',
   '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/methodology',
   '/resources', '/universities', '/entities', '/entities/topic/rapamycin', '/quality', '/automation', '/publication-policy', '/corrections', '/data', '/join',
-  '/auth/x', '/auth/linkedin', '/leaderboard', '/privacy',
+  '/auth/x', '/auth/linkedin', '/leaderboard', '/privacy', '/confirmed', '/unsubscribed',
 ];
 const routes = process.env.UAT_ROUTES ? process.env.UAT_ROUTES.split(',').map((route) => route.trim()).filter(Boolean) : defaultRoutes;
 if (!process.env.UAT_ROUTES) {
@@ -31,7 +31,8 @@ if (!process.env.UAT_ROUTES) {
 
 const browser = spawn(chromePath, [
   '--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
-  '--remote-allow-origins=*', '--no-first-run', '--disable-gpu', '--use-angle=swiftshader',
+  '--remote-allow-origins=*', '--no-first-run', '--disable-gpu', '--disable-gpu-compositing',
+  '--disable-3d-apis', '--disable-webgl', '--disable-webgl2',
   '--disable-features=Vulkan,SkiaGraphite,Dawn,WebGPU', '--hide-scrollbars', 'about:blank',
 ], { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
 let chromeError = '';
@@ -122,6 +123,9 @@ async function capture(cdp, name, fullPage = false) {
   return target;
 }
 
+const navButtonSelector = '.mobile-nav-toggle, .intel-nav-toggle, .m-member-nav-toggle';
+const navLookupExpression = `document.getElementById('primaryNav') || document.getElementById('intelNav') || document.querySelector('.m-member-nav')`;
+
 async function runViewport(cdp, profileName, width, height, mobile) {
   await cdp.call('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: mobile ? 2 : 1, mobile });
   const results = [];
@@ -139,8 +143,8 @@ async function runViewport(cdp, profileName, width, height, mobile) {
       logoLoaded: [...document.images].filter(img => img.src.includes('linkedin-app-logo.png') && img.loading !== 'lazy').every(img => img.complete && img.naturalWidth > 0),
       overflowing: [...document.querySelectorAll('body *')].map(el => { const r = el.getBoundingClientRect(); return { element: el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().replace(/\\s+/g,'.') : ''), left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width) }; }).filter(item => item.right > innerWidth + 2 || item.left < -2).slice(0, 12),
       internalOverflow: [document.documentElement, document.body, ...document.querySelectorAll('body *')].map(el => ({ element: el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().replace(/\\s+/g,'.') : ''), scrollWidth: el.scrollWidth, clientWidth: el.clientWidth })).filter(item => item.scrollWidth > item.clientWidth + 2).sort((a,b) => (b.scrollWidth-b.clientWidth) - (a.scrollWidth-a.clientWidth)).slice(0,12),
-      menuButtonVisible: (() => { const el = document.querySelector('.mobile-nav-toggle, .intel-nav-toggle'); return el ? getComputedStyle(el).display !== 'none' : null; })(),
-      menuVisible: (() => { const el = document.getElementById('primaryNav') || document.getElementById('intelNav'); return el ? getComputedStyle(el).display !== 'none' : null; })()
+      menuButtonVisible: (() => { const el = document.querySelector('${navButtonSelector}'); return el ? getComputedStyle(el).display !== 'none' : null; })(),
+      menuVisible: (() => { const el = ${navLookupExpression}; return el ? getComputedStyle(el).display !== 'none' : null; })()
       ,mainLandmark: Boolean(document.querySelector('main'))
       ,unlabelledInputs: [...document.querySelectorAll('input,select,textarea')].filter(el => !el.closest('label') && !(el.id && document.querySelector('label[for="' + CSS.escape(el.id) + '"]')) && !el.getAttribute('aria-label') && !el.getAttribute('aria-labelledby')).length
       ,genericLinks: [...document.querySelectorAll('a')].filter(a => /^(click here|learn more|read more)$/i.test((a.textContent || '').trim())).length
@@ -159,20 +163,21 @@ async function runViewport(cdp, profileName, width, height, mobile) {
     if (state.overflow > 2) failures.push(`horizontal overflow ${state.overflow}px: ${JSON.stringify({ outside: state.overflowing, internal: state.internalOverflow })}`);
     if (state.brokenImages.length) failures.push(`broken images: ${state.brokenImages.join(', ')}`);
     if (!state.logoLoaded) failures.push('brand mark failed to load');
-    if (route === '/' && mobile && state.menuButtonVisible !== true) failures.push('mobile menu button hidden');
+    if (mobile && state.menuButtonVisible !== true) failures.push('mobile menu button hidden or missing');
     if (route === '/' && !mobile && state.menuButtonVisible !== false) failures.push('desktop menu button visible');
-    if (route === '/universities' && mobile && state.menuButtonVisible !== true) failures.push('university mobile menu button hidden');
     failures.push(...exceptions, ...consoleErrors);
     results.push({ profile: profileName, route, resolvedUrl: state.url, failures });
 
     const routeName = route === '/' ? 'home' : route.slice(1).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
     await capture(cdp, `${profileName}-${routeName}.png`, false);
 
-    if (route === '/' || route === '/universities') {
+    if (state.menuButtonVisible === true) {
       if (mobile) {
-        const menu = await evaluate(cdp, `(() => { const button = document.querySelector('.mobile-nav-toggle, .intel-nav-toggle'); button?.click(); const nav = document.getElementById('primaryNav') || document.getElementById('intelNav'); return { expanded: button?.getAttribute('aria-expanded'), visible: nav ? getComputedStyle(nav).display !== 'none' : false, links: nav ? [...nav.querySelectorAll('a')].filter(a => { const r=a.getBoundingClientRect(); return r.width >= 1 && r.height >= 40; }).length : 0 }; })()`);
-        if (menu.expanded !== 'true' || !menu.visible || menu.links < 8) results.at(-1).failures.push('mobile menu interaction failed');
-        await capture(cdp, route === '/' ? 'mobile-home-menu.png' : 'mobile-universities-menu.png', false);
+        const menu = await evaluate(cdp, `(() => { const button = document.querySelector('${navButtonSelector}'); button?.click(); const nav = ${navLookupExpression}; return { expanded: button?.getAttribute('aria-expanded'), visible: nav ? getComputedStyle(nav).display !== 'none' : false, links: nav ? [...nav.querySelectorAll('a')].filter(a => { const r=a.getBoundingClientRect(); return r.width >= 1 && r.height >= 40; }).length : 0 }; })()`);
+        if (menu.expanded !== 'true' || !menu.visible || menu.links < 3) results.at(-1).failures.push('mobile menu interaction failed');
+        if (route === '/' || route === '/universities' || route === '/join' || route === '/privacy') {
+          await capture(cdp, route === '/' ? 'mobile-home-menu.png' : `mobile-${routeName}-menu.png`, false);
+        }
       } else {
         if (route === '/') await capture(cdp, 'desktop-home.png', false);
       }

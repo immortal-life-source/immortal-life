@@ -295,9 +295,16 @@
 </head>
 <body>
   <div class="m-shell join-page">
-    <header class="join-top">
+    <header class="join-top m-page-head">
       <a href="/" class="m-logo" style="text-decoration: none;" aria-label="immortal.life home"><img src="/linkedin-app-logo.png" width="38" height="38" alt="" decoding="async" /><span>immortal.life</span></a>
-      <nav class="join-top-links" aria-label="Page links"><a href="/research">Research</a><a href="#" data-news-trigger>Project news</a></nav>
+      <button class="m-member-nav-toggle" type="button" aria-expanded="false" aria-controls="joinMemberNav" data-member-nav-toggle><span>Menu</span><i aria-hidden="true"></i></button>
+      <nav class="join-top-links m-member-nav" id="joinMemberNav" aria-label="Page links">
+        <a href="/learn">Start here</a>
+        <a href="/research">Research</a>
+        <a href="/leaderboard">Leaderboard</a>
+        <a href="/resources">Resources</a>
+        <a href="#" data-news-trigger>Project news</a>
+      </nav>
     </header>
 
     <main class="join-main">
@@ -310,7 +317,7 @@
           <li>Points, rankings, and something worth climbing for</li>
           <li>Invite-only. Small group. Early.</li>
         </ul>
-        <p class="join-what-disclaimer">No token exists. No token is promised. But the circle remembers who was early.</p>
+        <p class="join-what-disclaimer">No financial product is offered or promised. This is early community access, and the circle remembers who was early.</p>
       </div>
 
       <div class="join-card" id="formCard">
@@ -368,6 +375,7 @@
   </div>
 
   <script src="/il-config.js"></script>
+  <script src="/members-nav.js"></script>
   <script src="/join.js"></script>
   <script src="/news-modal.js"></script>
 </body>

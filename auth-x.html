@@ -19,8 +19,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,200;0,300;1,200;1,300&family=Instrument+Sans:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/members.css" />
   <style>
-    .ax-wrap {
+    .auth-member-shell {
       min-height: 100vh;
+      padding: 48px 28px;
+    }
+    .ax-wrap {
+      min-height: calc(100vh - 180px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -43,13 +47,25 @@
   </style>
 </head>
 <body>
-  <div class="m-shell ax-wrap">
+  <div class="m-shell auth-member-shell">
+    <header class="m-page-head">
+      <a href="/" class="m-logo" aria-label="immortal.life home"><img src="/linkedin-app-logo.png" width="38" height="38" alt="" decoding="async" /><span>immortal.life</span></a>
+      <button class="m-member-nav-toggle" type="button" aria-expanded="false" aria-controls="authXMemberNav" data-member-nav-toggle><span>Menu</span><i aria-hidden="true"></i></button>
+      <nav class="m-member-nav" id="authXMemberNav" aria-label="Member navigation">
+        <a href="/join">Members area</a>
+        <a href="/learn">Start here</a>
+        <a href="/research">Research</a>
+        <a href="/resources">Resources</a>
+      </nav>
+    </header>
+    <main class="ax-wrap">
     <div class="ax-inner">
-      <a href="/" class="m-logo ax-logo" aria-label="immortal.life home"><img src="/linkedin-app-logo.png" width="38" height="38" alt="" decoding="async" /><span>immortal.life</span></a>
       <p class="ax-msg" id="axMsg">Connecting your X account…</p>
     </div>
+    </main>
   </div>
   <script src="/il-config.js"></script>
+  <script src="/members-nav.js"></script>
   <script src="/auth-x.js"></script>
 </body>
 </html>

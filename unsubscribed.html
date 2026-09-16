@@ -16,10 +16,12 @@
   <meta name="twitter:description" content="By invitation only. Secure your place.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,200;0,300;1,200&family=Instrument+Sans:wght@300;400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/members.css">
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #070706; color: #ede9e0; font-family: 'Instrument Sans', sans-serif; font-weight: 300; min-height: 100vh; display: flex; align-items: center; justify-content: center; -webkit-font-smoothing: antialiased; }
-    .wrap { text-align: center; padding: 40px; }
+    body { background: #070706; color: #ede9e0; font-family: 'Instrument Sans', sans-serif; font-weight: 300; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+    .shell { min-height: 100vh; padding: 48px 28px; display: grid; grid-template-rows: auto 1fr; }
+    .wrap { text-align: center; padding: 40px; align-self: center; justify-self: center; }
     .logo { font-family: 'Cormorant', serif; font-weight: 200; font-size: 12px; letter-spacing: 0.35em; color: #b8955a; text-transform: lowercase; margin-bottom: 48px; display: block; }
     h1 { font-family: 'Cormorant', serif; font-weight: 200; font-size: clamp(40px, 6vw, 72px); letter-spacing: -0.02em; color: #ede9e0; margin-bottom: 20px; }
     p { font-size: 15px; line-height: 1.75; color: #8a8878; max-width: 400px; margin: 0 auto 32px; }
@@ -27,11 +29,24 @@
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <span class="logo">immortal.life</span>
-    <h1>You are unsubscribed.</h1>
-    <p>You have been removed from the list. No further emails will be sent.</p>
-    <a href="/">Return to immortal.life</a>
+  <div class="shell">
+    <header class="m-page-head">
+      <a href="/" class="m-logo" aria-label="immortal.life home"><img src="/linkedin-app-logo.png" width="40" height="40" alt="" decoding="async" /><span>immortal.life</span></a>
+      <button class="m-member-nav-toggle" type="button" aria-expanded="false" aria-controls="unsubscribedMemberNav" data-member-nav-toggle><span>Menu</span><i aria-hidden="true"></i></button>
+      <nav class="m-member-nav" id="unsubscribedMemberNav" aria-label="Member navigation">
+        <a href="/learn">Start here</a>
+        <a href="/research">Research</a>
+        <a href="/resources">Resources</a>
+        <a href="/join">Members</a>
+      </nav>
+    </header>
+    <main class="wrap">
+      <span class="logo">immortal.life</span>
+      <h1>You are unsubscribed.</h1>
+      <p>You have been removed from the list. No further emails will be sent.</p>
+      <a href="/">Return to immortal.life</a>
+    </main>
   </div>
+  <script src="/members-nav.js"></script>
 </body>
 </html>

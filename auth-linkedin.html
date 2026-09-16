@@ -11,20 +11,33 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant:wght@300&family=Instrument+Sans:wght@300;400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/members.css" />
   <style>
-    .auth-provider-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px; text-align: center; }
+    .auth-member-shell { min-height: 100vh; padding: 48px 28px; }
+    .auth-provider-wrap { min-height: calc(100vh - 180px); display: flex; align-items: center; justify-content: center; padding: 40px; text-align: center; }
     .auth-provider-inner { max-width: 400px; }
     .auth-provider-logo { margin-bottom: 32px; display: inline-block; text-decoration: none; }
     .auth-provider-msg { font-size: 15px; color: var(--off); line-height: 1.75; }
   </style>
 </head>
 <body>
-  <div class="m-shell auth-provider-wrap">
+  <div class="m-shell auth-member-shell">
+    <header class="m-page-head">
+      <a href="/" class="m-logo" aria-label="immortal.life home"><img src="/linkedin-app-logo.png" width="38" height="38" alt="" decoding="async" /><span>immortal.life</span></a>
+      <button class="m-member-nav-toggle" type="button" aria-expanded="false" aria-controls="linkedinMemberNav" data-member-nav-toggle><span>Menu</span><i aria-hidden="true"></i></button>
+      <nav class="m-member-nav" id="linkedinMemberNav" aria-label="Member navigation">
+        <a href="/join">Members area</a>
+        <a href="/learn">Start here</a>
+        <a href="/research">Research</a>
+        <a href="/resources">Resources</a>
+      </nav>
+    </header>
+    <main class="auth-provider-wrap">
     <div class="auth-provider-inner">
-      <a href="/" class="m-logo auth-provider-logo" aria-label="immortal.life home"><img src="/linkedin-app-logo.png" width="38" height="38" alt="" decoding="async" /><span>immortal.life</span></a>
       <p class="auth-provider-msg" id="linkedinAuthMsg">Connecting your LinkedIn account…</p>
     </div>
+    </main>
   </div>
   <script src="/il-config.js"></script>
+  <script src="/members-nav.js"></script>
   <script src="/auth-linkedin.js"></script>
 </body>
 </html>

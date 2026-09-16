@@ -28,6 +28,7 @@ const staticAssets = [
   'auth-linkedin.js',
   'dashboard.js',
   'leaderboard.js',
+  'members-nav.js',
   'news-modal.js',
   'spread-copy.js',
   'widget.js',
