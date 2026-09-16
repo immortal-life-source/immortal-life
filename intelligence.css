@@ -363,23 +363,23 @@ body[data-view="topics"] .intel-section { padding-top: clamp(38px, 4vw, 58px); }
 .learn-intro { display: grid; grid-template-columns: minmax(220px, .62fr) minmax(0, 1.38fr); gap: clamp(30px, 7vw, 96px); align-items: start; margin-bottom: 54px; }
 .learn-intro h2 { margin: 12px 0 0; font: 300 clamp(36px, 5vw, 64px)/1 var(--serif); }
 .learn-intro p { margin: 0; color: var(--muted); font-size: clamp(15px, 1.3vw, 18px); line-height: 1.8; }
-.learn-intro-copy { position: relative; min-height: clamp(330px, 35vw, 520px); display: grid; align-items: start; overflow: hidden; }
+.learn-intro-copy { position: relative; min-height: clamp(360px, 36vw, 540px); display: grid; align-items: start; overflow: hidden; }
 .learn-intro-copy p { position: relative; z-index: 2; max-width: 360px; }
-.learn-silhouette { --learn-silhouette-x: 0; position: absolute; right: clamp(10px, 7vw, 104px); top: clamp(2px, 1vw, 18px); width: clamp(210px, 26vw, 370px); aspect-ratio: .56; opacity: .72; filter: drop-shadow(0 0 34px rgba(184,149,90,.12)); animation: learnSilhouetteAppear 9s ease-in-out infinite; }
-.learn-silhouette::before, .learn-silhouette::after { content: ''; position: absolute; inset: 8% 20% 7%; border: 1px solid rgba(184,149,90,.14); border-radius: 46% 46% 42% 42%; transform: scale(.86); animation: learnSilhouetteField 9s ease-in-out infinite; }
-.learn-silhouette::after { inset: 14% 27% 17%; border-color: rgba(110,183,168,.12); animation-delay: -2.8s; }
+.learn-silhouette { --learn-silhouette-x: 0; position: absolute; right: clamp(42px, 13vw, 178px); top: clamp(4px, 1.2vw, 24px); width: clamp(270px, 31vw, 440px); aspect-ratio: .56; opacity: .86; filter: drop-shadow(0 0 44px rgba(184,149,90,.2)); animation: learnSilhouetteAppear 9s ease-in-out infinite; }
+.learn-silhouette::before, .learn-silhouette::after { content: ''; position: absolute; inset: 8% 20% 7%; border: 1px solid rgba(184,149,90,.24); border-radius: 46% 46% 42% 42%; transform: scale(.86); animation: learnSilhouetteField 9s ease-in-out infinite; }
+.learn-silhouette::after { inset: 14% 27% 17%; border-color: rgba(110,183,168,.2); animation-delay: -2.8s; }
 .learn-silhouette__halo, .learn-silhouette__head, .learn-silhouette__torso, .learn-silhouette__arm, .learn-silhouette__leg, .learn-silhouette__node { position: absolute; display: block; left: 50%; transform: translateX(-50%); }
-.learn-silhouette__halo { top: 0; width: 52%; aspect-ratio: 1; border: 1px solid rgba(184,149,90,.16); border-radius: 999px; background: radial-gradient(circle, rgba(184,149,90,.14), transparent 60%); animation: learnSilhouettePulse 5.8s ease-in-out infinite; }
-.learn-silhouette__head { top: 9%; width: 17%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 45% 34%, rgba(237,233,224,.35), rgba(184,149,90,.18) 48%, rgba(7,7,6,.02) 72%); border: 1px solid rgba(237,233,224,.12); }
-.learn-silhouette__torso { top: 27%; width: 30%; height: 36%; border-radius: 48% 48% 38% 38%; background: linear-gradient(180deg, rgba(237,233,224,.18), rgba(184,149,90,.09) 58%, rgba(110,183,168,.045)); border: 1px solid rgba(184,149,90,.12); }
+.learn-silhouette__halo { top: 0; width: 52%; aspect-ratio: 1; border: 1px solid rgba(184,149,90,.26); border-radius: 999px; background: radial-gradient(circle, rgba(184,149,90,.22), transparent 60%); animation: learnSilhouettePulse 5.8s ease-in-out infinite; }
+.learn-silhouette__head { top: 9%; width: 17%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 45% 34%, rgba(237,233,224,.48), rgba(184,149,90,.28) 48%, rgba(7,7,6,.04) 72%); border: 1px solid rgba(237,233,224,.2); }
+.learn-silhouette__torso { top: 27%; width: 30%; height: 36%; border-radius: 48% 48% 38% 38%; background: linear-gradient(180deg, rgba(237,233,224,.26), rgba(184,149,90,.15) 58%, rgba(110,183,168,.075)); border: 1px solid rgba(184,149,90,.22); }
 .learn-silhouette__torso::before { content: ''; position: absolute; left: 50%; top: 7%; bottom: 9%; border-left: 1px solid rgba(184,149,90,.22); box-shadow: 0 0 18px rgba(184,149,90,.18); }
-.learn-silhouette__arm { top: 32%; width: 30%; height: 1px; background: linear-gradient(90deg, transparent, rgba(184,149,90,.22), transparent); transform-origin: center; }
+.learn-silhouette__arm { top: 32%; width: 30%; height: 1px; background: linear-gradient(90deg, transparent, rgba(184,149,90,.36), transparent); transform-origin: center; }
 .learn-silhouette__arm--left { transform: translateX(-82%) rotate(-58deg); }
 .learn-silhouette__arm--right { transform: translateX(-18%) rotate(58deg); }
-.learn-silhouette__leg { top: 62%; width: 32%; height: 1px; background: linear-gradient(90deg, transparent, rgba(184,149,90,.2), transparent); transform-origin: center; }
+.learn-silhouette__leg { top: 62%; width: 32%; height: 1px; background: linear-gradient(90deg, transparent, rgba(184,149,90,.32), transparent); transform-origin: center; }
 .learn-silhouette__leg--left { transform: translateX(-78%) rotate(-72deg); }
 .learn-silhouette__leg--right { transform: translateX(-22%) rotate(72deg); }
-.learn-silhouette__node { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 18px rgba(184,149,90,.5); animation: learnSilhouetteNode 4.8s ease-in-out infinite; }
+.learn-silhouette__node { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 22px rgba(184,149,90,.7); animation: learnSilhouetteNode 4.8s ease-in-out infinite; }
 .learn-silhouette__node--one { left: 50%; top: 43%; }
 .learn-silhouette__node--two { left: 38%; top: 58%; animation-delay: .8s; background: var(--teal); }
 .learn-silhouette__node--three { left: 62%; top: 72%; animation-delay: 1.6s; background: var(--violet); }
@@ -588,8 +588,8 @@ body[data-view="topics"] .intel-section { padding-top: clamp(38px, 4vw, 58px); }
 }
 
 @keyframes learnSilhouetteAppear {
-  0%, 100% { opacity: .18; transform: translateX(var(--learn-silhouette-x)) translateY(16px) scale(.985); }
-  34%, 68% { opacity: .78; transform: translateX(var(--learn-silhouette-x)) translateY(0) scale(1); }
+  0%, 100% { opacity: .3; transform: translateX(var(--learn-silhouette-x)) translateY(16px) scale(.985); }
+  34%, 68% { opacity: .92; transform: translateX(var(--learn-silhouette-x)) translateY(0) scale(1); }
 }
 
 @keyframes learnSilhouetteField {
