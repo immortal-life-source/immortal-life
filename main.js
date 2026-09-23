@@ -443,7 +443,7 @@ window.handleSubmit = handleSubmit;
     return clean.length > limit ? `${clean.slice(0, limit - 1).trim()}…` : clean;
   }
 
-  function renderToday(feedItems, changeItems, regulatory, university) {
+  function renderToday(feedItems, changeItems, currentTrial, regulatory, university) {
     const root = document.getElementById('todayGrid');
     if (!root) return;
     const combined = [...changeItems, ...feedItems].map((item) => ({ ...item, kind: recordKind(item) }));
@@ -452,7 +452,11 @@ window.handleSubmit = handleSubmit;
       return items.filter((item) => { const key = `${item.url || ''}|${item.title || ''}`; if (!key || seen.has(key)) return false; seen.add(key); return true; });
     };
     const developments = unique(combined.filter((item) => item.kind === 'research' || item.kind === 'integrity')).slice(0, 3);
-    const trial = combined.find((item) => item.kind === 'trials');
+    const trial = currentTrial ? {
+      kind: 'trials', title: currentTrial.title,
+      content_text: `Registry status: ${String(currentTrial.overall_status || 'not supplied').replaceAll('_', ' ').toLowerCase()}. Last source update ${currentTrial.last_update_date ? new Date(`${currentTrial.last_update_date}T00:00:00Z`).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' }) : 'date unavailable'}. Registration is not proof of safety or effectiveness.`,
+      date_published: currentTrial.last_update_date, url: `/trials/${currentTrial.id}`,
+    } : combined.find((item) => item.kind === 'trials');
     const official = regulatory ? {
       kind: 'regulatory', title: regulatory.title, content_text: regulatory.summary,
       date_published: regulatory.published_at, url: `/regulatory/${regulatory.id}`,
@@ -485,12 +489,13 @@ window.handleSubmit = handleSubmit;
 
   Promise.all([
     optionalJson('/feed.json'), optionalJson('/changes/feed.json'),
+    optionalJson(`${window.IL_FN_BASE}/public-intelligence?view=trials&limit=1`, { headers: window.ilFnHeaders() }),
     optionalJson(`${window.IL_FN_BASE}/public-intelligence?view=regulatory&limit=1`, { headers: window.ilFnHeaders() }),
     optionalJson(`${window.IL_FN_BASE}/public-intelligence?view=universities&sort=momentum&limit=1`, { headers: window.ilFnHeaders() }),
-  ]).then(([feed, changes, regulatoryData, universityData]) => {
+  ]).then(([feed, changes, trialData, regulatoryData, universityData]) => {
     const feedItems = Array.isArray(feed?.items) ? feed.items : [];
     const changeItems = Array.isArray(changes?.items) ? changes.items : [];
-    renderToday(feedItems, changeItems, regulatoryData?.regulatory?.[0], universityData?.universities?.[0]);
+    renderToday(feedItems, changeItems, trialData?.trials?.[0], regulatoryData?.regulatory?.[0], universityData?.universities?.[0]);
     const status = document.getElementById('homeDataStatus');
     if (status) status.textContent = `Live index checked ${new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}. Every item links to its original record.`;
     if (previousVisit) {

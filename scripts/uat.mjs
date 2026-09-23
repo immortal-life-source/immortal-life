@@ -113,10 +113,13 @@ async function waitForReady(cdp) {
 }
 
 async function capture(cdp, name, fullPage = false) {
+  const metrics = fullPage ? await cdp.call('Page.getLayoutMetrics') : null;
+  const size = metrics?.cssContentSize || metrics?.contentSize;
   const shot = await cdp.call('Page.captureScreenshot', {
     format: 'png',
     captureBeyondViewport: fullPage,
     fromSurface: true,
+    ...(size ? { clip: { x: 0, y: 0, width: Math.ceil(size.width), height: Math.ceil(size.height), scale: 1 } } : {}),
   });
   const target = join(artifacts, name);
   writeFileSync(target, Buffer.from(shot.data, 'base64'));
@@ -149,6 +152,14 @@ async function runViewport(cdp, profileName, width, height, mobile) {
       ,unlabelledInputs: [...document.querySelectorAll('input,select,textarea')].filter(el => !el.closest('label') && !(el.id && document.querySelector('label[for="' + CSS.escape(el.id) + '"]')) && !el.getAttribute('aria-label') && !el.getAttribute('aria-labelledby')).length
       ,genericLinks: [...document.querySelectorAll('a')].filter(a => /^(click here|learn more|read more)$/i.test((a.textContent || '').trim())).length
       ,smallControls: [...document.querySelectorAll('button,a,input,select')].filter(el => { const r=el.getBoundingClientRect(); const s=getComputedStyle(el); return r.width>0 && r.height>0 && (el.tagName==='BUTTON' || el.tagName==='INPUT' || el.tagName==='SELECT') && r.height<40 && s.position!=='absolute'; }).slice(0,8).map(el => ({tag:el.tagName,id:el.id,className:el.className,height:Math.round(el.getBoundingClientRect().height)}))
+      ,todayCards: document.querySelectorAll('#todayGrid .today-card').length
+      ,systemMapLower: Boolean(document.querySelector('.home-explorer .hero-orbit'))
+      ,timelineVisible: (() => { const el=document.getElementById('timelineSection'); return el ? !el.hidden : null; })()
+      ,timelineEvents: document.querySelectorAll('#evidenceTimeline .timeline-event').length
+      ,graphMechanisms: document.querySelectorAll('#evidenceGraph .graph-node--mechanism').length
+      ,graphUniversities: document.querySelectorAll('#evidenceGraph .graph-node--university').length
+      ,trialWorldMapNodes: document.querySelectorAll('.trial-world-map .trial-map-node').length
+      ,recordGuideLabels: [...document.querySelectorAll('.record-meaning dt')].map(el => el.textContent.trim())
     }))()`);
     const recentEvents = cdp.events.slice(eventStart);
     const exceptions = recentEvents.filter((event) => event.method === 'Runtime.exceptionThrown').map((event) => event.params?.exceptionDetails?.text || 'runtime exception');
@@ -165,6 +176,12 @@ async function runViewport(cdp, profileName, width, height, mobile) {
     if (!state.logoLoaded) failures.push('brand mark failed to load');
     if (mobile && state.menuButtonVisible !== true) failures.push('mobile menu button hidden or missing');
     if (route === '/' && !mobile && state.menuButtonVisible !== false) failures.push('desktop menu button visible');
+    if (route === '/' && state.todayCards !== 6) failures.push(`daily briefing has ${state.todayCards} cards instead of 6`);
+    if (route === '/' && !state.systemMapLower) failures.push('interactive system map is not below the hero');
+    if (route === '/topics/rapamycin' && (!state.timelineVisible || state.timelineEvents < 1)) failures.push('topic evidence timeline did not render');
+    if (route === '/evidence-graph' && (state.graphMechanisms < 1 || state.graphUniversities < 1)) failures.push(`graph missing layers: ${state.graphMechanisms} mechanisms, ${state.graphUniversities} universities`);
+    if (route === '/discover/recruiting-trials' && state.trialWorldMapNodes < 1) failures.push('trial world map did not render country nodes');
+    if (/^\/research\/\d+$/.test(route) && !['What this is','Why it may matter','Evidence','Main limitation','What changed','Where to verify'].every(label => state.recordGuideLabels.includes(label))) failures.push('research record plain-language guide is incomplete');
     failures.push(...exceptions, ...consoleErrors);
     results.push({ profile: profileName, route, resolvedUrl: state.url, failures });
 

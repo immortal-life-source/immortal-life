@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,300&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <link rel="icon" href="/favicon.ico" type="image/x-icon" />
-  <link rel="stylesheet" href="/intelligence.css?v=20260924-complete-atlas" />
+  <link rel="stylesheet" href="/intelligence.css?v=20260924-final-uat" />
 </head>
 <body data-view="{{PAGE_VIEW}}" data-topic="{{TOPIC_SLUG}}">
   <header class="intel-header">
@@ -70,6 +70,15 @@
       <div class="topic-grid" id="topicGrid"></div>
     </section>
 
+    <section class="intel-section evidence-timeline-section" id="timelineSection" hidden>
+      <div class="section-heading">
+        <div><span class="section-index">How this topic changed</span><h2>Evidence timeline</h2></div>
+        <a href="/changes" class="section-link">Open the full change log</a>
+      </div>
+      <p class="timeline-intro">A source-linked history of new records, trial changes, official notices, corrections, and retractions. This shows movement in the evidence—not whether a treatment works.</p>
+      <ol class="evidence-timeline" id="evidenceTimeline"></ol>
+    </section>
+
     <section class="intel-section" id="researchSection" hidden>
       <div class="section-heading">
         <div><span class="section-index">Research updates</span><h2>New research records</h2></div>
@@ -86,15 +95,6 @@
       </div>
       <div class="filter-row" id="trialFilters" hidden></div>
       <div class="record-list" id="trialList"></div>
-    </section>
-
-    <section class="intel-section evidence-timeline-section" id="timelineSection" hidden>
-      <div class="section-heading">
-        <div><span class="section-index">How this topic changed</span><h2>Evidence timeline</h2></div>
-        <a href="/changes" class="section-link">Open the full change log</a>
-      </div>
-      <p class="timeline-intro">A source-linked history of new records, trial changes, official notices, corrections, and retractions. This shows movement in the evidence—not whether a treatment works.</p>
-      <ol class="evidence-timeline" id="evidenceTimeline"></ol>
     </section>
 
     <section class="intel-section" id="regulatorySection" hidden>
@@ -253,7 +253,7 @@
   <nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/discover"><span aria-hidden="true">◇</span>Explore</a><a href="/dashboard"><span aria-hidden="true">☆</span>Saved</a><a href="/changes"><span aria-hidden="true">↻</span>Updates</a><button type="button" data-mobile-menu-open><span aria-hidden="true">☰</span>Menu</button></nav>
 
   <script src="/il-config.js"></script>
-  <script src="/intelligence.js?v=20260924-complete-atlas"></script>
+  <script src="/intelligence.js?v=20260924-final-uat"></script>
   <script src="/telemetry.js"></script>
 </body>
 </html>

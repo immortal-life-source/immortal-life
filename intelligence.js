@@ -955,8 +955,8 @@
         renderSources(data.sources || [], true);
       } else if (view === 'topic') {
         const [research, trials, topics, timeline] = await Promise.all([
-          request('research', 40),
-          request('trials', 40),
+          request('research', 12),
+          request('trials', 12),
           request('topics', 100),
           request('timeline', 40),
         ]);
