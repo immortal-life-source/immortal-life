@@ -16,6 +16,15 @@ test('homepage is organised around useful visitor goals and live updates', async
   assert.match(js, /il_saved_topics/)
 })
 
+test('desktop homepage keeps navigation compact and motion clear of the headline', async () => {
+  const [html, css, js] = await Promise.all([read('index.html'), read('style.css'), read('main.js')])
+  assert.match(html, /class="s1-nav-more-toggle"/)
+  assert.match(html, /id="homeMoreNav"/)
+  assert.match(css, /width: min\(760px, 52vw\)/)
+  assert.match(css, /--orbit-size: clamp\(380px, 31vw, 480px\)/)
+  assert.match(js, /setMoreMenu/)
+})
+
 test('public page shells provide search, reading levels, related journeys and mobile navigation', async () => {
   const files = await Promise.all([
     read('intelligence-template.html'),
