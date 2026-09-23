@@ -17,6 +17,20 @@ test('personal radar supports useful private watches without a forum', () => {
   assert.doesNotMatch(migration, /create table[^;]*(forum|comment|post)/i);
 });
 
+test('personal radar and weekly briefings exclude routine record noise', () => {
+  const member = read('supabase/functions/member-intelligence/index.ts');
+  const briefing = read('supabase/functions/generate-briefings/index.ts');
+  for (const source of [member, briefing]) {
+    assert.match(source, /MEANINGFUL_EVENT_TYPES/);
+    assert.match(source, /trial_status_changed/);
+    assert.match(source, /new_regulatory_notice/);
+    assert.match(source, /new_integrity_event/);
+    assert.match(source, /isMeaningfulEvent\(event\)/);
+  }
+  assert.doesNotMatch(member.match(/MEANINGFUL_EVENT_TYPES[^\n]+/)?.[0] || '', /new_research|new_trial/);
+  assert.doesNotMatch(briefing.match(/MEANINGFUL_EVENT_TYPES[^\n]+/)?.[0] || '', /new_research|new_trial/);
+});
+
 test('meaningful changes have public pages, feeds, social cards, and navigation', () => {
   const config = JSON.parse(read('vercel.json'));
   const sources = new Set(config.rewrites.map((rewrite) => rewrite.source));

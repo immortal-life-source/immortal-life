@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,300&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <link rel="icon" href="/favicon.ico" type="image/x-icon" />
-  <link rel="stylesheet" href="/intelligence.css?v=20260923-living-atlas" />
+  <link rel="stylesheet" href="/intelligence.css?v=20260924-complete-atlas" />
 </head>
 <body data-view="{{PAGE_VIEW}}" data-topic="{{TOPIC_SLUG}}">
   <header class="intel-header">
@@ -88,6 +88,15 @@
       <div class="record-list" id="trialList"></div>
     </section>
 
+    <section class="intel-section evidence-timeline-section" id="timelineSection" hidden>
+      <div class="section-heading">
+        <div><span class="section-index">How this topic changed</span><h2>Evidence timeline</h2></div>
+        <a href="/changes" class="section-link">Open the full change log</a>
+      </div>
+      <p class="timeline-intro">A source-linked history of new records, trial changes, official notices, corrections, and retractions. This shows movement in the evidence—not whether a treatment works.</p>
+      <ol class="evidence-timeline" id="evidenceTimeline"></ol>
+    </section>
+
     <section class="intel-section" id="regulatorySection" hidden>
       <div class="section-heading">
         <div><span class="section-index">Official notices</span><h2>Regulatory updates</h2></div>
@@ -112,11 +121,11 @@
       <div class="evidence-graph-wrap">
         <svg id="evidenceGraph" class="evidence-graph" viewBox="0 0 1200 720" role="img" aria-labelledby="graphTitle graphDescription">
           <title id="graphTitle">Longevity evidence graph</title>
-          <desc id="graphDescription">A map connecting tracked longevity topics to research, trials, regulatory notices, research integrity events, and overlapping evidence.</desc>
+          <desc id="graphDescription">A map connecting longevity topics and biological mechanisms to research, trials, regulatory notices, universities, integrity events, and overlapping evidence.</desc>
         </svg>
       </div>
       <div class="graph-legend" aria-label="Graph legend">
-        <span><i data-kind="topic"></i>Topic</span><span><i data-kind="research"></i>Research</span><span><i data-kind="trial"></i>Trials</span><span><i data-kind="regulatory"></i>Regulatory</span><span><i data-kind="integrity"></i>Integrity</span>
+        <span><i data-kind="topic"></i>Topic</span><span><i data-kind="mechanism"></i>Mechanism</span><span><i data-kind="research"></i>Research</span><span><i data-kind="trial"></i>Trials</span><span><i data-kind="regulatory"></i>Regulatory</span><span><i data-kind="integrity"></i>Integrity</span><span><i data-kind="university"></i>Universities</span>
       </div>
       <div id="graphFallback" class="graph-fallback"></div>
     </section>
@@ -224,7 +233,7 @@
       <p>No uncited fallback content has been substituted. Please try again shortly.</p>
       <button type="button" id="retryButton">Retry</button>
     </div>
-    <nav class="next-journey" aria-label="Continue exploring"><span>Continue exploring</span><a href="/changes">What changed today</a><a href="/topics">Choose a topic</a><a href="/discover/recruiting-trials">Find trials</a><a href="/universities">Compare universities</a></nav>
+    <nav class="next-journey" id="relatedJourneys" aria-label="Continue exploring"><span>Continue exploring</span><a href="/changes">What changed today</a><a href="/topics">Choose a topic</a><a href="/discover/recruiting-trials">Find trials</a><a href="/universities">Compare universities</a></nav>
   </main>
 
   <footer class="intel-footer">
@@ -244,7 +253,7 @@
   <nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/discover"><span aria-hidden="true">◇</span>Explore</a><a href="/dashboard"><span aria-hidden="true">☆</span>Saved</a><a href="/changes"><span aria-hidden="true">↻</span>Updates</a><button type="button" data-mobile-menu-open><span aria-hidden="true">☰</span>Menu</button></nav>
 
   <script src="/il-config.js"></script>
-  <script src="/intelligence.js?v=20260923-living-atlas"></script>
+  <script src="/intelligence.js?v=20260924-complete-atlas"></script>
   <script src="/telemetry.js"></script>
 </body>
 </html>

@@ -4,6 +4,12 @@ import { corsHeaders, serviceRoleKey } from '../_shared/security.ts'
 
 const PUBLIC_METHODS = 'GET, OPTIONS'
 const STRICT_TITLE_CONTEXT_TOPICS = new Set(['glp-1-therapies', 'exercise', 'caloric-restriction', 'sleep', 'plasma-exchange', 'stem-cells', 'gene-therapy'])
+const TOPIC_MECHANISMS: Record<string, string> = {
+  'rapamycin': 'mTOR signalling', 'senolytics': 'Cellular senescence', 'partial-reprogramming': 'Epigenetic resetting',
+  'metformin': 'AMPK and metabolism', 'glp-1-therapies': 'Incretin signalling', 'exercise': 'Mitochondrial adaptation',
+  'caloric-restriction': 'Nutrient sensing', 'sleep': 'Circadian regulation', 'epigenetic-clocks': 'DNA methylation',
+  'plasma-exchange': 'Circulating factors', 'stem-cells': 'Tissue regeneration', 'gene-therapy': 'Gene delivery and editing',
+}
 
 function publicRelations(record: any, field: string): any[] {
   return (record?.[field] ?? []).filter((relation: any) => {
@@ -299,34 +305,66 @@ Deno.serve(async (req) => {
       return response(req, { regulatory: data ?? [], sources: (sources ?? []).map(publicSourceState) })
     }
 
+    if (view === 'timeline') {
+      if (!topic) return response(req, { error: 'Topic is required' }, 400)
+      const [{ data: events, error }, { data: topicRow, error: topicError }, { data: sources, error: sourcesError }] = await Promise.all([
+        supabase.from('intelligence_change_events')
+          .select('id,event_type,importance,record_type,record_id,title,source_url,occurred_at,topic_slugs,metadata')
+          .contains('topic_slugs', [topic]).order('occurred_at', { ascending: false }).limit(limit),
+        supabase.from('intelligence_topics').select('slug,name,description').eq('slug', topic).eq('enabled', true).maybeSingle(),
+        sourcesPromise,
+      ])
+      if (error) throw error
+      if (topicError) throw topicError
+      if (sourcesError) throw sourcesError
+      const related = new Map<string, number>()
+      for (const event of events ?? []) for (const slug of event.topic_slugs ?? []) if (slug !== topic) related.set(slug, (related.get(slug) ?? 0) + 1)
+      const relatedSlugs = [...related.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6)
+      let relatedTopics: any[] = []
+      if (relatedSlugs.length) {
+        const result = await supabase.from('intelligence_topics').select('slug,name,description').in('slug', relatedSlugs.map(([slug]) => slug))
+        if (result.error) throw result.error
+        const bySlug = new Map((result.data ?? []).map((item: any) => [item.slug, item]))
+        relatedTopics = relatedSlugs.map(([slug, shared_events]) => ({ ...bySlug.get(slug), shared_events })).filter((item: any) => item.slug)
+      }
+      return response(req, { generated_at: new Date().toISOString(), topic: topicRow, events: events ?? [], related_topics: relatedTopics, sources: (sources ?? []).map(publicSourceState) })
+    }
+
     if (view === 'graph') {
-      const [topicsResult, researchLinks, trialLinks, regulatoryResult, integrityResult, sourcesResult] = await Promise.all([
+      const [topicsResult, researchLinks, trialLinks, regulatoryResult, integrityResult, universityLinks, sourcesResult] = await Promise.all([
         supabase.rpc('get_intelligence_topic_counts'),
         supabase.from('research_item_topics').select('research_item_id,topic_slug,matched_fields,research_items!inner(publication_state)').eq('is_published', true).eq('research_items.publication_state', 'published').limit(5000),
         supabase.from('clinical_trial_topics').select('clinical_trial_id,topic_slug,matched_fields,clinical_trials!inner(publication_state)').eq('is_published', true).eq('clinical_trials.publication_state', 'published').limit(5000),
         supabase.from('regulatory_events').select('matched_topics').eq('publication_state', 'published').limit(1000),
         supabase.from('research_integrity_events').select('research_items(research_item_topics(topic_slug,is_published))').eq('publication_state', 'published').limit(1000),
+        supabase.from('university_research_topic_metrics').select('topic_slug,works_five_year').gt('works_five_year', 0).limit(5000),
         sourcesPromise,
       ])
-      for (const result of [topicsResult, researchLinks, trialLinks, regulatoryResult, integrityResult, sourcesResult]) if (result.error) throw result.error
+      for (const result of [topicsResult, researchLinks, trialLinks, regulatoryResult, integrityResult, universityLinks, sourcesResult]) if (result.error) throw result.error
       const topics = topicsResult.data ?? []
       const visibleResearchLinks = publicLinkRows(researchLinks.data)
       const visibleTrialLinks = publicLinkRows(trialLinks.data)
       const researchTopicCounts = new Map<string, number>()
       const trialTopicCounts = new Map<string, number>()
+      const universityTopicCounts = new Map<string, number>()
       for (const row of visibleResearchLinks) researchTopicCounts.set(row.topic_slug, (researchTopicCounts.get(row.topic_slug) ?? 0) + 1)
       for (const row of visibleTrialLinks) trialTopicCounts.set(row.topic_slug, (trialTopicCounts.get(row.topic_slug) ?? 0) + 1)
+      for (const row of universityLinks.data ?? []) universityTopicCounts.set(row.topic_slug, (universityTopicCounts.get(row.topic_slug) ?? 0) + Number(row.works_five_year ?? 0))
       const nodes = topics.map((item: any) => ({ id: `topic:${item.slug}`, slug: item.slug, label: item.name, kind: 'topic', weight: (researchTopicCounts.get(item.slug) ?? 0) + (trialTopicCounts.get(item.slug) ?? 0) }))
       nodes.push(
         { id: 'layer:research', label: 'Research', kind: 'evidence', weight: visibleResearchLinks.length },
         { id: 'layer:trials', label: 'Trials', kind: 'evidence', weight: visibleTrialLinks.length },
         { id: 'layer:regulatory', label: 'Regulatory', kind: 'evidence', weight: regulatoryResult.data?.length ?? 0 },
         { id: 'layer:integrity', label: 'Integrity', kind: 'evidence', weight: integrityResult.data?.length ?? 0 },
+        { id: 'layer:universities', label: 'Universities', kind: 'university', weight: universityLinks.data?.length ?? 0 },
       )
+      for (const [slug, label] of Object.entries(TOPIC_MECHANISMS)) nodes.push({ id: `mechanism:${slug}`, label, kind: 'mechanism', weight: 1, slug })
       const links: Array<{ source: string; target: string; kind: string; weight: number }> = []
       for (const item of topics) {
         links.push({ source: `topic:${item.slug}`, target: 'layer:research', kind: 'research', weight: researchTopicCounts.get(item.slug) ?? 0 })
         links.push({ source: `topic:${item.slug}`, target: 'layer:trials', kind: 'trial', weight: trialTopicCounts.get(item.slug) ?? 0 })
+        links.push({ source: `topic:${item.slug}`, target: 'layer:universities', kind: 'university', weight: universityTopicCounts.get(item.slug) ?? 0 })
+        if (TOPIC_MECHANISMS[item.slug]) links.push({ source: `topic:${item.slug}`, target: `mechanism:${item.slug}`, kind: 'mechanism', weight: 1 })
       }
       const regulatoryCounts = new Map<string, number>()
       for (const item of regulatoryResult.data ?? []) for (const slug of item.matched_topics ?? []) regulatoryCounts.set(slug, (regulatoryCounts.get(slug) ?? 0) + 1)

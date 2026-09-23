@@ -430,6 +430,7 @@ window.handleSubmit = handleSubmit;
   localStorage.setItem('il_last_visit', new Date().toISOString());
 
   function recordKind(item) {
+    if (item?.kind) return item.kind;
     const url = String(item?.url || '');
     if (url.includes('/trials/')) return 'trials';
     if (url.includes('/regulatory/')) return 'regulatory';
@@ -442,36 +443,54 @@ window.handleSubmit = handleSubmit;
     return clean.length > limit ? `${clean.slice(0, limit - 1).trim()}…` : clean;
   }
 
-  function renderToday(feedItems, changeItems) {
+  function renderToday(feedItems, changeItems, regulatory, university) {
     const root = document.getElementById('todayGrid');
     if (!root) return;
-    const candidates = [];
-    const seenKinds = new Set();
-    [...changeItems, ...feedItems].forEach((item) => {
-      const kind = recordKind(item);
-      if (candidates.length < 4 && (!seenKinds.has(kind) || candidates.length > 2)) {
-        candidates.push({ ...item, kind }); seenKinds.add(kind);
-      }
-    });
+    const combined = [...changeItems, ...feedItems].map((item) => ({ ...item, kind: recordKind(item) }));
+    const unique = (items) => {
+      const seen = new Set();
+      return items.filter((item) => { const key = `${item.url || ''}|${item.title || ''}`; if (!key || seen.has(key)) return false; seen.add(key); return true; });
+    };
+    const developments = unique(combined.filter((item) => item.kind === 'research' || item.kind === 'integrity')).slice(0, 3);
+    const trial = combined.find((item) => item.kind === 'trials');
+    const official = regulatory ? {
+      kind: 'regulatory', title: regulatory.title, content_text: regulatory.summary,
+      date_published: regulatory.published_at, url: `/regulatory/${regulatory.id}`,
+    } : { kind: 'regulatory', title: 'No new official notice matched this window', content_text: 'Official regulatory sources remain under automatic monitoring. Open Regulatory Watch to inspect the latest available notices.', url: '/regulatory' };
+    const campus = university ? {
+      kind: 'university', title: university.name,
+      content_text: `${Number(university.indexed_works_two_year || 0).toLocaleString('en')} recent topic-linked works across ${Number(university.indexed_topic_count || 0)} tracked areas. Activity is not a quality ranking.`,
+      date_published: university.updated_at, url: `/universities/${university.slug}`,
+    } : { kind: 'university', title: 'University activity is being refreshed', content_text: 'Open the global university index to compare topic breadth and recent research momentum.', url: '/universities' };
+    const candidates = [...developments];
+    while (candidates.length < 3) candidates.push({ kind: 'research', title: 'The live evidence index is current', content_text: 'No additional distinct research development passed the public checks in this window. Browse the full research feed for source-linked records.', url: '/research' });
+    candidates.push(trial || { kind: 'trials', title: 'No new trial status change matched this window', content_text: 'Trial registries remain under automatic monitoring. Open Trial Radar for current registry statuses.', url: '/trials' }, official, campus);
     root.replaceChildren();
     if (!candidates.length) { root.append(Object.assign(document.createElement('article'), { className: 'today-loading', textContent: 'The live index is current; no new eligible records are available in this window.' })); return; }
-    candidates.slice(0, 4).forEach((item) => {
+    candidates.slice(0, 6).forEach((item) => {
       const card = document.createElement('a');
       card.className = 'today-card'; card.dataset.kind = item.kind; card.href = item.url || '/changes';
-      const label = document.createElement('span'); label.textContent = `${item.kind === 'trials' ? 'Trial' : item.kind === 'integrity' ? 'Evidence change' : item.kind === 'regulatory' ? 'Official notice' : 'Research'} · ${item.date_published ? new Date(item.date_published).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : 'Latest'}`;
+      const labels = { trials: 'Trial status', integrity: 'Evidence change', regulatory: 'Official signal', university: 'University momentum', research: 'Development' };
+      const label = document.createElement('span'); label.textContent = `${labels[item.kind] || 'Update'} · ${item.date_published ? new Date(item.date_published).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : 'Latest check'}`;
       const heading = document.createElement('h3'); heading.textContent = shortCopy(item.title, 92);
       const copy = document.createElement('p'); copy.textContent = shortCopy(item.content_text || 'Open the source-linked record to see what changed and why it appears here.');
       card.append(label, heading, copy); root.append(card);
     });
   }
 
+  const optionalJson = (url, options) => fetch(url, options).then((response) => response.ok ? response.json() : null).catch(() => null);
+  const systemMap = document.getElementById('systemMapTemplate');
+  const mapTarget = document.getElementById('explorerSystemMap');
+  if (systemMap && mapTarget) mapTarget.append(systemMap.content.cloneNode(true));
+
   Promise.all([
-    fetch('/feed.json').then((response) => response.ok ? response.json() : Promise.reject(new Error('feed unavailable'))),
-    fetch('/changes/feed.json').then((response) => response.ok ? response.json() : Promise.reject(new Error('changes unavailable'))),
-  ]).then(([feed, changes]) => {
-    const feedItems = Array.isArray(feed.items) ? feed.items : [];
-    const changeItems = Array.isArray(changes.items) ? changes.items : [];
-    renderToday(feedItems, changeItems);
+    optionalJson('/feed.json'), optionalJson('/changes/feed.json'),
+    optionalJson(`${window.IL_FN_BASE}/public-intelligence?view=regulatory&limit=1`, { headers: window.ilFnHeaders() }),
+    optionalJson(`${window.IL_FN_BASE}/public-intelligence?view=universities&sort=momentum&limit=1`, { headers: window.ilFnHeaders() }),
+  ]).then(([feed, changes, regulatoryData, universityData]) => {
+    const feedItems = Array.isArray(feed?.items) ? feed.items : [];
+    const changeItems = Array.isArray(changes?.items) ? changes.items : [];
+    renderToday(feedItems, changeItems, regulatoryData?.regulatory?.[0], universityData?.universities?.[0]);
     const status = document.getElementById('homeDataStatus');
     if (status) status.textContent = `Live index checked ${new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}. Every item links to its original record.`;
     if (previousVisit) {

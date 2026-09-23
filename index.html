@@ -30,7 +30,7 @@
 
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
 
-  <link rel="stylesheet" href="/style.css?v=20260923-living-atlas" />
+  <link rel="stylesheet" href="/style.css?v=20260924-complete-atlas" />
 </head>
 
 <body>
@@ -128,6 +128,8 @@
         </nav>
       </div>
 
+      <!-- The interactive system map lives lower on the page so the opening message stays calm and readable. -->
+      <template id="systemMapTemplate">
       <nav class="hero-orbit" aria-label="Explore longevity intelligence">
         <div class="hero-orbit-visual" aria-hidden="true">
           <span class="hero-orbit-ring hero-orbit-ring--outer"></span>
@@ -176,6 +178,7 @@
           </div>
         </div>
       </nav>
+      </template>
     </div>
 
     <!-- Hero footer -->
@@ -215,6 +218,13 @@
         <a href="/topics/rapamycin" data-tone="teal">Rapamycin</a><a href="/topics/senolytics" data-tone="violet">Senolytics</a><a href="/topics/epigenetic-clocks" data-tone="blue">Epigenetic clocks</a><a href="/topics/exercise" data-tone="green">Exercise</a><a href="/topics/stem-cells" data-tone="coral">Stem cells</a><a href="/topics/caloric-restriction" data-tone="gold">Caloric restriction</a>
       </nav>
       <div class="explorer-story reveal"><span>One topic, four views</span><ol><li><b>Understand</b><small>A plain-language topic guide</small></li><li><b>Check evidence</b><small>Human, preclinical and synthesis records</small></li><li><b>Find trials</b><small>Status, phase, locations and registry source</small></li><li><b>Watch change</b><small>New records, corrections and regulatory signals</small></li></ol></div>
+      <div class="explorer-system-map" id="explorerSystemMap" aria-label="Interactive longevity system map"></div>
+    </div>
+    <div class="explorer-connections" aria-label="Ways to follow a longevity idea">
+      <a href="/topics"><span>Topics</span><strong>Choose an intervention</strong><small>Rapamycin, senolytics, exercise and more</small></a>
+      <a href="/evidence-graph"><span>Mechanisms</span><strong>See the biology it may affect</strong><small>mTOR, cellular senescence, nutrient sensing and related pathways</small></a>
+      <a href="/trials"><span>Clinical testing</span><strong>Follow registered trials</strong><small>Phase, status, locations and registry source</small></a>
+      <a href="/universities"><span>Research landscape</span><strong>Find active universities</strong><small>Topic breadth, recent momentum and source context</small></a>
     </div>
   </section>
 
@@ -446,7 +456,7 @@
 
   <script src="/il-config.js"></script>
   <script src="/news-modal.js"></script>
-  <script src="/main.js?v=20260923-living-atlas"></script>
+  <script src="/main.js?v=20260924-complete-atlas"></script>
   <script src="/telemetry.js"></script>
 </body>
 </html>

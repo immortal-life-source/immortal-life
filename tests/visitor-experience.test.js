@@ -58,3 +58,24 @@ test('the visitor experience does not introduce a forum', async () => {
   const sources = await Promise.all([read('index.html'), read('intelligence-template.html'), read('content-template.html')])
   for (const source of sources) assert.doesNotMatch(source, /\bforum\b/i)
 })
+
+test('the completed living atlas includes daily signals, timelines, plain-language cards, and connected discovery', async () => {
+  const [home, main, portalTemplate, portal, publicPages, publicApi, css] = await Promise.all([
+    read('index.html'), read('main.js'), read('intelligence-template.html'), read('intelligence.js'),
+    read('supabase/functions/public-pages/index.ts'), read('supabase/functions/public-intelligence/index.ts'), read('intelligence.css'),
+  ])
+  assert.match(home, /systemMapTemplate/)
+  assert.match(home, /Mechanisms/)
+  assert.match(main, /candidates\.slice\(0, 6\)/)
+  assert.match(main, /University momentum/)
+  assert.match(portalTemplate, /Evidence timeline/)
+  assert.match(portal, /renderTimeline/)
+  assert.match(publicApi, /view === 'timeline'/)
+  assert.match(publicApi, /TOPIC_MECHANISMS/)
+  assert.match(publicApi, /layer:universities/)
+  assert.match(portal, /What this record means/)
+  assert.match(publicPages, /Five questions to ask about this record/)
+  assert.match(publicPages, /trial-world-map/)
+  assert.match(publicPages, /Related discoveries/)
+  assert.match(css, /trial-map-node/)
+})

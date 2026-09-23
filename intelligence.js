@@ -143,6 +143,9 @@
     graphSection: document.getElementById('graphSection'),
     graph: document.getElementById('evidenceGraph'),
     graphFallback: document.getElementById('graphFallback'),
+    timelineSection: document.getElementById('timelineSection'),
+    timelineList: document.getElementById('evidenceTimeline'),
+    relatedJourneys: document.getElementById('relatedJourneys'),
     entitiesSection: document.getElementById('entitiesSection'),
     entityGrid: document.getElementById('entityGrid'),
     universitiesSection: document.getElementById('universitiesSection'),
@@ -232,6 +235,16 @@
     container.append(details);
   }
 
+  function appendHumanGuide(container, rows) {
+    const details = el('details', 'record-human-guide');
+    details.append(el('summary', '', 'What this record means'));
+    const list = el('dl', 'record-guide');
+    rows.forEach(([label, value]) => {
+      const row = el('div'); row.append(el('dt', '', label), el('dd', '', value)); list.append(row);
+    });
+    details.append(list); container.append(details);
+  }
+
   function readableStatus(value) {
     return String(value || 'Status not supplied').replace(/_/g, ' ').toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase());
   }
@@ -284,6 +297,13 @@
       topicLinks(record, 'research_item_topics').forEach((topic) => tags.append(link('record-tag', topic.name, `/topics/${encodeURIComponent(topic.slug)}`)));
       if (record.is_open_access) tags.append(el('span', 'record-tag', 'Open access'));
       main.append(tags);
+      appendHumanGuide(main, [
+        ['What this is', `${evidenceLabel(record.evidence_level, record.status)} indexed from ${record.journal || 'a scholarly source'}.`],
+        ['Why it may matter', 'It matched one or more longevity topics and may help show how that area is developing.'],
+        ['Main limitation', record.evidence_level === 'preclinical' ? 'Lab or animal findings may not apply to people.' : record.evidence_level === 'preprint' ? 'This record has not completed peer review.' : 'A single record does not establish safety, effectiveness, or medical usefulness.'],
+        ['What changed', `Added or refreshed from source metadata dated ${formatDate(record.published_on)}.`],
+        ['Where to verify', 'Use “Open source record” below to read the original publication record.'],
+      ]);
       appendQualityExplanation(main, record, 'research_item_topics');
 
       const action = el('div', 'record-action');
@@ -358,6 +378,13 @@
       topicLinks(record, 'clinical_trial_topics').forEach((topic) => tags.append(link('record-tag', topic.name, `/topics/${encodeURIComponent(topic.slug)}`)));
       (record.phases || []).forEach((phase) => tags.append(el('span', 'record-tag', phase.replace(/_/g, ' '))));
       main.append(tags);
+      appendHumanGuide(main, [
+        ['What this is', `${phases} registered clinical study.`],
+        ['Why it may matter', `The registry currently reports the study as ${readableStatus(record.overall_status)}.`],
+        ['Main limitation', 'Registration is not proof that a treatment works, is safe, or is available to you.'],
+        ['What changed', `Registry metadata was last updated ${formatDate(record.last_update_date)}.`],
+        ['Where to verify', 'Use “Open registry record” below for eligibility, sites, contacts, and current status.'],
+      ]);
       appendQualityExplanation(main, record, 'clinical_trial_topics');
 
       const action = el('div', 'record-action');
@@ -390,6 +417,13 @@
       const tags = el('div', 'record-tags');
       (record.matched_topics || []).forEach((slug) => tags.append(link('record-tag', slug.replace(/-/g, ' '), `/topics/${encodeURIComponent(slug)}`)));
       main.append(tags);
+      appendHumanGuide(main, [
+        ['What this is', `${record.category || 'Official'} notice from ${record.jurisdiction || 'a public authority'}.`],
+        ['Why it may matter', 'Official notices can change the safety, approval, recall, or monitoring context around a topic.'],
+        ['Main limitation', 'The notice applies only to the product, use, date, and jurisdiction named by the authority.'],
+        ['What changed', `Published or refreshed ${formatTimestamp(record.published_at)}.`],
+        ['Where to verify', 'Use “Open official notice” below to read the authority’s original wording.'],
+      ]);
       appendQualityExplanation(main, record, '');
       const action = el('div', 'record-action');
       action.append(el('span', 'record-status', record.category));
@@ -415,6 +449,13 @@
       main.append(heading);
       main.append(el('p', '', record.summary));
       if (record.research_items?.title) main.append(el('p', 'integrity-linked', `Indexed record: ${record.research_items.title}`));
+      appendHumanGuide(main, [
+        ['What this is', `${readableStatus(record.event_type)} linked to an indexed research record.`],
+        ['Why it may matter', 'Corrections, retractions, and concerns can change how earlier evidence should be interpreted.'],
+        ['Main limitation', 'This event does not automatically invalidate every related finding; read the notice for its exact scope.'],
+        ['What changed', `Detected ${formatTimestamp(record.detected_at)}.`],
+        ['Where to verify', 'Use “Open integrity notice” below to inspect the original record.'],
+      ]);
       appendQualityExplanation(main, record, '');
       const action = el('div', 'record-action');
       action.append(el('span', 'record-status record-status--alert', record.event_type));
@@ -433,12 +474,18 @@
     const layerPositions = {
       'layer:research': { x: 95, y: 92 }, 'layer:trials': { x: 1105, y: 92 },
       'layer:regulatory': { x: 1105, y: 628 }, 'layer:integrity': { x: 95, y: 628 },
+      'layer:universities': { x: 600, y: 680 },
     };
     const topicNodes = (data.nodes || []).filter((node) => node.kind === 'topic' && Number(node.weight || 0) > 0);
     const positions = {};
     topicNodes.forEach((node, index) => {
       const angle = -Math.PI / 2 + index * Math.PI * 2 / Math.max(topicNodes.length, 1);
       positions[node.id] = { x: centerX + Math.cos(angle) * 325, y: centerY + Math.sin(angle) * 205 };
+    });
+    (data.nodes || []).filter((node) => node.kind === 'mechanism').forEach((node, index) => {
+      const topicPoint = positions[`topic:${node.slug}`];
+      if (topicPoint) positions[node.id] = { x: centerX + (topicPoint.x - centerX) * .58, y: centerY + (topicPoint.y - centerY) * .58 };
+      else positions[node.id] = { x: centerX + Math.cos(index) * 120, y: centerY + Math.sin(index) * 90 };
     });
     Object.assign(positions, layerPositions);
     const ns = 'http://www.w3.org/2000/svg';
@@ -458,13 +505,13 @@
       group.setAttribute('class', `graph-node graph-node--${node.kind}`);
       const circle = document.createElementNS(ns, 'circle');
       circle.setAttribute('cx', point.x); circle.setAttribute('cy', point.y);
-      circle.setAttribute('r', String(node.kind === 'topic' ? Math.min(32, 17 + Math.log2(Number(node.weight || 0) + 1) * 1.8) : 37));
+      circle.setAttribute('r', String(node.kind === 'topic' ? Math.min(32, 17 + Math.log2(Number(node.weight || 0) + 1) * 1.8) : node.kind === 'mechanism' ? 10 : 37));
       const label = document.createElementNS(ns, 'text');
       label.setAttribute('x', point.x); label.setAttribute('y', point.y + (node.kind === 'topic' ? 48 : 57));
       label.setAttribute('text-anchor', 'middle'); label.textContent = node.label;
       const count = document.createElementNS(ns, 'text');
       count.setAttribute('x', point.x); count.setAttribute('y', point.y + 4); count.setAttribute('text-anchor', 'middle');
-      count.setAttribute('class', 'graph-count'); count.textContent = numberFormatter.format(Number(node.weight || 0));
+      count.setAttribute('class', 'graph-count'); count.textContent = node.kind === 'mechanism' ? '' : numberFormatter.format(Number(node.weight || 0));
       group.append(circle, count, label); svg.append(group);
     });
     elements.graphFallback.replaceChildren();
@@ -472,6 +519,27 @@
     const fallbackList = el('ul', 'graph-fallback-list');
     topicNodes.forEach((node) => { const item = el('li'); item.append(link('', node.label, `/topics/${encodeURIComponent(node.slug)}`), el('span', '', numberFormatter.format(Number(node.weight || 0)))); fallbackList.append(item); });
     elements.graphFallback.append(fallbackList); elements.graphSection.hidden = false;
+  }
+
+  function renderTimeline(data) {
+    if (!elements.timelineSection || !elements.timelineList) return;
+    elements.timelineList.replaceChildren();
+    const events = Array.isArray(data.events) ? data.events : [];
+    if (!events.length) elements.timelineList.append(el('li', 'timeline-empty', 'No source-level change has been recorded for this topic yet. Monitoring continues automatically.'));
+    events.slice(0, 20).forEach((event) => {
+      const item = el('li', `timeline-event timeline-event--${event.record_type || 'research'}`);
+      item.append(el('time', '', formatTimestamp(event.occurred_at)), el('span', 'timeline-kind', readableStatus(event.event_type)));
+      const heading = el('h3'); heading.append(link('', event.title, event.record_type && event.record_id ? `/${event.record_type === 'trials' ? 'trials' : event.record_type}/${encodeURIComponent(event.record_id)}` : event.source_url || '/changes'));
+      item.append(heading, el('p', '', event.importance === 'important' ? 'Meaningful source change.' : 'New or updated source record. Open it to inspect the evidence and limitations.'));
+      elements.timelineList.append(item);
+    });
+    elements.timelineSection.hidden = false;
+    if (elements.relatedJourneys) {
+      elements.relatedJourneys.replaceChildren(el('span', '', 'Related discoveries'));
+      elements.relatedJourneys.append(link('', 'See all changes for this topic', `/changes?topic=${encodeURIComponent(topicSlug)}`));
+      (data.related_topics || []).slice(0, 3).forEach((topic) => elements.relatedJourneys.append(link('', `Compare with ${topic.name}`, `/topics/${encodeURIComponent(topic.slug)}`)));
+      elements.relatedJourneys.append(link('', 'Find related university activity', `/universities?topic=${encodeURIComponent(topicSlug)}`));
+    }
   }
 
   function renderSources(sources, showList) {
@@ -678,6 +746,11 @@
       [elements.universityTopic, elements.universityCountry, elements.universityContinent, elements.universitySort].forEach((control) => control.addEventListener('change', () => fetchUniversityIndex().catch(showUniversityError)));
       elements.clearUniversityCompare.onclick = () => { comparedUniversities.clear(); renderUniversityComparison(); renderUniversityRows(); };
       universityControlsReady = true;
+      const requestedTopic = new URLSearchParams(location.search).get('topic');
+      if (requestedTopic && [...elements.universityTopic.options].some((option) => option.value === requestedTopic)) {
+        elements.universityTopic.value = requestedTopic;
+        return fetchUniversityIndex();
+      }
     }
     renderUniversityRows();
     elements.freshness.dataset.health = data.sources?.[0]?.health || 'pending';
@@ -881,10 +954,11 @@
         renderTopics(data.topics || [], false);
         renderSources(data.sources || [], true);
       } else if (view === 'topic') {
-        const [research, trials, topics] = await Promise.all([
+        const [research, trials, topics, timeline] = await Promise.all([
           request('research', 40),
           request('trials', 40),
           request('topics', 100),
+          request('timeline', 40),
         ]);
         renderResearch(research.research || []);
         renderTrials(trials.trials || []);
@@ -893,6 +967,7 @@
         if (selected) {
           renderStats({ research: selected.research_count, trials: selected.trial_count });
         }
+        renderTimeline(timeline);
       } else if (view === 'regulatory') {
         const data = await request('regulatory', 80);
         renderRegulatory(data.regulatory || []);

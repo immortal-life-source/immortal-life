@@ -30,6 +30,14 @@ function matches(event: any, watches: any[]): boolean {
   return watches.some((watch) => watch.watch_type === 'topic' ? topics.has(watch.watch_key) : keys.has(watch.watch_type === 'entity' ? watch.watch_key : `${watch.watch_type}:${watch.watch_key}`))
 }
 
+const MEANINGFUL_EVENT_TYPES = new Set(['trial_status_changed', 'new_regulatory_notice', 'new_integrity_event', 'quality_state_changed', 'research_updated'])
+
+function isMeaningfulEvent(event: any): boolean {
+  if (!MEANINGFUL_EVENT_TYPES.has(String(event?.event_type ?? ''))) return false
+  if (event.event_type === 'research_updated') return event.importance === 'important' || ['retracted', 'corrected', 'expression_of_concern'].includes(String(event?.metadata?.status ?? ''))
+  return true
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return jsonResponse(req, { error: 'Method not allowed' }, 405, 'POST')
   const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', serviceRoleKey(), { auth: { persistSession: false, autoRefreshToken: false } })
@@ -46,7 +54,7 @@ Deno.serve(async (req) => {
       const { data: watches, error: watchesError } = await supabase.from('member_radar_watches').select('watch_type,watch_key,label').eq('member_id', preference.member_id)
       if (watchesError) throw watchesError
       if (!watches?.length) continue
-      const relevant = (events ?? []).filter((event: any) => matches(event, watches)).slice(0, 60)
+      const relevant = (events ?? []).filter((event: any) => isMeaningfulEvent(event) && matches(event, watches)).slice(0, 60)
       const grouped: Record<string, any[]> = { research: [], trials: [], regulatory: [], integrity: [] }
       for (const event of relevant) grouped[event.record_type]?.push({ id: event.record_id, title: event.title, source_url: event.source_url, event_type: event.event_type, importance: event.importance, occurred_at: event.occurred_at, metadata: event.metadata })
       const counts = Object.fromEntries(Object.entries(grouped).map(([kind, rows]) => [kind, rows.length]))

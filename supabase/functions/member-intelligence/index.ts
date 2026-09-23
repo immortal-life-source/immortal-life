@@ -4,6 +4,13 @@ import { corsHeaders, isAllowedOrigin, jsonResponse, serviceRoleKey, sessionFrom
 
 const METHODS = 'GET, POST, OPTIONS'
 const WATCH_TYPES = new Set(['topic', 'entity', 'country', 'trial'])
+const MEANINGFUL_EVENT_TYPES = new Set(['trial_status_changed', 'new_regulatory_notice', 'new_integrity_event', 'quality_state_changed', 'research_updated'])
+
+function isMeaningfulEvent(event: any): boolean {
+  if (!MEANINGFUL_EVENT_TYPES.has(String(event?.event_type ?? ''))) return false
+  if (event.event_type === 'research_updated') return event.importance === 'important' || ['retracted', 'corrected', 'expression_of_concern'].includes(String(event?.metadata?.status ?? ''))
+  return true
+}
 
 function slugify(value: unknown): string {
   return String(value ?? '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
@@ -111,7 +118,7 @@ Deno.serve(async (req) => {
     for (const result of [topicsResult, watchesResult, preferenceResult, briefingsResult, entitiesResult, trialsResult, stateResult, eventsResult]) if (result.error) throw result.error
 
     const watches = watchesResult.data ?? []
-    const events = (eventsResult.data ?? []).filter((event: any) => eventMatches(event, watches)).slice(0, 40)
+    const events = (eventsResult.data ?? []).filter((event: any) => isMeaningfulEvent(event) && eventMatches(event, watches)).slice(0, 40)
     const lastSeenAt = stateResult.data?.last_seen_at ?? new Date(Date.now() - 30 * 86400000).toISOString()
     const countries = new Map<string, { key: string; label: string; count: number }>()
     for (const trial of trialsResult.data ?? []) for (const country of trial.countries ?? []) {
