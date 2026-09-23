@@ -24,13 +24,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,200;0,300;1,200;1,300&family=Instrument+Sans:ital,wght@0,300;0,400;1,300;1,400&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,200;0,300;1,200;1,300&family=Instrument+Sans:ital,wght@0,300;0,400;1,300;1,400&family=Newsreader:opsz,wght@6..72,300&display=swap"
     rel="stylesheet"
   />
 
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
 
-  <link rel="stylesheet" href="/style.css?v=20260924-final-uat" />
+  <link rel="stylesheet" href="/style.css?v=20260924-content-density" />
 </head>
 
 <body>
@@ -127,6 +127,12 @@
           <a href="/discover/recruiting-trials">Find recruiting trials</a>
         </nav>
       </div>
+
+      <aside class="hero-discoveries" aria-labelledby="heroDiscoveriesTitle">
+        <div class="hero-discoveries-head"><span>Newest discoveries</span><a href="/research">All research</a></div>
+        <h2 id="heroDiscoveriesTitle">Fresh from the live index</h2>
+        <div id="heroDiscoveriesList" class="hero-discoveries-list" aria-live="polite"><p>Checking the newest source-linked records…</p></div>
+      </aside>
 
       <!-- The interactive system map lives lower on the page so the opening message stays calm and readable. -->
       <template id="systemMapTemplate">
@@ -456,7 +462,7 @@
 
   <script src="/il-config.js"></script>
   <script src="/news-modal.js"></script>
-  <script src="/main.js?v=20260924-final-uat"></script>
+  <script src="/main.js?v=20260924-content-density"></script>
   <script src="/telemetry.js"></script>
 </body>
 </html>

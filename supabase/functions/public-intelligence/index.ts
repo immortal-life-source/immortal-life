@@ -299,10 +299,32 @@ Deno.serve(async (req) => {
         .order('id', { ascending: false })
         .limit(limit)
       if (topic) query = query.contains('matched_topics', [topic])
-      const [{ data, error }, { data: sources, error: sourcesError }] = await Promise.all([query, sourcesPromise])
+      const regulatorQuery = supabase
+        .from('global_resources')
+        .select('id,name,resource_type,geographic_scope,jurisdiction_code,jurisdiction_name,region,authority_tier,description,limitations,homepage_url,data_url,terms_url,access_mode,reuse_status,integration_status,content_source_id,update_cadence,eligibility_reason,last_checked_at,last_healthy_at,last_status_code,consecutive_failures')
+        .eq('is_eligible', true)
+        .eq('resource_type', 'regulator')
+        .order('authority_tier')
+        .order('region')
+        .order('name')
+        .limit(100)
+      const [{ data, error }, { data: regulators, error: regulatorsError }, { data: sources, error: sourcesError }] = await Promise.all([query, regulatorQuery, sourcesPromise])
       if (error) throw error
+      if (regulatorsError) throw regulatorsError
       if (sourcesError) throw sourcesError
-      return response(req, { regulatory: data ?? [], sources: (sources ?? []).map(publicSourceState) })
+      const ingestionById = new Map((sources ?? []).map((source: any) => [source.id, source]))
+      const regulatoryGuides = (regulators ?? []).map((resource: any) => publicResourceState(resource, resource.content_source_id ? ingestionById.get(resource.content_source_id) : undefined))
+      return response(req, {
+        generated_at: new Date().toISOString(),
+        regulatory: data ?? [],
+        regulatory_guides: regulatoryGuides,
+        regulatory_coverage: {
+          authorities: regulatoryGuides.length,
+          jurisdictions: new Set(regulatoryGuides.map((item: any) => item.jurisdiction_code)).size,
+          regions: new Set(regulatoryGuides.map((item: any) => item.region)).size,
+        },
+        sources: (sources ?? []).map(publicSourceState),
+      })
     }
 
     if (view === 'timeline') {

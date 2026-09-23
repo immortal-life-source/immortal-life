@@ -482,6 +482,29 @@ window.handleSubmit = handleSubmit;
     });
   }
 
+  function renderHeroDiscoveries(feedItems, changeItems) {
+    const root = document.getElementById('heroDiscoveriesList');
+    if (!root) return;
+    const seen = new Set();
+    const items = [...changeItems, ...feedItems].filter((item) => {
+      const kind = recordKind(item);
+      const key = `${item.url || ''}|${item.title || ''}`;
+      if (!item.title || !item.url || seen.has(key) || !['research', 'integrity'].includes(kind)) return false;
+      seen.add(key); return true;
+    }).slice(0, 3);
+    root.replaceChildren();
+    if (!items.length) {
+      const fallback = document.createElement('a'); fallback.className = 'hero-discovery'; fallback.href = '/research';
+      fallback.append(Object.assign(document.createElement('span'), { textContent: 'Live index' }), Object.assign(document.createElement('strong'), { textContent: 'Browse the newest source-linked longevity research' })); root.append(fallback); return;
+    }
+    items.forEach((item) => {
+      const anchor = document.createElement('a'); anchor.className = 'hero-discovery'; anchor.href = item.url;
+      const meta = document.createElement('span'); meta.textContent = item.date_published ? new Date(item.date_published).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : recordKind(item) === 'integrity' ? 'Integrity' : 'New record';
+      const title = document.createElement('strong'); title.textContent = shortCopy(item.title, 82);
+      anchor.append(meta, title); root.append(anchor);
+    });
+  }
+
   const optionalJson = (url, options) => fetch(url, options).then((response) => response.ok ? response.json() : null).catch(() => null);
   const systemMap = document.getElementById('systemMapTemplate');
   const mapTarget = document.getElementById('explorerSystemMap');
@@ -495,6 +518,7 @@ window.handleSubmit = handleSubmit;
   ]).then(([feed, changes, trialData, regulatoryData, universityData]) => {
     const feedItems = Array.isArray(feed?.items) ? feed.items : [];
     const changeItems = Array.isArray(changes?.items) ? changes.items : [];
+    renderHeroDiscoveries(feedItems, changeItems);
     renderToday(feedItems, changeItems, trialData?.trials?.[0], regulatoryData?.regulatory?.[0], universityData?.universities?.[0]);
     const status = document.getElementById('homeDataStatus');
     if (status) status.textContent = `Live index checked ${new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}. Every item links to its original record.`;
@@ -508,5 +532,6 @@ window.handleSubmit = handleSubmit;
     if (root) root.innerHTML = '<article class="today-loading">The live summary is temporarily delayed. The research, trial and change pages remain available.</article>';
     const status = document.getElementById('homeDataStatus');
     if (status) status.textContent = 'Live summary delayed. No uncited fallback content has been inserted.';
+    renderHeroDiscoveries([], []);
   });
 })();

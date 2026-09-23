@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,300&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <link rel="icon" href="/favicon.ico" type="image/x-icon" />
-  <link rel="stylesheet" href="/intelligence.css?v=20260924-final-uat" />
+  <link rel="stylesheet" href="/intelligence.css?v=20260924-content-density" />
 </head>
 <body data-view="{{PAGE_VIEW}}" data-topic="{{TOPIC_SLUG}}">
   <header class="intel-header">
@@ -52,7 +52,7 @@
       </div>
     </section>
 
-    <section class="reader-mode" aria-label="Choose explanation level"><div><span>Explain this for a</span><div class="reader-mode-buttons"><button type="button" data-reader-mode="beginner">Beginner</button><button type="button" data-reader-mode="student">Student</button><button type="button" data-reader-mode="professional">Professional</button></div></div><p id="readerModeCopy">Plain-language summaries first, with technical details available when you want them.</p></section>
+    <section class="reader-mode" aria-label="Choose detail level"><div><span>Choose detail level</span><div class="reader-mode-buttons"><button type="button" data-reader-mode="beginner">Beginner</button><button type="button" data-reader-mode="student">Student</button><button type="button" data-reader-mode="professional">Professional</button></div></div><p id="readerModeCopy">Beginner shows the plain-language meaning and the original source.</p></section>
 
     {{TOPIC_DOSSIER_HTML}}
 
@@ -99,10 +99,17 @@
 
     <section class="intel-section" id="regulatorySection" hidden>
       <div class="section-heading">
-        <div><span class="section-index">Official notices</span><h2>Regulatory updates</h2></div>
+        <div><span class="section-index">Official notices</span><h2>Latest regulatory updates</h2></div>
         <a href="/integrity" class="section-link">Research integrity feed</a>
       </div>
+      <p class="regulatory-intro">Live notices appear here only after they pass the automated relevance checks. The official-source library below remains available at all times, so you can verify approvals, safety alerts, recalls, shortages, and product information directly with authorities worldwide.</p>
       <div class="record-list" id="regulatoryList"></div>
+      <section class="regulatory-library" id="regulatoryLibrary" aria-labelledby="regulatoryLibraryTitle" hidden>
+        <div class="regulatory-library-heading"><div><span class="section-index">Global official-source library</span><h2 id="regulatoryLibraryTitle">Regulatory guides by country and region</h2><p>Each guide explains where to look, what the authority covers, and what its decisions do—and do not—mean. Every card links to the authority itself.</p></div><div class="regulatory-coverage" id="regulatoryCoverage"></div></div>
+        <form class="regulatory-controls" id="regulatoryControls" role="search" aria-label="Filter regulatory guides"><label><span>Find an authority or country</span><input id="regulatorySearch" type="search" placeholder="Try FDA, Japan, medicines…" autocomplete="off" /></label><label><span>Region</span><select id="regulatoryRegion"><option value="">All regions</option></select></label></form>
+        <p class="filter-result" id="regulatoryResult" aria-live="polite"></p>
+        <div class="regulatory-guide-grid" id="regulatoryGuideGrid"></div>
+      </section>
     </section>
 
     <section class="intel-section" id="integritySection" hidden>
@@ -253,7 +260,7 @@
   <nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/discover"><span aria-hidden="true">◇</span>Explore</a><a href="/dashboard"><span aria-hidden="true">☆</span>Saved</a><a href="/changes"><span aria-hidden="true">↻</span>Updates</a><button type="button" data-mobile-menu-open><span aria-hidden="true">☰</span>Menu</button></nav>
 
   <script src="/il-config.js"></script>
-  <script src="/intelligence.js?v=20260924-final-uat"></script>
+  <script src="/intelligence.js?v=20260924-content-density"></script>
   <script src="/telemetry.js"></script>
 </body>
 </html>

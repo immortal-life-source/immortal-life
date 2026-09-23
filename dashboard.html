@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,200;0,300;1,200;1,300&family=Instrument+Sans:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/members.css" />
+  <link rel="stylesheet" href="/members.css?v=20260924-radar" />
 </head>
 <body>
   <div class="m-shell dash-page">
@@ -34,7 +34,12 @@
       </nav>
     </header>
 
-    <p id="dashLoading">Loading your dashboard…</p>
+    <p id="dashLoading">Loading your radar…</p>
+
+    <section class="guest-radar" id="guestRadar" hidden aria-labelledby="guestRadarTitle">
+      <div class="guest-radar-intro"><span>Your browser radar</span><h1 id="guestRadarTitle">Your saved longevity topics</h1><p>My Radar works before sign-in. Topics you save and guides you visit on this device appear here. Sign in only when you want to sync watchlists and briefings across devices.</p><a class="guest-radar-signin" href="/join">Sign in to sync across devices</a></div>
+      <div class="guest-radar-grid"><section><h2>Saved topics</h2><div id="guestSavedTopics" class="guest-topic-list"></div><a href="/topics">Choose topics</a></section><section><h2>Recently viewed</h2><div id="guestRecentTopics" class="guest-topic-list"></div><a href="/changes">See what changed</a></section></div>
+    </section>
 
     <div id="dashRoot" hidden>
       <div class="dash-grid">

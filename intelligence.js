@@ -44,9 +44,9 @@
   });
 
   const readerCopy = {
-    beginner: 'Plain-language summaries first. Start with what changed, why it may matter, and the original source.',
-    student: 'Study design, evidence level, population and limitations are foregrounded for careful learning.',
-    professional: 'Source metadata, confidence signals, jurisdictions and machine-readable exports stay close at hand.',
+    beginner: 'Beginner shows the plain-language meaning, the main caution, and where to verify it.',
+    student: 'Student adds evidence stage, study or notice scope, and the most important limitations.',
+    professional: 'Professional adds jurisdiction, source metadata, confidence signals, and operational detail.',
   };
   let readerMode = 'beginner';
   try { readerMode = localStorage.getItem('il_reader_mode') || 'beginner'; } catch (_) { /* storage is optional */ }
@@ -138,6 +138,13 @@
     trialList: document.getElementById('trialList'),
     regulatorySection: document.getElementById('regulatorySection'),
     regulatoryList: document.getElementById('regulatoryList'),
+    regulatoryLibrary: document.getElementById('regulatoryLibrary'),
+    regulatoryCoverage: document.getElementById('regulatoryCoverage'),
+    regulatoryControls: document.getElementById('regulatoryControls'),
+    regulatorySearch: document.getElementById('regulatorySearch'),
+    regulatoryRegion: document.getElementById('regulatoryRegion'),
+    regulatoryResult: document.getElementById('regulatoryResult'),
+    regulatoryGuideGrid: document.getElementById('regulatoryGuideGrid'),
     integritySection: document.getElementById('integritySection'),
     integrityList: document.getElementById('integrityList'),
     graphSection: document.getElementById('graphSection'),
@@ -199,6 +206,16 @@
     const node = el('a', className, label);
     node.href = href;
     return node;
+  }
+
+  function appendReaderCopy(container, variants) {
+    const group = el('div', 'reader-copy-set');
+    ['beginner', 'student', 'professional'].forEach((mode) => {
+      const copy = el('p', `reader-copy reader-copy--${mode}`, variants[mode] || variants.beginner || '');
+      copy.dataset.readerLevel = mode;
+      group.append(copy);
+    });
+    container.append(group);
   }
 
   function formatDate(value) {
@@ -291,7 +308,11 @@
       heading.append(link('record-title-link', record.title, `/research/${encodeURIComponent(record.id)}`));
       main.append(heading);
       const researchSummary = `${evidenceLabel(record.evidence_level, record.status)}${record.journal ? ` from ${record.journal}` : ''}. Open the original record for the study details, methods, and limitations.`;
-      main.append(el('p', '', researchSummary));
+      appendReaderCopy(main, {
+        beginner: researchSummary,
+        student: `${evidenceLabel(record.evidence_level, record.status)}${record.journal ? ` in ${record.journal}` : ''}. Treat the evidence stage as context: a single indexed record cannot establish a general clinical conclusion. Open the source to inspect the population, methods, comparison, outcomes, and limitations.`,
+        professional: `${evidenceLabel(record.evidence_level, record.status)} · published ${formatDate(record.published_on)} · topic-match confidence ${Number(record.relevance_confidence || 0)}% · source-quality signal ${Number(record.source_quality_score || 0)}%. These automated signals describe indexing confidence, not validity or effect size.`,
+      });
       main.append(evidenceLadder(record.evidence_level));
       const tags = el('div', 'record-tags');
       topicLinks(record, 'research_item_topics').forEach((topic) => tags.append(link('record-tag', topic.name, `/topics/${encodeURIComponent(topic.slug)}`)));
@@ -372,7 +393,11 @@
       heading.append(link('record-title-link', record.title, `/trials/${encodeURIComponent(record.id)}`));
       main.append(heading);
       const phases = Array.isArray(record.phases) && record.phases.length ? record.phases.map(readableStatus).join(', ') : 'Phase not supplied';
-      main.append(el('p', '', `${phases} clinical study. Registry status: ${readableStatus(record.overall_status)}. Open the registry record for eligibility, locations, and contacts.`));
+      appendReaderCopy(main, {
+        beginner: `${phases} clinical study. Registry status: ${readableStatus(record.overall_status)}. Open the registry record for eligibility, locations, and contacts.`,
+        student: `${phases} registered study with a current registry status of ${readableStatus(record.overall_status)}. Registration describes a protocol; it does not show that the study finished or that an intervention works. Check eligibility, outcomes, locations, and update history in the source.`,
+        professional: `${record.external_id} · ${phases} · ${readableStatus(record.overall_status)} · planned enrollment ${record.enrollment == null ? 'not supplied' : numberFormatter.format(record.enrollment)} · registry metadata updated ${formatDate(record.last_update_date)} · match confidence ${Number(record.relevance_confidence || 0)}%.`,
+      });
       main.append(trialLadder(record.phases));
       const tags = el('div', 'record-tags');
       topicLinks(record, 'clinical_trial_topics').forEach((topic) => tags.append(link('record-tag', topic.name, `/topics/${encodeURIComponent(topic.slug)}`)));
@@ -400,9 +425,57 @@
     elements.trialsSection.hidden = false;
   }
 
-  function renderRegulatory(records) {
+  function regulatoryGuideTitle(resource) {
+    const place = resource.jurisdiction_name || resource.geographic_scope || resource.region || 'this jurisdiction';
+    return `How to check medicine approvals and safety in ${place}`;
+  }
+
+  function renderRegulatoryGuides(guides, coverage) {
+    if (!elements.regulatoryGuideGrid || !elements.regulatoryLibrary) return;
+    const ordered = [...guides].sort((a, b) => String(a.region).localeCompare(String(b.region)) || String(a.jurisdiction_name).localeCompare(String(b.jurisdiction_name)) || String(a.name).localeCompare(String(b.name)));
+    const regions = [...new Set(ordered.map((item) => item.region).filter(Boolean))].sort();
+    elements.regulatoryRegion?.replaceChildren(new Option('All regions', ''), ...regions.map((region) => new Option(region, region)));
+    if (elements.regulatoryCoverage) {
+      elements.regulatoryCoverage.replaceChildren();
+      [[coverage?.authorities ?? ordered.length, 'official authorities'], [coverage?.jurisdictions ?? new Set(ordered.map((item) => item.jurisdiction_code)).size, 'jurisdictions'], [coverage?.regions ?? regions.length, 'world regions']].forEach(([value, label]) => {
+        const stat = el('div'); stat.append(el('strong', '', value), el('span', '', label)); elements.regulatoryCoverage.append(stat);
+      });
+    }
+
+    function draw() {
+      const query = String(elements.regulatorySearch?.value || '').trim().toLowerCase();
+      const region = elements.regulatoryRegion?.value || '';
+      const filtered = ordered.filter((item) => (!region || item.region === region) && (!query || `${item.name} ${item.jurisdiction_name} ${item.region} ${item.description}`.toLowerCase().includes(query)));
+      elements.regulatoryGuideGrid.replaceChildren();
+      filtered.forEach((resource) => {
+        const card = el('article', 'regulatory-guide-card');
+        const overline = el('div', 'regulatory-guide-overline', `${resource.region || 'Global'} · ${resource.jurisdiction_name || resource.geographic_scope || 'Official authority'}`);
+        const heading = el('h3'); heading.append(link('', regulatoryGuideTitle(resource), resource.homepage_url));
+        const healthText = resource.health === 'healthy' ? 'Official link checked' : resource.health === 'restricted' ? 'Authority limits automated checks' : resource.health === 'degraded' ? 'Availability check delayed' : 'Awaiting availability check';
+        appendReaderCopy(card, {
+          beginner: `Use ${resource.name} for the official answer in ${resource.jurisdiction_name || resource.geographic_scope || 'its jurisdiction'}. Start here to check whether a medicine is authorised and to find official safety alerts, recalls, shortages, or product information.`,
+          student: `${resource.description} Decisions are jurisdiction-specific: a listing, warning, or approval in one country does not automatically apply elsewhere. ${resource.limitations || 'Verify the exact product, indication, date, and authority record.'}`,
+          professional: `${resource.name} · authority tier ${resource.authority_tier || 'not supplied'} · access ${String(resource.access_mode || 'not supplied').replace(/-/g, ' ')} · update cadence ${resource.update_cadence || 'source-defined'} · integration ${resource.integration_status === 'live' ? 'automated ingestion' : 'verified directory'} · availability ${healthText.toLowerCase()}. ${resource.limitations || ''}`,
+        });
+        const actions = el('div', 'regulatory-guide-actions');
+        const official = link('source-link', 'Open official authority', resource.homepage_url); official.target = '_blank'; official.rel = 'noopener noreferrer'; actions.append(official);
+        if (resource.data_url && resource.data_url !== resource.homepage_url) { const data = link('source-link section-link--muted', 'Open official database', resource.data_url); data.target = '_blank'; data.rel = 'noopener noreferrer'; actions.append(data); }
+        card.prepend(overline, heading);
+        card.append(el('div', `resource-health resource-health--${resource.health || 'pending'}`, healthText), actions);
+        elements.regulatoryGuideGrid.append(card);
+      });
+      if (!filtered.length) elements.regulatoryGuideGrid.append(el('p', 'empty-list', 'No official authority matches those filters. Try a country, region, or shorter search term.'));
+      if (elements.regulatoryResult) elements.regulatoryResult.textContent = `${numberFormatter.format(filtered.length)} of ${numberFormatter.format(ordered.length)} official-source guides shown`;
+    }
+    elements.regulatoryControls?.addEventListener('input', draw);
+    elements.regulatoryControls?.addEventListener('change', draw);
+    draw();
+    elements.regulatoryLibrary.hidden = false;
+  }
+
+  function renderRegulatory(records, guides = [], coverage = {}) {
     elements.regulatoryList.replaceChildren();
-    if (!records.length) elements.regulatoryList.append(el('p', 'empty-list', 'Official feeds are current; no notices have been indexed yet.'));
+    if (!records.length) elements.regulatoryList.append(el('div', 'regulatory-live-state', 'No new notice passed the public relevance checks in this window. Monitoring continues automatically; use the official-source guides below for current authority information.'));
     records.forEach((record) => {
       const card = el('article', 'record-card');
       const meta = el('div', 'record-meta');
@@ -413,7 +486,11 @@
       const heading = el('h3');
       heading.append(link('record-title-link', record.title, `/regulatory/${encodeURIComponent(record.id)}`));
       main.append(heading);
-      main.append(el('p', '', record.summary));
+      appendReaderCopy(main, {
+        beginner: record.summary,
+        student: `${record.summary} This is an official notice, but its meaning is limited to the product, use, dates, and jurisdiction named in the source.`,
+        professional: `${record.summary} Jurisdiction: ${record.jurisdiction || 'not supplied'} · category: ${record.category || 'not supplied'} · match confidence ${Number(record.relevance_confidence || 0)}% · source-quality signal ${Number(record.source_quality_score || 0)}%.`,
+      });
       const tags = el('div', 'record-tags');
       (record.matched_topics || []).forEach((slug) => tags.append(link('record-tag', slug.replace(/-/g, ' '), `/topics/${encodeURIComponent(slug)}`)));
       main.append(tags);
@@ -432,6 +509,7 @@
       source.target = '_blank'; source.rel = 'noopener noreferrer'; action.append(source);
       card.append(meta, main, action); elements.regulatoryList.append(card);
     });
+    renderRegulatoryGuides(guides, coverage);
     elements.regulatorySection.hidden = false;
   }
 
@@ -447,7 +525,11 @@
       const heading = el('h3');
       heading.append(link('record-title-link', record.title, `/integrity/${encodeURIComponent(record.id)}`));
       main.append(heading);
-      main.append(el('p', '', record.summary));
+      appendReaderCopy(main, {
+        beginner: record.summary,
+        student: `${record.summary} Read the original notice to see which parts of the earlier record were corrected, questioned, or withdrawn.`,
+        professional: `${record.summary} Event: ${readableStatus(record.event_type)} · announced ${formatDate(record.announced_on)} · detected ${formatTimestamp(record.detected_at)} · match confidence ${Number(record.relevance_confidence || 0)}%.`,
+      });
       if (record.research_items?.title) main.append(el('p', 'integrity-linked', `Indexed record: ${record.research_items.title}`));
       appendHumanGuide(main, [
         ['What this is', `${readableStatus(record.event_type)} linked to an indexed research record.`],
@@ -970,7 +1052,7 @@
         renderTimeline(timeline);
       } else if (view === 'regulatory') {
         const data = await request('regulatory', 80);
-        renderRegulatory(data.regulatory || []);
+        renderRegulatory(data.regulatory || [], data.regulatory_guides || [], data.regulatory_coverage || {});
         renderSources(data.sources || [], false);
       } else if (view === 'integrity') {
         const data = await request('integrity', 80);

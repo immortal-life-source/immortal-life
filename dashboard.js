@@ -461,7 +461,24 @@
   var session = getSession();
 
   if (!session) {
-    window.location.replace('/join');
+    var guest = document.getElementById('guestRadar');
+    function localList(key) {
+      try { var value = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(value) ? value : []; } catch (_) { return []; }
+    }
+    function renderGuestTopics(id, items, emptyText) {
+      var target = document.getElementById(id); if (!target) return;
+      target.replaceChildren();
+      if (!items.length) { var empty = document.createElement('p'); empty.textContent = emptyText; target.append(empty); return; }
+      items.slice(0, 12).forEach(function (entry) {
+        var slug = typeof entry === 'string' ? entry : entry.slug;
+        if (!slug) return;
+        var anchor = document.createElement('a'); anchor.href = '/topics/' + encodeURIComponent(slug); anchor.textContent = typeof entry === 'string' ? entry.replace(/-/g, ' ') : (entry.name || slug.replace(/-/g, ' ')); target.append(anchor);
+      });
+    }
+    renderGuestTopics('guestSavedTopics', localList('il_saved_topics'), 'No saved topics yet. Choose a topic and press “Save this topic”.');
+    renderGuestTopics('guestRecentTopics', localList('il_recent_topics'), 'Topic guides you open on this device will appear here.');
+    if (loading) loading.hidden = true;
+    if (guest) guest.hidden = false;
     return;
   }
 

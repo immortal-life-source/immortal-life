@@ -14,7 +14,7 @@ const defaultRoutes = [
   '/', '/learn', '/research', '/trials', '/topics', '/topics/rapamycin',
   '/discover', '/changes', '/discover/recruiting-trials', '/discover/regulatory-status', '/discover/research-integrity', '/reports',
   '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/methodology',
-  '/resources', '/universities', '/entities', '/entities/topic/rapamycin', '/quality', '/automation', '/publication-policy', '/corrections', '/data', '/join',
+  '/resources', '/universities', '/entities', '/entities/topic/rapamycin', '/quality', '/automation', '/publication-policy', '/corrections', '/data', '/dashboard', '/join',
   '/auth/x', '/auth/linkedin', '/leaderboard', '/privacy', '/confirmed', '/unsubscribed',
 ];
 const routes = process.env.UAT_ROUTES ? process.env.UAT_ROUTES.split(',').map((route) => route.trim()).filter(Boolean) : defaultRoutes;
@@ -160,6 +160,11 @@ async function runViewport(cdp, profileName, width, height, mobile) {
       ,graphUniversities: document.querySelectorAll('#evidenceGraph .graph-node--university').length
       ,trialWorldMapNodes: document.querySelectorAll('.trial-world-map .trial-map-node').length
       ,recordGuideLabels: [...document.querySelectorAll('.record-meaning dt')].map(el => el.textContent.trim())
+      ,portalIntroBottom: (() => { const el=document.querySelector('.reader-mode') || document.querySelector('.intel-hero'); return el ? Math.round(el.getBoundingClientRect().bottom) : null; })()
+      ,regulatoryGuides: document.querySelectorAll('#regulatoryGuideGrid .regulatory-guide-card').length
+      ,readerCopies: document.querySelectorAll('.reader-copy').length
+      ,heroDiscoveries: document.querySelectorAll('#heroDiscoveriesList .hero-discovery').length
+      ,guestRadarVisible: (() => { const el=document.getElementById('guestRadar'); return el ? !el.hidden : null; })()
     }))()`);
     const recentEvents = cdp.events.slice(eventStart);
     const exceptions = recentEvents.filter((event) => event.method === 'Runtime.exceptionThrown').map((event) => event.params?.exceptionDetails?.text || 'runtime exception');
@@ -178,6 +183,11 @@ async function runViewport(cdp, profileName, width, height, mobile) {
     if (route === '/' && !mobile && state.menuButtonVisible !== false) failures.push('desktop menu button visible');
     if (route === '/' && state.todayCards !== 6) failures.push(`daily briefing has ${state.todayCards} cards instead of 6`);
     if (route === '/' && !state.systemMapLower) failures.push('interactive system map is not below the hero');
+    if (route === '/' && state.heroDiscoveries < 1) failures.push('homepage newest-discoveries rail did not render');
+    if (!mobile && ['/research','/trials','/universities','/discover','/changes','/regulatory'].includes(route) && state.portalIntroBottom > 390) failures.push(`portal introduction ends too low at ${state.portalIntroBottom}px`);
+    if (route === '/regulatory' && state.regulatoryGuides < 20) failures.push(`regulatory library has only ${state.regulatoryGuides} guides`);
+    if (route === '/regulatory' && state.readerCopies < 3) failures.push('regulatory reading-level copies did not render');
+    if (route === '/dashboard' && state.guestRadarVisible !== true) failures.push('guest My Radar did not render without sign-in');
     if (route === '/topics/rapamycin' && (!state.timelineVisible || state.timelineEvents < 1)) failures.push('topic evidence timeline did not render');
     if (route === '/evidence-graph' && (state.graphMechanisms < 1 || state.graphUniversities < 1)) failures.push(`graph missing layers: ${state.graphMechanisms} mechanisms, ${state.graphUniversities} universities`);
     if (route === '/discover/recruiting-trials' && state.trialWorldMapNodes < 1) failures.push('trial world map did not render country nodes');
@@ -187,6 +197,14 @@ async function runViewport(cdp, profileName, width, height, mobile) {
 
     const routeName = route === '/' ? 'home' : route.slice(1).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
     await capture(cdp, `${profileName}-${routeName}.png`, false);
+
+    if (route === '/regulatory') {
+      for (const mode of ['beginner', 'student', 'professional']) {
+        const modeState = await evaluate(cdp, `(() => { document.querySelector('[data-reader-mode="${mode}"]')?.click(); const visible=[...document.querySelectorAll('.reader-copy')].filter(el => getComputedStyle(el).display !== 'none'); return { bodyMode:document.body.dataset.readerMode, visible:visible.length, wrong:visible.filter(el => !el.classList.contains('reader-copy--${mode}')).length }; })()`);
+        if (modeState.bodyMode !== mode || modeState.visible < 1 || modeState.wrong) results.at(-1).failures.push(`reader mode ${mode} did not change visible explanations`);
+        await capture(cdp, `${profileName}-regulatory-${mode}.png`, false);
+      }
+    }
 
     if (state.menuButtonVisible === true) {
       if (mobile) {
