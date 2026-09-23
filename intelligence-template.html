@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,300&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <link rel="icon" href="/favicon.ico" type="image/x-icon" />
-  <link rel="stylesheet" href="/intelligence.css" />
+  <link rel="stylesheet" href="/intelligence.css?v=20260923-living-atlas" />
 </head>
 <body data-view="{{PAGE_VIEW}}" data-topic="{{TOPIC_SLUG}}">
   <header class="intel-header">
@@ -29,20 +29,7 @@
     <button class="intel-nav-toggle" id="intelNavToggle" type="button" aria-expanded="false" aria-controls="intelNav">
       <span>Menu</span><i aria-hidden="true"></i>
     </button>
-    <nav class="intel-nav" id="intelNav" aria-label="Primary navigation">
-      <a href="/learn">Start here</a>
-      <a href="/discover">Discover</a>
-      <a href="/changes">What changed</a>
-      <a href="/research" data-nav="research">Research</a>
-      <a href="/trials" data-nav="trials">Trial Radar</a>
-      <a href="/topics" data-nav="topics">Topics</a>
-      <a href="/universities" data-nav="universities">Universities</a>
-      <a href="/regulatory" data-nav="regulatory">Regulatory</a>
-      <a href="/resources" data-nav="resources">Resources</a>
-      <a href="/briefings">Briefings</a>
-      <a href="/methodology">How it works</a>
-      <a href="/join">Members</a>
-    </nav>
+    <nav class="intel-nav" id="intelNav" aria-label="Primary navigation"><a href="/changes">Today</a><a href="/discover">Explore</a><a href="/trials" data-nav="trials">Trials</a><a href="/universities" data-nav="universities">Universities</a><a href="/dashboard">My Radar</a><div class="intel-nav-more"><button class="intel-nav-more-toggle" type="button" aria-expanded="false">More</button><div><form class="intel-nav-search" role="search"><input type="search" aria-label="Search longevity topics" placeholder="Search topics…" /><button type="submit">Search</button></form><a href="/learn">Longevity 101</a><a href="/research" data-nav="research">Research</a><a href="/topics" data-nav="topics">Topics</a><a href="/regulatory" data-nav="regulatory">Regulatory</a><a href="/resources" data-nav="resources">Resources</a><a href="/briefings">Briefings</a><a href="/methodology">How it works</a><a href="/join">Sign in</a></div></div></nav>
   </header>
 
   <main>
@@ -65,23 +52,7 @@
       </div>
     </section>
 
-    <section class="reader-guide" aria-label="How to use this page">
-      <article>
-        <span>First read</span>
-        <h2>Start with the question.</h2>
-        <p>Each page is organised around a practical research question: what changed, where the evidence comes from, and which source to open next.</p>
-      </article>
-      <article>
-        <span>Important limit</span>
-        <h2>Indexing is not endorsement.</h2>
-        <p>A record appearing here means it matched the automated topic rules. It does not mean the intervention is safe, effective, approved, or recommended.</p>
-      </article>
-      <article>
-        <span>Best habit</span>
-        <h2>Open the original source.</h2>
-        <p>Use immortal.life as a map. For decisions, assignments, or citations, verify the details at the linked journal, registry, regulator, or dataset.</p>
-      </article>
-    </section>
+    <section class="reader-mode" aria-label="Choose explanation level"><div><span>Explain this for a</span><div class="reader-mode-buttons"><button type="button" data-reader-mode="beginner">Beginner</button><button type="button" data-reader-mode="student">Student</button><button type="button" data-reader-mode="professional">Professional</button></div></div><p id="readerModeCopy">Plain-language summaries first, with technical details available when you want them.</p></section>
 
     {{TOPIC_DOSSIER_HTML}}
 
@@ -253,6 +224,7 @@
       <p>No uncited fallback content has been substituted. Please try again shortly.</p>
       <button type="button" id="retryButton">Retry</button>
     </div>
+    <nav class="next-journey" aria-label="Continue exploring"><span>Continue exploring</span><a href="/changes">What changed today</a><a href="/topics">Choose a topic</a><a href="/discover/recruiting-trials">Find trials</a><a href="/universities">Compare universities</a></nav>
   </main>
 
   <footer class="intel-footer">
@@ -269,8 +241,10 @@
     </div>
   </footer>
 
+  <nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/discover"><span aria-hidden="true">◇</span>Explore</a><a href="/dashboard"><span aria-hidden="true">☆</span>Saved</a><a href="/changes"><span aria-hidden="true">↻</span>Updates</a><button type="button" data-mobile-menu-open><span aria-hidden="true">☰</span>Menu</button></nav>
+
   <script src="/il-config.js"></script>
-  <script src="/intelligence.js"></script>
+  <script src="/intelligence.js?v=20260923-living-atlas"></script>
   <script src="/telemetry.js"></script>
 </body>
 </html>

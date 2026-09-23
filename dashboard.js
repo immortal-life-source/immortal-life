@@ -23,6 +23,28 @@
     return sessionStorage.getItem(SESSION_KEY);
   }
 
+  function renderLocalJourneys() {
+    function read(key) {
+      try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_) { return []; }
+    }
+    function fill(id, items, hrefFor, labelFor, emptyText) {
+      var root = document.getElementById(id);
+      if (!root) return;
+      root.replaceChildren();
+      if (!items.length) {
+        var empty = document.createElement('span'); empty.className = 'dash-journey-empty'; empty.textContent = emptyText; root.appendChild(empty); return;
+      }
+      items.slice(0, 5).forEach(function (item) {
+        var anchor = document.createElement('a'); anchor.href = hrefFor(item); anchor.textContent = labelFor(item); root.appendChild(anchor);
+      });
+    }
+    fill('dashSavedSearches', read('il_saved_searches'), function (item) { return '/topics?search=' + encodeURIComponent(item.query); }, function (item) { return item.query; }, 'Search from the homepage to keep it here.');
+    fill('dashSavedTopics', read('il_saved_topics'), function (item) { var slug = typeof item === 'string' ? item : item.slug; return '/topics/' + encodeURIComponent(slug); }, function (item) { return typeof item === 'string' ? item.replace(/-/g, ' ') : item.name; }, 'Save a topic guide to keep it here.');
+    fill('dashRecentTopics', read('il_recent_topics'), function (item) { return '/topics/' + encodeURIComponent(item.slug); }, function (item) { return item.name || item.slug.replace(/-/g, ' '); }, 'Recently opened topic guides will appear here.');
+  }
+
+  renderLocalJourneys();
+
   function esc(s) {
     var d = document.createElement('div');
     d.textContent = s == null ? '' : String(s);

@@ -1020,6 +1020,7 @@ details.dash-acc summary {
   }
 
   .dash-right > .dash-section {
+    order: 7;
     margin-bottom: 16px;
     margin-top: 0;
     padding-top: 0;
@@ -1074,6 +1075,14 @@ details.dash-acc summary {
 
   .dash-right > .dash-section:nth-child(5) {
     order: 5;
+  }
+
+  .dash-right > .dash-section:nth-child(6) {
+    order: 6;
+  }
+
+  .dash-right > .dash-section:nth-child(7) {
+    order: 7;
   }
 
   .dash-left > .dash-section-label {
@@ -1328,6 +1337,12 @@ details.dash-acc summary {
 .dash-radar-picker summary { color: rgba(237,233,224,.76); cursor: pointer; font-size: 12px; letter-spacing: .04em; }
 .dash-radar-picker details .dash-watch-topics { padding-top: 12px; }
 .dash-radar-group-title { margin: 0 0 10px; color: rgba(237,233,224,.58); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+.dash-continue-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
+.dash-continue-grid > div { min-width:0; padding:18px; border:1px solid rgba(237,233,224,.1); background:rgba(255,255,255,.015); }
+.dash-journey-links { display:flex; flex-wrap:wrap; gap:8px; }
+.dash-journey-links a { padding:8px 10px; border:1px solid rgba(184,149,90,.28); color:rgba(237,233,224,.78); text-decoration:none; font-size:11px; line-height:1.35; }
+.dash-journey-links a:hover { border-color:#b8955a; color:#b8955a; }
+.dash-journey-empty { color:rgba(237,233,224,.42); font-size:11px; line-height:1.55; }
 .dash-watch-trials { max-height: 270px; overflow: auto; padding-right: 4px; }
 .dash-watch-trials .dash-watch-chip { max-width: 100%; text-align: left; line-height: 1.45; text-transform: none; letter-spacing: .02em; }
 .dash-radar-updates { margin-top: 28px; padding: 20px; border: 1px solid rgba(237,233,224,.1); background: rgba(255,255,255,.015); }
@@ -1353,6 +1368,7 @@ details.dash-acc summary {
 
 @media (max-width: 680px) {
   .dash-intel-head { flex-direction: column; }
+  .dash-continue-grid { grid-template-columns:1fr; }
   .dash-radar-events { grid-template-columns: 1fr; }
   .dash-radar-updates { padding: 16px; }
   .dash-radar-updates-head { align-items: flex-start; flex-direction: column; }

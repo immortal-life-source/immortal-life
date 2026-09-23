@@ -5,18 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- ── SEO ── -->
-  <title>immortal.life — The end of ageing begins here</title>
-  <meta property="og:title" content="Immortal.Life — The founding circle is forming.">
-  <meta property="og:description" content="By invitation only. Secure your place.">
+  <title>immortal.life — Understand what is changing in longevity</title>
+  <meta property="og:title" content="immortal.life — Understand what is changing in longevity">
+  <meta property="og:description" content="Research, clinical trials, safety signals and university activity—automatically collected and explained in plain language.">
   <meta property="og:image" content="https://www.immortal.life/og-image.png">
   <meta property="og:url" content="https://www.immortal.life">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://www.immortal.life/og-image.png">
-  <meta name="twitter:title" content="Immortal.Life — The founding circle is forming.">
-  <meta name="twitter:description" content="By invitation only. Secure your place.">
+  <meta name="twitter:title" content="immortal.life — Understand what is changing in longevity">
+  <meta name="twitter:description" content="Research, clinical trials, safety signals and university activity—automatically collected and explained in plain language.">
 
-  <meta name="description" content="The biology of ageing is becoming programmable. immortal.life is a home for longevity science intelligence, practical protocol, and a serious community." />
+  <meta name="description" content="Understand new longevity research, clinical trials, safety signals and university activity through an automatically updated, source-linked guide." />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://www.immortal.life" />
 
@@ -30,7 +30,7 @@
 
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
 
-  <link rel="stylesheet" href="/style.css?v=20260916-mobile-header-unified" />
+  <link rel="stylesheet" href="/style.css?v=20260923-living-atlas" />
 </head>
 
 <body>
@@ -75,27 +75,25 @@
       </button>
       <nav class="s1-nav" id="primaryNav" aria-label="Primary navigation">
         <div class="s1-nav-top">
-          <a href="/learn" class="s1-nav-link">Start here</a>
+          <a href="/changes" class="s1-nav-link">Today</a>
           <span class="s1-nav-sep" aria-hidden="true"></span>
-          <a href="/discover" class="s1-nav-link">Discover</a>
+          <a href="/discover" class="s1-nav-link">Explore</a>
           <span class="s1-nav-sep" aria-hidden="true"></span>
-          <a href="/research" class="s1-nav-link">Research</a>
-          <a href="/changes" class="s1-nav-link">What changed</a>
-          <span class="s1-nav-sep" aria-hidden="true"></span>
-          <a href="/trials" class="s1-nav-link">Trial Radar</a>
-          <span class="s1-nav-sep" aria-hidden="true"></span>
-          <a href="/topics" class="s1-nav-link">Topics</a>
+          <a href="/trials" class="s1-nav-link">Trials</a>
           <span class="s1-nav-sep" aria-hidden="true"></span>
           <a href="/universities" class="s1-nav-link">Universities</a>
           <span class="s1-nav-sep" aria-hidden="true"></span>
-          <a href="/resources" class="s1-nav-link">Resources</a>
+          <a href="/dashboard" class="s1-nav-link">My Radar</a>
         </div>
         <div class="s1-nav-secondary">
+          <a href="/learn" class="s1-nav-leaderboard">Longevity 101</a>
+          <a href="/research" class="s1-nav-leaderboard">Research</a>
+          <a href="/topics" class="s1-nav-leaderboard">Topics</a>
           <a href="/regulatory" class="s1-nav-leaderboard">Regulatory</a>
-          <a href="/briefings" class="s1-nav-leaderboard">Briefings</a>
+          <a href="/resources" class="s1-nav-leaderboard">Resources</a>
           <a href="/methodology" class="s1-nav-leaderboard">How it works</a>
           <a href="#" class="s1-nav-leaderboard" data-news-trigger>Project News</a>
-          <a href="/join" class="s1-nav-leaderboard">Members</a>
+          <a href="/join" class="s1-nav-leaderboard">Sign in</a>
         </div>
       </nav>
     </header>
@@ -103,22 +101,29 @@
     <!-- Giant headline -->
     <div class="s1-center">
       <h1>
-        <span class="hl-wrap"><span class="hl-inner"><span class="hl">You were</span></span></span>
-        <span class="hl-wrap"><span class="hl-inner"><span class="hl italic">not meant</span></span></span>
-        <span class="hl-wrap"><span class="hl-inner"><span class="hl">to expire.</span></span></span>
+        <span class="hl-wrap"><span class="hl-inner"><span class="hl">Understand</span></span></span>
+        <span class="hl-wrap"><span class="hl-inner"><span class="hl italic">what is changing</span></span></span>
+        <span class="hl-wrap"><span class="hl-inner"><span class="hl">in longevity.</span></span></span>
       </h1>
 
       <div class="s1-sub">
         <div class="s1-sub-line" aria-hidden="true"></div>
         <p class="s1-sub-text">
-          The biology of ageing is <strong>becoming programmable.</strong><br> For the first time in history, the question is no longer whether —
-          but when, and for whom.
+          Research, clinical trials, safety signals and university activity—<br><strong>automatically collected and explained in plain language.</strong>
         </p>
       </div>
 
-      <div class="hero-start reveal">
-        <a href="/learn">Start with Longevity 101</a>
-        <span>New to the field? Follow a guided route through the science, trials, universities, and safety signals.</span>
+      <div class="hero-actions reveal">
+        <form class="home-search" id="homeSearch" role="search">
+          <label for="homeSearchInput">What are you curious about?</label>
+          <div><input id="homeSearchInput" name="q" type="search" list="longevityTopics" placeholder="Try rapamycin, senolytics, exercise…" autocomplete="off" /><button type="submit">Explore</button></div>
+          <datalist id="longevityTopics"><option value="Rapamycin"></option><option value="Senolytics"></option><option value="Epigenetic clocks"></option><option value="Exercise"></option><option value="Caloric restriction"></option><option value="Stem cells"></option><option value="Gene therapy"></option><option value="Sleep"></option></datalist>
+        </form>
+        <nav class="hero-quick-links" aria-label="Start exploring">
+          <a href="/changes">See what changed this week</a>
+          <a href="/topics">Explore a topic</a>
+          <a href="/discover/recruiting-trials">Find recruiting trials</a>
+        </nav>
       </div>
 
       <nav class="hero-orbit" aria-label="Explore longevity intelligence">
@@ -182,84 +187,43 @@
 
   </section>
 
-  <!-- ══════════════════════════════════════════
-       SECTION 2 — MANIFESTO
-  ══════════════════════════════════════════ -->
-  <section class="s2" aria-label="Manifesto">
-    <div class="s2-label reveal" aria-hidden="true">Manifesto</div>
-    <div class="manifesto">
+  <section class="home-live" id="today" aria-labelledby="todayTitle">
+    <div class="home-section-head reveal"><div><span>Updated automatically</span><h2 id="todayTitle">Today in longevity</h2></div><a href="/changes">Open the full change log</a></div>
+    <div class="return-banner" id="returnBanner" hidden><span id="returnCount">0</span><p>meaningful changes since your last visit.</p><a href="/changes">Show me what changed</a></div>
+    <div class="today-grid" id="todayGrid" aria-live="polite"><article class="today-loading">Loading the newest source-linked developments…</article></div>
+    <p class="home-data-status" id="homeDataStatus">Checking the live index…</p>
+  </section>
 
-      <div class="manifesto-line reveal">
-        For 200,000 years, death was not a problem to be solved.
-        It was simply <em>the condition of being alive.</em>
-        <span class="aside">
-          That assumption is being revised — in laboratories, in clinical trials,
-          in the data coming back from the first generation of interventions that
-          treat ageing as a biological process rather than an inevitability.
-        </span>
-      </div>
-
-      <div class="manifesto-line reveal reveal-d1">
-        The science has crossed a threshold.
-        <em>The question now is whether you are paying attention.</em>
-        <span class="aside">
-          Billions in research capital. Thousands of scientists. Convergent
-          technologies arriving simultaneously — AI-accelerated drug discovery,
-          epigenetic reprogramming, cellular rejuvenation. The timeline is
-          compressing faster than public awareness.
-        </span>
-      </div>
-
+  <section class="home-paths" aria-labelledby="pathsTitle">
+    <div class="home-section-head reveal"><div><span>Choose your route</span><h2 id="pathsTitle">What brings you here?</h2></div><a href="/learn">New? Start with Longevity 101</a></div>
+    <div class="path-grid">
+      <a class="path-card path-card--learn reveal" href="/learn"><span>01 · Learn</span><h3>I am new to longevity</h3><p>Build a clear foundation and learn how evidence levels differ.</p><b>Start the guided route →</b></a>
+      <a class="path-card path-card--evidence reveal" href="/topics"><span>02 · Follow</span><h3>I want to follow a topic</h3><p>See papers, trials, uncertainties and source changes together.</p><b>Choose a topic →</b></a>
+      <a class="path-card path-card--trials reveal" href="/discover/recruiting-trials"><span>03 · Trials</span><h3>I want to find clinical trials</h3><p>Explore active registry records by topic and location.</p><b>Open Trial Radar →</b></a>
+      <a class="path-card path-card--universities reveal" href="/universities"><span>04 · Landscape</span><h3>I want to compare universities</h3><p>See research activity, topic breadth and recent momentum globally.</p><b>Explore universities →</b></a>
+      <a class="path-card path-card--safety reveal" href="/regulatory"><span>05 · Safety</span><h3>I want official safety information</h3><p>Navigate regulatory notices, corrections and retractions.</p><b>Check official updates →</b></a>
+      <a class="path-card path-card--changes reveal" href="/changes"><span>06 · Updates</span><h3>I want to know what changed</h3><p>Review meaningful source differences without scanning every record.</p><b>See recent changes →</b></a>
     </div>
   </section>
 
-  <!-- ══════════════════════════════════════════
-       SECTION 3 — THREE PILLARS
-  ══════════════════════════════════════════ -->
-  <section class="s3" aria-label="What we are building">
-    <div class="pillar reveal">
-      <div class="p-index" aria-hidden="true">01</div>
-      <h2 class="p-title">Research<br><em>Intelligence</em></h2>
-      <p class="p-body">
-        New studies and clinical trials made easier to understand, with direct
-        links to the original records and clear notes about uncertainty.
-      </p>
-    </div>
-    <div class="pillar reveal reveal-d1">
-      <div class="p-index" aria-hidden="true">02</div>
-      <h2 class="p-title">Evidence<br><em>Index</em></h2>
-      <p class="p-body">
-        Study designs, populations, trial status, and uncertainty shown
-        without turning research records into personal medical advice.
-      </p>
-    </div>
-    <div class="pillar reveal reveal-d2">
-      <div class="p-index" aria-hidden="true">03</div>
-      <h2 class="p-title">A serious<br><em>Community</em></h2>
-      <p class="p-body">
-        For researchers, practitioners, and thoughtful individuals
-        who believe the timeline is real — and want to be part of
-        what comes next.
-      </p>
+  <section class="home-explorer" aria-labelledby="explorerTitle">
+    <div class="home-section-head reveal"><div><span>Visual topic explorer</span><h2 id="explorerTitle">Follow an idea through the evidence.</h2></div><a href="/evidence-graph">Open the full evidence graph</a></div>
+    <div class="explorer-layout">
+      <nav class="explorer-topics" aria-label="Popular longevity topics">
+        <a href="/topics/rapamycin" data-tone="teal">Rapamycin</a><a href="/topics/senolytics" data-tone="violet">Senolytics</a><a href="/topics/epigenetic-clocks" data-tone="blue">Epigenetic clocks</a><a href="/topics/exercise" data-tone="green">Exercise</a><a href="/topics/stem-cells" data-tone="coral">Stem cells</a><a href="/topics/caloric-restriction" data-tone="gold">Caloric restriction</a>
+      </nav>
+      <div class="explorer-story reveal"><span>One topic, four views</span><ol><li><b>Understand</b><small>A plain-language topic guide</small></li><li><b>Check evidence</b><small>Human, preclinical and synthesis records</small></li><li><b>Find trials</b><small>Status, phase, locations and registry source</small></li><li><b>Watch change</b><small>New records, corrections and regulatory signals</small></li></ol></div>
     </div>
   </section>
 
-  <section class="portal-preview" aria-label="Longevity intelligence portal">
-    <div class="portal-preview-copy reveal">
-      <div class="portal-preview-kicker">Updated automatically</div>
-      <h2>A living map of longevity science.</h2>
-      <p>
-        New papers and clinical-trial changes are found, organised, and published
-        automatically. Every item links back to its original source.
-      </p>
-      <a href="/research" class="portal-preview-link">Open the research portal</a>
-    </div>
-    <div class="portal-preview-list reveal reveal-d1" aria-label="Automatic capabilities">
-      <div><span>01</span><strong>Research updates</strong><small>Recent records from scientific databases</small></div>
-      <div><span>02</span><strong>Trial Radar</strong><small>Study status, phase, enrolment, and registry links</small></div>
-      <div><span>03</span><strong>Topic guides</strong><small>Twelve focused ways to explore the evidence</small></div>
-      <div><span>04</span><strong>Student path</strong><small>A plain-language route for learning the field without getting lost</small></div>
-    </div>
+  <section class="home-global" aria-labelledby="globalTitle">
+    <div class="home-global-copy reveal"><span>Global pulse</span><h2 id="globalTitle">See where longevity research is moving.</h2><p>Explore university activity, recruiting trials and official sources around the world. The map is a discovery tool—not a ranking of scientific quality or medical care.</p><div class="home-global-actions"><a href="/universities">University research map</a><a href="/discover/recruiting-trials">Recruiting trials by country</a><a href="/resources">Official source atlas</a></div></div>
+    <div class="home-world" aria-hidden="true"><span class="world-orbit world-orbit--one"></span><span class="world-orbit world-orbit--two"></span><i style="--x:18%;--y:38%;--tone:var(--violet)"></i><i style="--x:44%;--y:29%;--tone:var(--teal)"></i><i style="--x:62%;--y:44%;--tone:var(--gold)"></i><i style="--x:78%;--y:31%;--tone:var(--coral)"></i><i style="--x:71%;--y:69%;--tone:var(--success)"></i><i style="--x:33%;--y:68%;--tone:var(--blue)"></i></div>
+  </section>
+
+  <section class="home-personal" id="savedForYou" aria-labelledby="personalTitle">
+    <div><span>Your longevity radar</span><h2 id="personalTitle">Make the index yours.</h2><p>Save topics, return to recently viewed guides, and receive only meaningful changes—not a stream of every new paper.</p></div>
+    <div class="personal-grid"><div><strong>Saved topics</strong><div id="savedTopicsHome" class="saved-topic-list"><span>Save a topic to see it here.</span></div></div><div><strong>Recently viewed</strong><div id="recentTopicsHome" class="saved-topic-list"><span>Your recent topic guides will appear here.</span></div></div><a class="personal-cta" href="/dashboard">Open My Radar</a></div>
   </section>
 
   <!-- ══════════════════════════════════════════
@@ -269,16 +233,16 @@
     <div class="s4-glow" aria-hidden="true"></div>
 
     <div class="s4-left reveal">
-      <div class="s4-eyebrow">Join the list</div>
+      <div class="s4-eyebrow">Weekly longevity briefing</div>
       <h2 class="s4-headline">
-        Be here<br>
-        <em>before</em><br>
-        it opens.
+        Keep up<br>
+        <em>without</em><br>
+        the noise.
       </h2>
       <p class="s4-body">
-        We're building in the open. The first people on this list will
-        shape what immortal.life becomes — and receive everything we
-        publish before anyone else.
+        Receive one source-linked summary of meaningful research, trial,
+        regulatory and integrity changes each week. Automatically generated;
+        no noise and no promotional feed.
       </p>
     </div>
 
@@ -326,7 +290,7 @@
           class="submit-btn"
           id="submitBtn"
         >
-          Secure your place
+          Send me the weekly briefing
         </button>
 
         <p class="form-small">
@@ -342,8 +306,7 @@
         <div class="success-hl">You're on the list.</div>
         <div class="success-body">
           A confirmation is on its way to your inbox.<br><br>
-          Something worth reading is coming.
-          We'll be in touch when it does.
+          Your first source-linked weekly briefing will arrive after confirmation.
         </div>
       </div>
 
@@ -377,6 +340,8 @@
       <div class="foot-copy">© 2026 immortal.life</div>
     </div>
   </footer>
+
+  <nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/discover"><span aria-hidden="true">◇</span>Explore</a><a href="/dashboard"><span aria-hidden="true">☆</span>Saved</a><a href="/changes"><span aria-hidden="true">↻</span>Updates</a><button type="button" data-mobile-menu-open><span aria-hidden="true">☰</span>Menu</button></nav>
 
   <!-- ══════════════════════════════════════════
        PRIVACY POLICY MODAL
@@ -479,7 +444,7 @@
 
   <script src="/il-config.js"></script>
   <script src="/news-modal.js"></script>
-  <script src="/main.js?v=20260915-brand-nav"></script>
+  <script src="/main.js?v=20260923-living-atlas"></script>
   <script src="/telemetry.js"></script>
 </body>
 </html>

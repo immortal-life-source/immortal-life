@@ -16,8 +16,99 @@
     if (event.target instanceof Element && event.target.closest('a')) setNavigationOnly(false);
   });
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') setNavigationOnly(false);
+    if (event.key === 'Escape') { setNavigationOnly(false); if (window.innerWidth > 860) setMoreNavigation(false); }
   });
+
+  const moreNavigation = document.querySelector('.intel-nav-more');
+  const moreNavigationToggle = document.querySelector('.intel-nav-more-toggle');
+  function setMoreNavigation(open) {
+    if (!moreNavigation) return;
+    moreNavigation.dataset.open = String(open);
+    moreNavigationToggle?.setAttribute('aria-expanded', String(open));
+  }
+  function syncMoreNavigation() {
+    setMoreNavigation(window.innerWidth <= 860);
+  }
+  moreNavigationToggle?.addEventListener('click', () => setMoreNavigation(moreNavigation?.dataset.open !== 'true'));
+  document.addEventListener('click', (event) => {
+    if (window.innerWidth > 860 && moreNavigation?.dataset.open === 'true' && event.target instanceof Node && !moreNavigation.contains(event.target)) setMoreNavigation(false);
+  });
+  syncMoreNavigation();
+  window.addEventListener('resize', syncMoreNavigation);
+
+  document.querySelector('[data-mobile-menu-open]')?.addEventListener('click', () => navToggleOnly?.click());
+  const currentPath = location.pathname;
+  document.querySelectorAll('.mobile-dock a').forEach((anchor) => {
+    const href = anchor.getAttribute('href');
+    if (href === currentPath || (href !== '/' && currentPath.startsWith(`${href}/`))) anchor.setAttribute('aria-current', 'page');
+  });
+
+  const readerCopy = {
+    beginner: 'Plain-language summaries first. Start with what changed, why it may matter, and the original source.',
+    student: 'Study design, evidence level, population and limitations are foregrounded for careful learning.',
+    professional: 'Source metadata, confidence signals, jurisdictions and machine-readable exports stay close at hand.',
+  };
+  let readerMode = 'beginner';
+  try { readerMode = localStorage.getItem('il_reader_mode') || 'beginner'; } catch (_) { /* storage is optional */ }
+  function setReaderMode(mode) {
+    if (!readerCopy[mode]) return;
+    readerMode = mode; body.dataset.readerMode = mode;
+    document.querySelectorAll('[data-reader-mode]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.readerMode === mode)));
+    const copy = document.getElementById('readerModeCopy'); if (copy) copy.textContent = readerCopy[mode];
+    try { localStorage.setItem('il_reader_mode', mode); } catch (_) { /* storage is optional */ }
+  }
+  document.querySelectorAll('[data-reader-mode]').forEach((button) => button.addEventListener('click', () => setReaderMode(button.dataset.readerMode)));
+  setReaderMode(readerMode);
+
+  const topicMatch = currentPath.match(/^\/topics\/([a-z0-9-]+)$/);
+  if (topicMatch) {
+    const topicName = document.querySelector('h1')?.textContent?.trim() || topicMatch[1].replace(/-/g, ' ');
+    try {
+      const recent = JSON.parse(localStorage.getItem('il_recent_topics') || '[]').filter((item) => item.slug !== topicMatch[1]);
+      recent.unshift({ slug: topicMatch[1], name: topicName, visitedAt: new Date().toISOString() });
+      localStorage.setItem('il_recent_topics', JSON.stringify(recent.slice(0, 8)));
+    } catch (_) { /* storage is optional */ }
+  }
+
+  document.querySelectorAll('[data-save-topic]').forEach((button) => {
+    const slug = button.dataset.saveTopic; const name = button.dataset.topicName || slug.replace(/-/g, ' ');
+    function refresh() {
+      let saved = []; try { saved = JSON.parse(localStorage.getItem('il_saved_topics') || '[]'); } catch (_) { /* empty */ }
+      const active = saved.some((item) => (typeof item === 'string' ? item : item.slug) === slug);
+      button.textContent = active ? '★ Topic saved' : '☆ Save this topic'; button.setAttribute('aria-pressed', String(active));
+    }
+    button.addEventListener('click', () => {
+      let saved = []; try { saved = JSON.parse(localStorage.getItem('il_saved_topics') || '[]'); } catch (_) { /* empty */ }
+      const active = saved.some((item) => (typeof item === 'string' ? item : item.slug) === slug);
+      saved = active ? saved.filter((item) => (typeof item === 'string' ? item : item.slug) !== slug) : [{ slug, name }, ...saved];
+      try { localStorage.setItem('il_saved_topics', JSON.stringify(saved.slice(0, 20))); } catch (_) { /* storage is optional */ }
+      refresh();
+    });
+    refresh();
+  });
+
+  document.querySelectorAll('[data-learning-quiz] .quiz-question').forEach((question) => {
+    question.querySelectorAll('[data-choice]').forEach((button) => button.addEventListener('click', () => {
+      const correct = button.dataset.choice === question.dataset.answer;
+      question.dataset.result = correct ? 'correct' : 'try-again';
+      question.querySelector('small').hidden = false;
+      question.querySelectorAll('[data-choice]').forEach((choice) => choice.setAttribute('aria-pressed', String(choice === button)));
+    }));
+    question.querySelector('small').hidden = true;
+  });
+
+  document.querySelectorAll('.intel-nav-search').forEach((form) => form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const input = form.querySelector('input[type="search"]');
+    const query = String(input?.value || '').trim();
+    if (!query) { input?.focus(); return; }
+    try {
+      const saved = JSON.parse(localStorage.getItem('il_saved_searches') || '[]').filter((item) => item.query.toLowerCase() !== query.toLowerCase());
+      saved.unshift({ query, savedAt: new Date().toISOString() });
+      localStorage.setItem('il_saved_searches', JSON.stringify(saved.slice(0, 8)));
+    } catch (_) { /* storage is optional */ }
+    window.location.href = `/topics?search=${encodeURIComponent(query)}`;
+  }));
 
   if (!body.dataset.view) return;
 
@@ -147,7 +238,9 @@
 
   function renderTopics(topics, compact) {
     elements.topicGrid.replaceChildren();
-    const visible = compact ? topics.slice(0, 6) : topics;
+    const search = new URLSearchParams(location.search).get('search')?.trim().toLowerCase() || '';
+    const filtered = search ? topics.filter((topic) => `${topic.name} ${topic.description}`.toLowerCase().includes(search)) : topics;
+    const visible = compact ? filtered.slice(0, 6) : filtered;
     visible.forEach((topic, index) => {
       const card = link('topic-card', '', `/topics/${encodeURIComponent(topic.slug)}`);
       card.append(el('span', 'topic-card-number', String(index + 1).padStart(2, '0')));
@@ -163,6 +256,7 @@
       card.append(counts);
       elements.topicGrid.append(card);
     });
+    if (!visible.length) elements.topicGrid.append(el('p', 'empty-list', `No tracked topic matches “${search}”. Try a broader term or browse all topics.`));
     elements.topicsSection.hidden = false;
     const allLink = elements.topicsSection.querySelector('.section-link');
     if (allLink) allLink.hidden = !compact;
@@ -185,6 +279,7 @@
       main.append(heading);
       const researchSummary = `${evidenceLabel(record.evidence_level, record.status)}${record.journal ? ` from ${record.journal}` : ''}. Open the original record for the study details, methods, and limitations.`;
       main.append(el('p', '', researchSummary));
+      main.append(evidenceLadder(record.evidence_level));
       const tags = el('div', 'record-tags');
       topicLinks(record, 'research_item_topics').forEach((topic) => tags.append(link('record-tag', topic.name, `/topics/${encodeURIComponent(topic.slug)}`)));
       if (record.is_open_access) tags.append(el('span', 'record-tag', 'Open access'));
@@ -217,6 +312,29 @@
     return labels[level] || 'Research record';
   }
 
+  function evidenceLadder(level) {
+    const ladder = el('div', 'evidence-ladder');
+    ladder.setAttribute('aria-label', 'Evidence stage');
+    const stages = [
+      ['preclinical', 'Lab / animal'], ['human-study', 'Human study'], ['randomized-human', 'Randomized'], ['human-synthesis', 'Evidence synthesis']
+    ];
+    const activeIndex = stages.findIndex(([key]) => key === level);
+    stages.forEach(([key, label], index) => {
+      const item = el('span', index === activeIndex ? 'is-current' : index < activeIndex ? 'is-passed' : '', label);
+      item.dataset.stage = key; ladder.append(item);
+    });
+    return ladder;
+  }
+
+  function trialLadder(phases) {
+    const ladder = el('div', 'evidence-ladder evidence-ladder--trial');
+    ladder.setAttribute('aria-label', 'Clinical trial phase');
+    const value = (Array.isArray(phases) ? phases.join(' ') : String(phases || '')).toLowerCase();
+    const current = value.includes('phase 4') ? 3 : value.includes('phase 3') ? 2 : value.includes('phase 2') ? 1 : 0;
+    ['Early phase', 'Phase 2', 'Phase 3', 'Phase 4'].forEach((label, index) => ladder.append(el('span', index === current ? 'is-current' : index < current ? 'is-passed' : '', label)));
+    return ladder;
+  }
+
   function renderTrials(records) {
     elements.trialList.replaceChildren();
     if (!records.length) {
@@ -235,6 +353,7 @@
       main.append(heading);
       const phases = Array.isArray(record.phases) && record.phases.length ? record.phases.map(readableStatus).join(', ') : 'Phase not supplied';
       main.append(el('p', '', `${phases} clinical study. Registry status: ${readableStatus(record.overall_status)}. Open the registry record for eligibility, locations, and contacts.`));
+      main.append(trialLadder(record.phases));
       const tags = el('div', 'record-tags');
       topicLinks(record, 'clinical_trial_topics').forEach((topic) => tags.append(link('record-tag', topic.name, `/topics/${encodeURIComponent(topic.slug)}`)));
       (record.phases || []).forEach((phase) => tags.append(el('span', 'record-tag', phase.replace(/_/g, ' '))));

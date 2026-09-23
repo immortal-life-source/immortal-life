@@ -359,3 +359,113 @@ document.addEventListener('keydown', (e) => {
 window.openPrivacy  = openPrivacy;
 window.closePrivacy = closePrivacy;
 window.handleSubmit = handleSubmit;
+
+/* ── Living homepage: search, live updates, and return memory ── */
+(function initLivingHomepage() {
+  const menuButton = document.querySelector('[data-mobile-menu-open]');
+  const mobileToggle = document.querySelector('.mobile-nav-toggle');
+  menuButton?.addEventListener('click', () => mobileToggle?.click());
+  document.querySelector('.mobile-dock a[href="/"]')?.setAttribute('aria-current', 'page');
+
+  const topicRoutes = {
+    'rapamycin': 'rapamycin', 'senolytics': 'senolytics', 'epigenetic clocks': 'epigenetic-clocks',
+    'exercise': 'exercise', 'caloric restriction': 'caloric-restriction', 'stem cells': 'stem-cells',
+    'gene therapy': 'gene-therapy', 'sleep': 'sleep', 'plasma exchange': 'plasma-exchange',
+    'glp-1': 'glp-1-therapies', 'metformin': 'metformin', 'nad': 'nad-metabolism'
+  };
+  document.getElementById('homeSearch')?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const rawQuery = String(document.getElementById('homeSearchInput')?.value || '').trim();
+    const query = rawQuery.toLowerCase();
+    if (!query) return document.getElementById('homeSearchInput')?.focus();
+    try {
+      const saved = JSON.parse(localStorage.getItem('il_saved_searches') || '[]').filter((item) => item.query.toLowerCase() !== rawQuery.toLowerCase());
+      saved.unshift({ query: rawQuery, savedAt: new Date().toISOString() });
+      localStorage.setItem('il_saved_searches', JSON.stringify(saved.slice(0, 8)));
+    } catch (_) { /* storage is optional */ }
+    const exact = topicRoutes[query] || Object.entries(topicRoutes).find(([label]) => label.includes(query) || query.includes(label))?.[1];
+    window.location.href = exact ? `/topics/${exact}` : `/topics?search=${encodeURIComponent(query)}`;
+  });
+
+  function readJson(key, fallback) {
+    try { return JSON.parse(localStorage.getItem(key) || '') || fallback; } catch (_) { return fallback; }
+  }
+
+  function renderTopicMemory(id, entries, emptyText) {
+    const root = document.getElementById(id);
+    if (!root) return;
+    root.replaceChildren();
+    if (!entries.length) { root.append(Object.assign(document.createElement('span'), { textContent: emptyText })); return; }
+    entries.slice(0, 5).forEach((entry) => {
+      const slug = typeof entry === 'string' ? entry : entry.slug;
+      const label = typeof entry === 'string' ? entry.replace(/-/g, ' ') : entry.name || entry.slug.replace(/-/g, ' ');
+      const anchor = document.createElement('a');
+      anchor.href = `/topics/${encodeURIComponent(slug)}`;
+      anchor.textContent = label;
+      root.append(anchor);
+    });
+  }
+
+  renderTopicMemory('savedTopicsHome', readJson('il_saved_topics', []), 'Save a topic to see it here.');
+  renderTopicMemory('recentTopicsHome', readJson('il_recent_topics', []), 'Your recent topic guides will appear here.');
+
+  const previousVisit = localStorage.getItem('il_last_visit');
+  localStorage.setItem('il_last_visit', new Date().toISOString());
+
+  function recordKind(item) {
+    const url = String(item?.url || '');
+    if (url.includes('/trials/')) return 'trials';
+    if (url.includes('/regulatory/')) return 'regulatory';
+    if (url.includes('/integrity/')) return 'integrity';
+    return 'research';
+  }
+
+  function shortCopy(value, limit = 150) {
+    const clean = String(value || '').replace(/\s+/g, ' ').trim();
+    return clean.length > limit ? `${clean.slice(0, limit - 1).trim()}…` : clean;
+  }
+
+  function renderToday(feedItems, changeItems) {
+    const root = document.getElementById('todayGrid');
+    if (!root) return;
+    const candidates = [];
+    const seenKinds = new Set();
+    [...changeItems, ...feedItems].forEach((item) => {
+      const kind = recordKind(item);
+      if (candidates.length < 4 && (!seenKinds.has(kind) || candidates.length > 2)) {
+        candidates.push({ ...item, kind }); seenKinds.add(kind);
+      }
+    });
+    root.replaceChildren();
+    if (!candidates.length) { root.append(Object.assign(document.createElement('article'), { className: 'today-loading', textContent: 'The live index is current; no new eligible records are available in this window.' })); return; }
+    candidates.slice(0, 4).forEach((item) => {
+      const card = document.createElement('a');
+      card.className = 'today-card'; card.dataset.kind = item.kind; card.href = item.url || '/changes';
+      const label = document.createElement('span'); label.textContent = `${item.kind === 'trials' ? 'Trial' : item.kind === 'integrity' ? 'Evidence change' : item.kind === 'regulatory' ? 'Official notice' : 'Research'} · ${item.date_published ? new Date(item.date_published).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : 'Latest'}`;
+      const heading = document.createElement('h3'); heading.textContent = shortCopy(item.title, 92);
+      const copy = document.createElement('p'); copy.textContent = shortCopy(item.content_text || 'Open the source-linked record to see what changed and why it appears here.');
+      card.append(label, heading, copy); root.append(card);
+    });
+  }
+
+  Promise.all([
+    fetch('/feed.json').then((response) => response.ok ? response.json() : Promise.reject(new Error('feed unavailable'))),
+    fetch('/changes/feed.json').then((response) => response.ok ? response.json() : Promise.reject(new Error('changes unavailable'))),
+  ]).then(([feed, changes]) => {
+    const feedItems = Array.isArray(feed.items) ? feed.items : [];
+    const changeItems = Array.isArray(changes.items) ? changes.items : [];
+    renderToday(feedItems, changeItems);
+    const status = document.getElementById('homeDataStatus');
+    if (status) status.textContent = `Live index checked ${new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}. Every item links to its original record.`;
+    if (previousVisit) {
+      const count = changeItems.filter((item) => new Date(item.date_published).getTime() > new Date(previousVisit).getTime()).length;
+      const banner = document.getElementById('returnBanner');
+      if (count > 0 && banner) { document.getElementById('returnCount').textContent = String(count); banner.hidden = false; }
+    }
+  }).catch(() => {
+    const root = document.getElementById('todayGrid');
+    if (root) root.innerHTML = '<article class="today-loading">The live summary is temporarily delayed. The research, trial and change pages remain available.</article>';
+    const status = document.getElementById('homeDataStatus');
+    if (status) status.textContent = 'Live summary delayed. No uncited fallback content has been inserted.';
+  });
+})();
