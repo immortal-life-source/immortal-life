@@ -146,12 +146,12 @@ const intelligencePages = [
   },
   {
     filename: 'regulatory.html',
-    PAGE_TITLE: 'EU & Czech Regulatory Watch — immortal.life',
-    PAGE_DESCRIPTION: 'Official notices from European and Czech medicines regulators, monitored automatically and linked to their original sources.',
+    PAGE_TITLE: 'Global Regulatory Watch — immortal.life',
+    PAGE_DESCRIPTION: 'Official medicines authorities, regulatory notices, approval databases, and safety sources from around the world, monitored automatically and linked to their original records.',
     CANONICAL_URL: `${site}/regulatory`,
     PAGE_VIEW: 'regulatory',
     TOPIC_SLUG: '',
-    PAGE_KICKER: 'Official EU and Czech notices',
+    PAGE_KICKER: 'Official regulatory sources worldwide',
     PAGE_HEADING: 'See when regulatory information changes.',
   },
   {
