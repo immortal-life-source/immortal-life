@@ -197,7 +197,7 @@
     resourcesSection: document.getElementById('resourcesSection'),
     resourceStats: document.getElementById('resourceStats'),
     resourceMapNodes: document.getElementById('resourceMapNodes'),
-    resourceEuCoverage: document.getElementById('resourceEuCoverage'),
+    resourceCountryCoverage: document.getElementById('resourceCountryCoverage'),
     mapSummary: document.getElementById('mapSummary'),
     resourceControls: document.getElementById('resourceControls'),
     resourceSearch: document.getElementById('resourceSearch'),
@@ -942,7 +942,8 @@
       label.setAttribute('x', point.x); label.setAttribute('y', point.y + 58); label.setAttribute('text-anchor', 'middle'); label.setAttribute('class', 'resource-map-label'); label.textContent = region;
       const detail = document.createElementNS(ns, 'text');
       detail.setAttribute('x', point.x); detail.setAttribute('y', point.y + 75); detail.setAttribute('text-anchor', 'middle'); detail.setAttribute('class', 'resource-map-detail');
-      detail.textContent = region === 'Europe' ? '27 EU COUNTRIES COVERED' : `${count} SOURCES`;
+      const countryCount = Number(coverage?.by_region_jurisdictions?.[region] || 0);
+      detail.textContent = countryCount ? `${countryCount} COUNTRIES` : `${count} SOURCES`;
       group.append(pulse, circle, number, label, detail);
       group.addEventListener('click', (event) => {
         event.preventDefault();
@@ -952,31 +953,55 @@
       });
       elements.resourceMapNodes.append(group);
     });
-    const euCodes = new Set(['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE']);
-    const euCountries = [...new Map(atlasResources
-      .filter((resource) => resource.region === 'Europe' && euCodes.has(resource.jurisdiction_code))
+    const countrySources = [...new Map(atlasResources
+      .filter((resource) => resource.geographic_scope === 'national' && /^[A-Z]{2}$/.test(resource.jurisdiction_code || ''))
       .map((resource) => [resource.jurisdiction_code, resource.jurisdiction_name]))]
       .sort((a, b) => String(a[1]).localeCompare(String(b[1])));
-    if (elements.resourceEuCoverage) {
-      elements.resourceEuCoverage.replaceChildren();
-      const heading = el('div', 'resource-eu-heading');
-      heading.append(el('strong', '', `EU national coverage: ${euCountries.length} of 27 countries`), el('span', '', 'Select a country to see its official medicines authority.'));
-      const countries = el('div', 'resource-eu-countries');
-      euCountries.forEach(([code, name]) => {
-        const button = el('button', '', `${code} · ${name}`);
+    if (elements.resourceCountryCoverage) {
+      elements.resourceCountryCoverage.replaceChildren();
+      const heading = el('div', 'resource-country-heading');
+      heading.append(el('strong', '', `Worldwide country coverage: ${countrySources.length} of 195 countries`), el('span', '', 'Choose a country to open its national authority or official WHO country profile.'));
+      const controls = el('div', 'resource-country-controls');
+      const selectLabel = el('label');
+      selectLabel.append(el('span', '', 'Choose a country'));
+      const select = el('select');
+      select.setAttribute('aria-label', 'Choose a country source');
+      const placeholder = el('option', '', 'Select one of 195 countries');
+      placeholder.value = '';
+      select.append(placeholder);
+      countrySources.forEach(([code, name]) => {
+        const option = el('option', '', `${name} (${code})`);
+        option.value = code;
+        select.append(option);
+      });
+      select.onchange = () => {
+        const selected = countrySources.find(([code]) => code === select.value);
+        if (!selected) return;
+        const source = atlasResources.find((resource) => resource.jurisdiction_code === selected[0] && resource.geographic_scope === 'national');
+        elements.resourceSearch.value = selected[1];
+        elements.resourceRegion.value = source?.region || '';
+        renderFilteredResources();
+        elements.resourceControls.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      };
+      selectLabel.append(select);
+      controls.append(selectLabel);
+      const regionSummary = el('div', 'resource-country-regions');
+      Object.entries(coverage?.by_region_jurisdictions || {}).sort((a, b) => String(a[0]).localeCompare(String(b[0]))).forEach(([region, count]) => {
+        const button = el('button', '', `${region}: ${count}`);
         button.type = 'button';
         button.onclick = () => {
-          elements.resourceSearch.value = name;
-          elements.resourceRegion.value = 'Europe';
+          elements.resourceSearch.value = '';
+          elements.resourceRegion.value = region;
           renderFilteredResources();
           elements.resourceControls.scrollIntoView({ behavior: 'smooth', block: 'center' });
         };
-        countries.append(button);
+        regionSummary.append(button);
       });
-      heading.append(countries);
-      elements.resourceEuCoverage.append(heading);
+      controls.append(regionSummary);
+      heading.append(controls);
+      elements.resourceCountryCoverage.append(heading);
     }
-    elements.mapSummary.textContent = 'Coverage shows official sources in the directory. Each national authority applies only within its own jurisdiction.';
+    elements.mapSummary.textContent = 'Country coverage uses a national pharmaceutical authority where the WHO directory identifies one; otherwise it links to the official WHO country profile. Each authority applies only within its own jurisdiction.';
   }
 
   let atlasResources = [];
@@ -1151,7 +1176,7 @@
       } else if (view === 'universities') {
         await fetchUniversityIndex();
       } else if (view === 'resources') {
-        const data = await request('resources', 100);
+        const data = await request('resources', 500);
         renderResources(data);
       } else if (view === 'quality') {
         const data = await request('quality', 100);

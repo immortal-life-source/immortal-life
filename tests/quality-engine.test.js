@@ -115,3 +115,21 @@ test('global resource atlas is authority-based, jurisdiction-aware, and automati
   assert.match(template, /Coverage map/);
   assert.match(template, /Regulatory information applies only to the country or region/);
 });
+
+test('global source directory covers all 195 sovereign states without inventing missing regulators', () => {
+  const migration = read('supabase/migrations/20260924000300_complete_global_country_sources.sql');
+  const generator = read('scripts/generate-global-country-sources.mjs');
+  const api = read('supabase/functions/public-intelligence/index.ts');
+  const portal = read('intelligence.js');
+  const rosterRows = migration.match(/\n  \('[A-Z]{2}', '[A-Z]{3}',/g) ?? [];
+  assert.equal(rosterRows.length, 195);
+  assert.match(migration, /create table if not exists public\.global_country_roster/);
+  assert.match(migration, /source_kind in \('regulator', 'who_profile'\)/);
+  assert.match(migration, /roster_count <> 195 or covered_count <> 195/);
+  assert.match(generator, /WHO country profile/);
+  assert.match(generator, /cells\[0\] !== '001'/);
+  assert.match(api, /Math\.min\(Math\.max\(parsedLimit, 1\), 500\)/);
+  assert.match(api, /by_region_jurisdictions/);
+  assert.match(portal, /request\('resources', 500\)/);
+  assert.match(portal, /Worldwide country coverage/);
+});

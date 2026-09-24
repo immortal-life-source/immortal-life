@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
   const view = cleanText(url.searchParams.get('view') ?? 'overview', 30)
   const topic = cleanText(url.searchParams.get('topic') ?? '', 80)
   const parsedLimit = Number.parseInt(url.searchParams.get('limit') ?? '24', 10)
-  const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 100) : 24
+  const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 500) : 24
 
   if (topic && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(topic)) {
     return response(req, { error: 'Invalid topic' }, 400)
@@ -184,6 +184,13 @@ Deno.serve(async (req) => {
         counts[value] = (counts[value] ?? 0) + 1
         return counts
       }, {})
+      const nationalCountries = resources.filter((item: any) => item.geographic_scope === 'national' && /^[A-Z]{2}$/.test(item.jurisdiction_code ?? ''))
+      const countriesByRegion = nationalCountries.reduce((regions: Record<string, Set<string>>, item: any) => {
+        const region = String(item.region ?? 'Unknown')
+        if (!regions[region]) regions[region] = new Set()
+        regions[region].add(item.jurisdiction_code)
+        return regions
+      }, {})
       return response(req, {
         generated_at: new Date().toISOString(),
         resources,
@@ -193,6 +200,7 @@ Deno.serve(async (req) => {
           live_integrations: resources.filter((item: any) => item.integration_status === 'live').length,
           healthy: resources.filter((item: any) => item.health === 'healthy').length,
           by_region: countBy('region'),
+          by_region_jurisdictions: Object.fromEntries(Object.entries(countriesByRegion).map(([region, codes]) => [region, codes.size])),
           by_type: countBy('resource_type'),
         },
         scope_notice: 'Coverage is selective and authority-based. A resource applies only in its stated jurisdiction; directory inclusion is not endorsement or evidence of treatment approval.',
