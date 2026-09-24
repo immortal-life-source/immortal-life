@@ -608,8 +608,8 @@ body[data-view="topics"] .intel-section { padding-top: clamp(38px, 4vw, 58px); }
   .resource-pathways { grid-template-columns: 1fr; }
   .resource-pathways button { min-height: 92px; }
   .resource-controls { grid-template-columns: 1fr; }
-  .resource-map { min-width: 680px; }
-  .resource-map-wrap { overflow-x: auto; }
+  .resource-map { width: 100%; min-width: 0; min-height: 0; height: auto; }
+  .resource-map-wrap { overflow: hidden; }
   .entity-record-list li { flex-direction: column; gap: 7px; }
   .entity-record-list span { text-align: left; }
   .change-row { grid-template-columns: 1fr; gap: 8px; }
