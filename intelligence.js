@@ -918,7 +918,7 @@
     });
   }
 
-  function renderResourceMap(coverage) {
+  function renderResourceMap(coverage, countryDirectory = []) {
     elements.resourceMapNodes.replaceChildren();
     const positions = {
       Global: { x: 600, y: 68 }, Europe: { x: 620, y: 178 }, Americas: { x: 250, y: 220 },
@@ -953,9 +953,8 @@
       });
       elements.resourceMapNodes.append(group);
     });
-    const countrySources = [...new Map(atlasResources
-      .filter((resource) => resource.geographic_scope === 'national' && /^[A-Z]{2}$/.test(resource.jurisdiction_code || ''))
-      .map((resource) => [resource.jurisdiction_code, resource.jurisdiction_name]))]
+    const countrySources = countryDirectory
+      .map((country) => [country.jurisdiction_code, country.jurisdiction_name, country.region])
       .sort((a, b) => String(a[1]).localeCompare(String(b[1])));
     if (elements.resourceCountryCoverage) {
       elements.resourceCountryCoverage.replaceChildren();
@@ -977,9 +976,8 @@
       select.onchange = () => {
         const selected = countrySources.find(([code]) => code === select.value);
         if (!selected) return;
-        const source = atlasResources.find((resource) => resource.jurisdiction_code === selected[0] && resource.geographic_scope === 'national');
         elements.resourceSearch.value = selected[1];
-        elements.resourceRegion.value = source?.region || '';
+        elements.resourceRegion.value = '';
         renderFilteredResources();
         elements.resourceControls.scrollIntoView({ behavior: 'smooth', block: 'center' });
       };
@@ -1053,7 +1051,7 @@
   function renderResources(data) {
     atlasResources = Array.isArray(data.resources) ? data.resources : [];
     renderResourceStats(data.coverage || {});
-    renderResourceMap(data.coverage || {});
+    renderResourceMap(data.coverage || {}, Array.isArray(data.country_directory) ? data.country_directory : []);
     const regions = [...new Set(atlasResources.map((item) => item.region))].sort();
     const types = [...new Set(atlasResources.map((item) => item.resource_type))].sort();
     regions.forEach((region) => elements.resourceRegion.append(new Option(region, region)));

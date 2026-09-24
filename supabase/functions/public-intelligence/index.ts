@@ -168,15 +168,19 @@ Deno.serve(async (req) => {
     }
 
     if (view === 'resources') {
-      const [{ data, error }, { data: ingestionSources, error: ingestionError }] = await Promise.all([supabase
+      const [{ data, error }, { data: ingestionSources, error: ingestionError }, { data: countryDirectory, error: countryDirectoryError }] = await Promise.all([supabase
         .from('global_resources')
         .select('id,name,resource_type,geographic_scope,jurisdiction_code,jurisdiction_name,region,authority_tier,description,limitations,homepage_url,data_url,terms_url,access_mode,reuse_status,integration_status,content_source_id,update_cadence,eligibility_reason,last_checked_at,last_healthy_at,last_status_code,consecutive_failures')
         .eq('is_eligible', true)
         .order('authority_tier')
         .order('name')
-        .limit(limit), sourcesPromise])
+        .limit(limit), sourcesPromise, supabase
+          .from('global_country_roster')
+          .select('jurisdiction_code,jurisdiction_name,region,source_kind')
+          .order('jurisdiction_name')])
       if (error) throw error
       if (ingestionError) throw ingestionError
+      if (countryDirectoryError) throw countryDirectoryError
       const ingestionById = new Map((ingestionSources ?? []).map((source: any) => [source.id, source]))
       const resources = (data ?? []).map((resource: any) => publicResourceState(resource, resource.content_source_id ? ingestionById.get(resource.content_source_id) : undefined))
       const countBy = (key: string) => resources.reduce((counts: Record<string, number>, item: any) => {
@@ -184,8 +188,7 @@ Deno.serve(async (req) => {
         counts[value] = (counts[value] ?? 0) + 1
         return counts
       }, {})
-      const nationalCountries = resources.filter((item: any) => item.geographic_scope === 'national' && /^[A-Z]{2}$/.test(item.jurisdiction_code ?? ''))
-      const countriesByRegion = nationalCountries.reduce((regions: Record<string, Set<string>>, item: any) => {
+      const countriesByRegion = (countryDirectory ?? []).reduce((regions: Record<string, Set<string>>, item: any) => {
         const region = String(item.region ?? 'Unknown')
         if (!regions[region]) regions[region] = new Set()
         regions[region].add(item.jurisdiction_code)
@@ -194,6 +197,7 @@ Deno.serve(async (req) => {
       return response(req, {
         generated_at: new Date().toISOString(),
         resources,
+        country_directory: countryDirectory ?? [],
         coverage: {
           total: resources.length,
           jurisdictions: new Set(resources.map((item: any) => item.jurisdiction_code)).size,
