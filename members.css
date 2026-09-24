@@ -62,7 +62,7 @@ body::after {
   gap: 10px;
 }
 
-.m-logo img { width: 38px; height: 38px; object-fit: contain; filter: drop-shadow(0 0 12px rgba(184,149,90,.18)); }
+.m-logo img { width: 51px; height: 51px; object-fit: contain; filter: drop-shadow(0 0 15px rgba(184,149,90,.22)); }
 
 .m-page-head {
   display: flex;

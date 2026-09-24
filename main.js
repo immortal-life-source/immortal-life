@@ -483,7 +483,7 @@ window.handleSubmit = handleSubmit;
     } : { kind: 'university', title: 'University activity is being refreshed', content_text: 'Open the global university index to compare topic breadth and recent research momentum.', url: '/universities' };
     const discoveryFallbacks = [
       { kind: 'research', title: 'Browse the newest longevity research', content_text: 'Open the source-linked research index, sorted by the date supplied by the original scholarly source.', url: '/research' },
-      { kind: 'integrity', title: 'See meaningful evidence changes', content_text: 'Review new records, corrections, retractions, trial-status changes, and other automatically detected differences.', url: '/changes' },
+      { kind: 'integrity', title: 'See important evidence updates', content_text: 'Review new records, corrections, retractions, trial-status updates, and other automatically detected differences.', url: '/changes' },
       { kind: 'research', title: 'Choose a longevity topic to follow', content_text: 'Start with a plain-language topic guide, then move into matching papers, trials, limitations, and source records.', url: '/topics' },
     ];
     const candidates = [...developments];
@@ -494,10 +494,10 @@ window.handleSubmit = handleSubmit;
     candidates.slice(0, 6).forEach((item) => {
       const card = document.createElement('a');
       card.className = 'today-card'; card.dataset.kind = item.kind; card.href = item.url || '/changes';
-      const labels = { trials: 'Trial status', integrity: 'Evidence change', regulatory: 'Official guidance', university: 'University momentum', research: 'Development' };
+      const labels = { trials: 'Trial status', integrity: 'Evidence update', regulatory: 'Official guidance', university: 'University momentum', research: 'Development' };
       const label = document.createElement('span'); label.textContent = `${labels[item.kind] || 'Update'} · ${item.date_published ? new Date(item.date_published).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : 'Latest check'}`;
       const heading = document.createElement('h3'); heading.textContent = shortCopy(item.title, 92);
-      const copy = document.createElement('p'); copy.textContent = shortCopy(item.content_text || 'Open the source-linked record to see what changed and why it appears here.');
+      const copy = document.createElement('p'); copy.textContent = shortCopy(item.content_text || 'Open the source-linked record to see what is new and why it appears here.');
       card.append(label, heading, copy); root.append(card);
     });
   }

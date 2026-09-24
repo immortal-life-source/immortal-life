@@ -39,7 +39,7 @@ test('meaningful changes have public pages, feeds, social cards, and navigation'
   for (const route of ['/changes', '/changes/feed.xml', '/changes/feed.json']) assert.ok(sources.has(route), `missing ${route}`);
   const pages = read('supabase/functions/public-pages/index.ts');
   assert.match(pages, /mode === 'changes'/);
-  assert.match(pages, /Living change log/);
+  assert.match(pages, /Recent additions and updates/);
   assert.match(read('supabase/functions/social-card/index.ts'), /kind === 'changes'/);
 });
 

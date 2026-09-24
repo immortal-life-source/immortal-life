@@ -197,6 +197,7 @@
     resourcesSection: document.getElementById('resourcesSection'),
     resourceStats: document.getElementById('resourceStats'),
     resourceMapNodes: document.getElementById('resourceMapNodes'),
+    resourceEuCoverage: document.getElementById('resourceEuCoverage'),
     mapSummary: document.getElementById('mapSummary'),
     resourceControls: document.getElementById('resourceControls'),
     resourceSearch: document.getElementById('resourceSearch'),
@@ -939,7 +940,10 @@
       number.setAttribute('x', point.x); number.setAttribute('y', point.y + 6); number.setAttribute('text-anchor', 'middle'); number.textContent = String(count);
       const label = document.createElementNS(ns, 'text');
       label.setAttribute('x', point.x); label.setAttribute('y', point.y + 58); label.setAttribute('text-anchor', 'middle'); label.setAttribute('class', 'resource-map-label'); label.textContent = region;
-      group.append(pulse, circle, number, label);
+      const detail = document.createElementNS(ns, 'text');
+      detail.setAttribute('x', point.x); detail.setAttribute('y', point.y + 75); detail.setAttribute('text-anchor', 'middle'); detail.setAttribute('class', 'resource-map-detail');
+      detail.textContent = region === 'Europe' ? '27 EU COUNTRIES COVERED' : `${count} SOURCES`;
+      group.append(pulse, circle, number, label, detail);
       group.addEventListener('click', (event) => {
         event.preventDefault();
         elements.resourceRegion.value = region;
@@ -948,7 +952,31 @@
       });
       elements.resourceMapNodes.append(group);
     });
-    elements.mapSummary.textContent = 'The map shows directory coverage, not regulatory equivalence. Global resources aggregate across countries; national and regional decisions apply only where stated.';
+    const euCodes = new Set(['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE']);
+    const euCountries = [...new Map(atlasResources
+      .filter((resource) => resource.region === 'Europe' && euCodes.has(resource.jurisdiction_code))
+      .map((resource) => [resource.jurisdiction_code, resource.jurisdiction_name]))]
+      .sort((a, b) => String(a[1]).localeCompare(String(b[1])));
+    if (elements.resourceEuCoverage) {
+      elements.resourceEuCoverage.replaceChildren();
+      const heading = el('div', 'resource-eu-heading');
+      heading.append(el('strong', '', `EU national coverage: ${euCountries.length} of 27 countries`), el('span', '', 'Select a country to see its official medicines authority.'));
+      const countries = el('div', 'resource-eu-countries');
+      euCountries.forEach(([code, name]) => {
+        const button = el('button', '', `${code} · ${name}`);
+        button.type = 'button';
+        button.onclick = () => {
+          elements.resourceSearch.value = name;
+          elements.resourceRegion.value = 'Europe';
+          renderFilteredResources();
+          elements.resourceControls.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        };
+        countries.append(button);
+      });
+      heading.append(countries);
+      elements.resourceEuCoverage.append(heading);
+    }
+    elements.mapSummary.textContent = 'Coverage shows official sources in the directory. Each national authority applies only within its own jurisdiction.';
   }
 
   let atlasResources = [];

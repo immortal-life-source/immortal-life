@@ -23,6 +23,10 @@ test('desktop homepage keeps navigation compact and motion clear of the headline
   assert.match(css, /width: min\(760px, 52vw\)/)
   assert.match(css, /--orbit-size: clamp\(380px, 31vw, 480px\)/)
   assert.match(js, /setMoreMenu/)
+  assert.match(html, /<a href="\/topics" class="s1-nav-link">Topics<\/a>/)
+  assert.match(html, /<a href="\/discover" class="s1-nav-leaderboard">Explore<\/a>/)
+  assert.match(css, /font-size: clamp\(50px, 5\.25vw, 81px\)/)
+  assert.match(css, /\.brand-mark \{[\s\S]*?width: 57px;/)
 })
 
 test('public page shells provide search, reading levels, related journeys and mobile navigation', async () => {
@@ -35,6 +39,8 @@ test('public page shells provide search, reading levels, related journeys and mo
     assert.match(source, /intel-nav-search/)
     assert.match(source, /mobile-dock/)
     assert.match(source, /Continue exploring/)
+    assert.match(source, /<a href="\/topics"[^>]*>Topics<\/a>/)
+    assert.match(source, /<a href="\/discover">Explore<\/a>/)
   }
   assert.match(files[0], /reader-mode/)
   assert.match(files[2], /reader-mode/)
@@ -106,4 +112,7 @@ test('the completed living atlas includes daily signals, timelines, plain-langua
   assert.match(publicPages, /trial-world-map/)
   assert.match(publicPages, /Related discoveries/)
   assert.match(css, /trial-map-node/)
+  assert.match(portalTemplate, /resourceEuCoverage/)
+  assert.match(portal, /EU national coverage:.*of 27 countries/)
+  assert.match(portal, /27 EU COUNTRIES COVERED/)
 })

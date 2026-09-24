@@ -30,7 +30,7 @@
 
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
 
-  <link rel="stylesheet" href="/style.css?v=20260924-content-density-b" />
+  <link rel="stylesheet" href="/style.css?v=20260924-navigation-density-c" />
 </head>
 
 <body>
@@ -67,7 +67,7 @@
     <!-- Header -->
     <header class="s1-header">
       <a href="/" class="logo brand-lockup" aria-label="immortal.life home">
-        <img class="brand-mark" src="/linkedin-app-logo.png" width="44" height="44" alt="" fetchpriority="high" decoding="async" />
+        <img class="brand-mark" src="/linkedin-app-logo.png" width="57" height="57" alt="" fetchpriority="high" decoding="async" />
         <span>immortal.life</span>
       </a>
       <button class="mobile-nav-toggle" type="button" aria-expanded="false" aria-controls="primaryNav" aria-label="Open navigation">
@@ -77,7 +77,7 @@
         <div class="s1-nav-top">
           <a href="/changes" class="s1-nav-link">Today</a>
           <span class="s1-nav-sep" aria-hidden="true"></span>
-          <a href="/discover" class="s1-nav-link">Explore</a>
+          <a href="/topics" class="s1-nav-link">Topics</a>
           <span class="s1-nav-sep" aria-hidden="true"></span>
           <a href="/trials" class="s1-nav-link">Trials</a>
           <span class="s1-nav-sep" aria-hidden="true"></span>
@@ -90,7 +90,7 @@
         <div class="s1-nav-secondary" id="homeMoreNav">
           <a href="/learn" class="s1-nav-leaderboard">Longevity 101</a>
           <a href="/research" class="s1-nav-leaderboard">Research</a>
-          <a href="/topics" class="s1-nav-leaderboard">Topics</a>
+          <a href="/discover" class="s1-nav-leaderboard">Explore</a>
           <a href="/regulatory" class="s1-nav-leaderboard">Regulatory</a>
           <a href="/resources" class="s1-nav-leaderboard">Resources</a>
           <a href="/methodology" class="s1-nav-leaderboard">How it works</a>
@@ -122,7 +122,7 @@
           <datalist id="longevityTopics"><option value="Rapamycin"></option><option value="Senolytics"></option><option value="Epigenetic clocks"></option><option value="Exercise"></option><option value="Caloric restriction"></option><option value="Stem cells"></option><option value="Gene therapy"></option><option value="Sleep"></option></datalist>
         </form>
         <nav class="hero-quick-links" aria-label="Start exploring">
-          <a href="/changes">See what changed this week</a>
+          <a href="/changes">See what's new this week</a>
           <a href="/topics">Explore a topic</a>
           <a href="/discover/recruiting-trials">Find recruiting trials</a>
         </nav>
@@ -199,8 +199,8 @@
   </section>
 
   <section class="home-live" id="today" aria-labelledby="todayTitle">
-    <div class="home-section-head reveal"><div><span>Updated automatically</span><h2 id="todayTitle">Today in longevity</h2></div><a href="/changes">Open the full change log</a></div>
-    <div class="return-banner" id="returnBanner" hidden><span id="returnCount">0</span><p>meaningful changes since your last visit.</p><a href="/changes">Show me what changed</a></div>
+    <div class="home-section-head reveal"><div><span>Updated automatically</span><h2 id="todayTitle">Today in longevity</h2></div><a href="/changes">Open all recent updates</a></div>
+    <div class="return-banner" id="returnBanner" hidden><span id="returnCount">0</span><p>new items since your last visit.</p><a href="/changes">Show me what's new</a></div>
     <div class="today-grid" id="todayGrid" aria-live="polite"><article class="today-loading">Loading the newest source-linked developments…</article></div>
     <p class="home-data-status" id="homeDataStatus">Checking the live index…</p>
   </section>
@@ -209,11 +209,11 @@
     <div class="home-section-head reveal"><div><span>Choose your route</span><h2 id="pathsTitle">What brings you here?</h2></div><a href="/learn">New? Start with Longevity 101</a></div>
     <div class="path-grid">
       <a class="path-card path-card--learn reveal" href="/learn"><span>01 · Learn</span><h3>I am new to longevity</h3><p>Build a clear foundation and learn how evidence levels differ.</p><b>Start the guided route →</b></a>
-      <a class="path-card path-card--evidence reveal" href="/topics"><span>02 · Follow</span><h3>I want to follow a topic</h3><p>See papers, trials, uncertainties and source changes together.</p><b>Choose a topic →</b></a>
+      <a class="path-card path-card--evidence reveal" href="/topics"><span>02 · Follow</span><h3>I want to follow a topic</h3><p>See papers, trials, uncertainties and source updates together.</p><b>Choose a topic →</b></a>
       <a class="path-card path-card--trials reveal" href="/discover/recruiting-trials"><span>03 · Trials</span><h3>I want to find clinical trials</h3><p>Explore active registry records by topic and location.</p><b>Open Trial Radar →</b></a>
       <a class="path-card path-card--universities reveal" href="/universities"><span>04 · Landscape</span><h3>I want to compare universities</h3><p>See research activity, topic breadth and recent momentum globally.</p><b>Explore universities →</b></a>
       <a class="path-card path-card--safety reveal" href="/regulatory"><span>05 · Safety</span><h3>I want official safety information</h3><p>Navigate regulatory notices, corrections and retractions.</p><b>Check official updates →</b></a>
-      <a class="path-card path-card--changes reveal" href="/changes"><span>06 · Updates</span><h3>I want to know what changed</h3><p>Review meaningful source differences without scanning every record.</p><b>See recent changes →</b></a>
+      <a class="path-card path-card--changes reveal" href="/changes"><span>06 · Updates</span><h3>I want to see what's new</h3><p>Browse newly added research, trial updates and official notices.</p><b>See the latest updates →</b></a>
     </div>
   </section>
 
@@ -240,7 +240,7 @@
   </section>
 
   <section class="home-personal" id="savedForYou" aria-labelledby="personalTitle">
-    <div><span>Your longevity radar</span><h2 id="personalTitle">Make the index yours.</h2><p>Save topics, return to recently viewed guides, and receive only meaningful changes—not a stream of every new paper.</p></div>
+    <div><span>Your longevity radar</span><h2 id="personalTitle">Make the index yours.</h2><p>Save topics, return to recently viewed guides, and receive only important updates—not a stream of every new paper.</p></div>
     <div class="personal-grid"><div><strong>Saved topics</strong><div id="savedTopicsHome" class="saved-topic-list"><span>Save a topic to see it here.</span></div></div><div><strong>Recently viewed</strong><div id="recentTopicsHome" class="saved-topic-list"><span>Your recent topic guides will appear here.</span></div></div><a class="personal-cta" href="/dashboard">Open My Radar</a></div>
   </section>
 
@@ -342,7 +342,7 @@
        FOOTER
   ══════════════════════════════════════════ -->
   <footer class="site-footer">
-    <a class="foot-logo brand-lockup" href="/" aria-label="immortal.life home"><img class="brand-mark" src="/linkedin-app-logo.png" width="38" height="38" alt="" loading="lazy" decoding="async" /><span>immortal.life</span></a>
+    <a class="foot-logo brand-lockup" href="/" aria-label="immortal.life home"><img class="brand-mark" src="/linkedin-app-logo.png" width="57" height="57" alt="" loading="lazy" decoding="async" /><span>immortal.life</span></a>
     <div class="foot-right">
       <button type="button" class="foot-link">Privacy Policy</button>
       <a class="foot-link" href="/automation">Automation</a>
@@ -359,7 +359,7 @@
     </div>
   </footer>
 
-  <nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/discover"><span aria-hidden="true">◇</span>Explore</a><a href="/dashboard"><span aria-hidden="true">☆</span>Saved</a><a href="/changes"><span aria-hidden="true">↻</span>Updates</a><button type="button" data-mobile-menu-open><span aria-hidden="true">☰</span>Menu</button></nav>
+  <nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/topics"><span aria-hidden="true">◇</span>Topics</a><a href="/dashboard"><span aria-hidden="true">☆</span>Saved</a><a href="/changes"><span aria-hidden="true">↻</span>Updates</a><button type="button" data-mobile-menu-open><span aria-hidden="true">☰</span>Menu</button></nav>
 
   <!-- ══════════════════════════════════════════
        PRIVACY POLICY MODAL

@@ -13,7 +13,7 @@ async function cardData(supabase: any, kind: string, key: string): Promise<{ tit
   if (kind === 'changes' && key === 'latest') {
     const since = new Date(Date.now() - 7 * 86400000).toISOString()
     const { count } = await supabase.from('intelligence_change_events').select('id', { count: 'exact', head: true }).neq('event_type', 'quality_state_changed').gte('occurred_at', since)
-    return { title: `${count ?? 0} longevity evidence changes this week`, kicker: 'What changed' }
+    return { title: `${count ?? 0} longevity evidence updates this week`, kicker: "What's new" }
   }
   if (kind === 'briefing') {
     const { data } = await supabase.from('public_briefings').select('title').eq('slug', key).maybeSingle()
