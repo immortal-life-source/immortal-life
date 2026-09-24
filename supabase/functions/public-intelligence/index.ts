@@ -9,6 +9,16 @@ const TOPIC_MECHANISMS: Record<string, string> = {
   'metformin': 'AMPK and metabolism', 'glp-1-therapies': 'Incretin signalling', 'exercise': 'Mitochondrial adaptation',
   'caloric-restriction': 'Nutrient sensing', 'sleep': 'Circadian regulation', 'epigenetic-clocks': 'DNA methylation',
   'plasma-exchange': 'Circulating factors', 'stem-cells': 'Tissue regeneration', 'gene-therapy': 'Gene delivery and editing',
+  'genomic-instability': 'DNA damage and repair', 'telomeres-telomerase': 'Telomere maintenance', 'epigenetic-alterations': 'Chromatin regulation',
+  proteostasis: 'Protein quality control', autophagy: 'Cellular recycling', 'nutrient-sensing': 'Metabolic signalling',
+  'mitochondrial-function': 'Mitochondrial quality', 'intercellular-communication': 'Cell-to-cell signalling', 'chronic-inflammation': 'Inflammaging',
+  'microbiome-dysbiosis': 'Host–microbiome balance', 'nad-metabolism': 'NAD metabolism', sirtuins: 'Sirtuin signalling',
+  spermidine: 'Autophagy support', 'urolithin-a': 'Mitophagy', taurine: 'Amino-acid metabolism',
+  'glycine-glynac': 'Glutathione metabolism', 'alpha-ketoglutarate': 'TCA-cycle signalling', acarbose: 'Glucose handling',
+  canagliflozin: 'SGLT2 and metabolism', '17alpha-estradiol': 'Steroid signalling', 'ketogenic-diets': 'Ketone metabolism',
+  'protein-restriction': 'Amino-acid sensing', 'young-blood-parabiosis': 'Circulating factors', 'heat-cold-hormesis': 'Adaptive stress response',
+  frailty: 'Whole-person resilience', sarcopenia: 'Muscle ageing', 'cognitive-aging': 'Brain resilience',
+  'cardiovascular-aging': 'Vascular ageing', 'immune-aging': 'Immunosenescence', 'ovarian-aging': 'Reproductive ageing',
 }
 
 function publicRelations(record: any, field: string): any[] {
@@ -118,15 +128,28 @@ Deno.serve(async (req) => {
       .order('name')
 
     if (view === 'quality') {
-      const [{ data: telemetry, error }, { data: search, error: searchError }, { data: sources, error: sourcesError }] = await Promise.all([
+      const [{ data: telemetry, error }, { data: search, error: searchError }, { data: sources, error: sourcesError }, { data: directorySources, error: directoryError }] = await Promise.all([
         supabase.rpc('get_intelligence_quality_telemetry'),
         supabase.rpc('search_utility_telemetry'),
         sourcesPromise,
+        supabase.from('global_resources')
+          .select('id,name,resource_type,geographic_scope,jurisdiction_code,jurisdiction_name,region,authority_tier,description,limitations,homepage_url,data_url,terms_url,access_mode,reuse_status,integration_status,update_cadence,eligibility_reason,last_checked_at,last_healthy_at,last_status_code,consecutive_failures')
+          .eq('is_eligible', true)
+          .eq('resource_type', 'regulator')
+          .eq('region', 'Europe')
+          .order('jurisdiction_name')
+          .order('name')
+          .limit(100),
       ])
       if (error) throw error
       if (searchError) throw searchError
       if (sourcesError) throw sourcesError
-      return response(req, { telemetry: { ...(telemetry ?? {}), search: search ?? {} }, sources: (sources ?? []).map(publicSourceState) })
+      if (directoryError) throw directoryError
+      return response(req, {
+        telemetry: { ...(telemetry ?? {}), search: search ?? {} },
+        sources: (sources ?? []).map(publicSourceState),
+        directory_sources: (directorySources ?? []).map((resource: any) => publicResourceState(resource)),
+      })
     }
 
     if (view === 'entities') {
@@ -206,6 +229,14 @@ Deno.serve(async (req) => {
       for (const result of [coverage, topicsResult, countriesResult]) if (result.error) throw result.error
       if (error) throw error
       if (sourcesError) throw sourcesError
+      const universities = data ?? []
+      if (topic) universities.sort((left: any, right: any) => {
+        const leftMetric = (left.university_research_topic_metrics ?? []).find((metric: any) => metric.topic_slug === topic)
+        const rightMetric = (right.university_research_topic_metrics ?? []).find((metric: any) => metric.topic_slug === topic)
+        return Number(rightMetric?.works_five_year ?? 0) - Number(leftMetric?.works_five_year ?? 0)
+          || Number(rightMetric?.works_two_year ?? 0) - Number(leftMetric?.works_two_year ?? 0)
+          || String(left.name).localeCompare(String(right.name))
+      })
       const countryMap = new Map<string, { code: string; name: string; continent: string; universities: number }>()
       for (const row of countriesResult.data ?? []) {
         if (!row.country_code) continue
@@ -220,7 +251,7 @@ Deno.serve(async (req) => {
         filters: { topic: topic || null, country: country || null, continent: continent || null, sort },
         topics: topicsResult.data ?? [],
         countries: [...countryMap.values()].sort((left, right) => left.name.localeCompare(right.name)),
-        universities: data ?? [],
+        universities,
         methodology: {
           label: 'Global University Research Index',
           source: 'OpenAlex affiliations resolved to ROR institutions',

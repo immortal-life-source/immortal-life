@@ -40,6 +40,30 @@ test('public page shells provide search, reading levels, related journeys and mo
   assert.match(files[2], /reader-mode/)
 })
 
+test('detail-level controls are explicit and hidden when a page has no alternate copy', async () => {
+  const [portal, css] = await Promise.all([read('intelligence.js'), read('intelligence.css')])
+  assert.match(portal, /Showing Beginner view/)
+  assert.match(portal, /readerModeControl\.hidden = !document\.querySelector\('\.reader-copy'\)/)
+  assert.match(portal, /reader-mode--changed/)
+  assert.match(css, /reader-mode-confirm/)
+})
+
+test('record titles use readable article typography on desktop and mobile', async () => {
+  const css = await read('intelligence.css')
+  assert.match(css, /\.record-hero h1 \{ font-size: clamp\(36px, 3\.6vw, 52px\)/)
+  assert.match(css, /\.record-hero h1 \{ font-size:clamp\(28px,7\.6vw,38px\)/)
+  assert.doesNotMatch(css, /\.record-hero h1 \{ font-size: clamp\(48px, 7\.5vw, 100px\)/)
+})
+
+test('topic journeys produce a visibly topic-specific university ranking', async () => {
+  const [portal, api, template] = await Promise.all([read('intelligence.js'), read('supabase/functions/public-intelligence/index.ts'), read('intelligence-template.html')])
+  assert.match(portal, /Find related university activity/)
+  assert.match(portal, /This is a topic-specific view/)
+  assert.match(portal, /ranked by that topic’s indexed work links/)
+  assert.match(api, /leftMetric\?\.works_five_year/)
+  assert.match(template, /id="universityHeading"/)
+})
+
 test('learning, evidence and return-loop features remain connected', async () => {
   const [build, portal, dashboardHtml, dashboardJs, publicPages] = await Promise.all([
     read('build.js'), read('intelligence.js'), read('dashboard.html'), read('dashboard.js'), read('supabase/functions/public-pages/index.ts'),

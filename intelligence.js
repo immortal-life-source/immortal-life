@@ -44,21 +44,43 @@
   });
 
   const readerCopy = {
-    beginner: 'Beginner shows the plain-language meaning, the main caution, and where to verify it.',
-    student: 'Student adds evidence stage, study or notice scope, and the most important limitations.',
-    professional: 'Professional adds jurisdiction, source metadata, confidence signals, and operational detail.',
+    beginner: 'Showing Beginner view — plain-language meaning, the main caution, and where to verify it.',
+    student: 'Showing Student view — evidence stage, study or notice scope, and the most important limitations.',
+    professional: 'Showing Professional view — jurisdiction, source metadata, confidence signals, and operational detail.',
   };
   let readerMode = 'beginner';
+  let readerModeReady = false;
   try { readerMode = localStorage.getItem('il_reader_mode') || 'beginner'; } catch (_) { /* storage is optional */ }
   function setReaderMode(mode) {
     if (!readerCopy[mode]) return;
     readerMode = mode; body.dataset.readerMode = mode;
     document.querySelectorAll('[data-reader-mode]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.readerMode === mode)));
     const copy = document.getElementById('readerModeCopy'); if (copy) copy.textContent = readerCopy[mode];
+    const control = document.querySelector('.reader-mode');
+    if (readerModeReady && control) {
+      control.classList.remove('reader-mode--changed');
+      void control.offsetWidth;
+      control.classList.add('reader-mode--changed');
+    }
     try { localStorage.setItem('il_reader_mode', mode); } catch (_) { /* storage is optional */ }
   }
   document.querySelectorAll('[data-reader-mode]').forEach((button) => button.addEventListener('click', () => setReaderMode(button.dataset.readerMode)));
   setReaderMode(readerMode);
+  readerModeReady = true;
+
+  const readerModeControl = document.querySelector('.reader-mode');
+  let readerVisibilityQueued = false;
+  function syncReaderModeVisibility() {
+    readerVisibilityQueued = false;
+    if (readerModeControl) readerModeControl.hidden = !document.querySelector('.reader-copy');
+  }
+  function queueReaderModeVisibility() {
+    if (readerVisibilityQueued) return;
+    readerVisibilityQueued = true;
+    queueMicrotask(syncReaderModeVisibility);
+  }
+  syncReaderModeVisibility();
+  if (readerModeControl) new MutationObserver(queueReaderModeVisibility).observe(document.querySelector('main') || body, { childList: true, subtree: true });
 
   const topicMatch = currentPath.match(/^\/topics\/([a-z0-9-]+)$/);
   if (topicMatch) {
@@ -162,6 +184,8 @@
     universityControls: document.getElementById('universityControls'),
     universitySearch: document.getElementById('universitySearch'),
     universityTopic: document.getElementById('universityTopic'),
+    universityHeading: document.getElementById('universityHeading'),
+    universityIntro: document.getElementById('universityIntro'),
     universityCountry: document.getElementById('universityCountry'),
     universityContinent: document.getElementById('universityContinent'),
     universitySort: document.getElementById('universitySort'),
@@ -639,10 +663,14 @@
       const sourceLink = link('', source.name, source.homepage_url);
       sourceLink.target = '_blank';
       sourceLink.rel = 'noopener noreferrer';
-      const sourceHealthLabels = { healthy: 'Up to date', degraded: 'Delayed', stale: 'Update delayed', pending: 'Checking' };
+      const sourceHealthLabels = { healthy: source.integration_status === 'directory' ? 'Official link available' : 'Up to date', degraded: 'Delayed', stale: 'Update delayed', pending: 'Checking', restricted: 'Access limited' };
       const health = el('span', 'source-health', sourceHealthLabels[source.health] || readableStatus(source.health));
       health.dataset.health = source.health;
-      const updated = source.last_success_at ? `Last checked ${dateFormatter.format(new Date(source.last_success_at))} · Updated ${source.update_cadence}` : `First update is pending · Updated ${source.update_cadence}`;
+      const sourceDate = source.last_success_at || source.last_healthy_at || source.last_checked_at;
+      const sourceScope = source.jurisdiction_name ? `${source.jurisdiction_name} · Official medicines authority · ` : '';
+      const updated = sourceDate
+        ? `${sourceScope}Last checked ${dateFormatter.format(new Date(sourceDate))} · ${source.update_cadence}`
+        : `${sourceScope}${source.integration_status === 'directory' ? 'Official-link check is pending' : 'First update is pending'} · ${source.update_cadence}`;
       item.append(sourceLink, health, el('p', '', updated));
       if (shouldShowList) elements.sourceList.append(item);
     });
@@ -739,6 +767,12 @@
   }
 
   function metricForSort(university) {
+    const topicSlug = elements.universityTopic?.value || '';
+    if (topicSlug) {
+      const topicMetric = (university.university_research_topic_metrics || []).find((metric) => metric.topic_slug === topicSlug);
+      const topicName = elements.universityTopic.selectedOptions?.[0]?.textContent || topicSlug.replaceAll('-', ' ');
+      return { value: numberFormatter.format(Number(topicMetric?.works_five_year || 0)), label: `${topicName} work links` };
+    }
     const sort = elements.universitySort?.value || 'index';
     if (sort === 'activity') return { value: university.indexed_works_five_year, label: 'five-year work links' };
     if (sort === 'breadth') return { value: university.indexed_topic_count, label: 'topics represented' };
@@ -769,6 +803,8 @@
 
   function renderUniversityRows() {
     const search = String(elements.universitySearch?.value || '').trim().toLowerCase();
+    const activeTopic = elements.universityTopic?.value || '';
+    const activeTopicName = elements.universityTopic?.selectedOptions?.[0]?.textContent || activeTopic.replaceAll('-', ' ');
     const visible = universityRows.filter((university) => !search || `${university.name} ${university.city || ''} ${university.country_name || ''}`.toLowerCase().includes(search));
     elements.universityList.replaceChildren();
     if (!visible.length) elements.universityList.append(el('li', 'empty-list', universityRows.length ? 'No university in this result matches that name or location.' : 'The first automated university index refresh is pending. This page will populate without manual editing.'));
@@ -781,7 +817,10 @@
       const heading = el('h3'); heading.append(link('', university.name, `/universities/${encodeURIComponent(university.slug)}`)); main.append(heading);
       const topicMetrics = Array.isArray(university.university_research_topic_metrics) ? university.university_research_topic_metrics : [];
       const topicNames = topicMetrics.sort((left, right) => Number(right.works_five_year || 0) - Number(left.works_five_year || 0)).slice(0, 4).map((metric) => metric.topic_slug.replaceAll('-', ' '));
-      main.append(el('p', '', topicNames.length ? `Strongest indexed activity: ${topicNames.join(', ')}.` : `${numberFormatter.format(Number(university.indexed_topic_count || 0))} longevity topics represented.`));
+      const activeMetric = activeTopic ? topicMetrics.find((metric) => metric.topic_slug === activeTopic) : null;
+      main.append(el('p', '', activeTopic
+        ? `${numberFormatter.format(Number(activeMetric?.works_five_year || 0))} source-matched ${activeTopicName} work links in the five-year window; ${numberFormatter.format(Number(activeMetric?.works_two_year || 0))} are recent.`
+        : topicNames.length ? `Strongest indexed activity: ${topicNames.join(', ')}.` : `${numberFormatter.format(Number(university.indexed_topic_count || 0))} longevity topics represented.`));
       const signals = el('div', 'university-signals');
       signals.append(
         el('span', '', `${numberFormatter.format(Number(university.indexed_works_five_year || 0))} five-year work links`),
@@ -804,7 +843,13 @@
       compare.append(checkbox, el('span', '', 'Compare'));
       item.append(rank, main, score, compare); elements.universityList.append(item);
     });
-    elements.universityResult.textContent = `Showing ${numberFormatter.format(visible.length)} of ${numberFormatter.format(universityRows.length)} returned universities. Up to 500 are returned for each filter combination.`;
+    elements.universityResult.textContent = activeTopic
+      ? `Showing ${numberFormatter.format(visible.length)} universities with source-matched ${activeTopicName} activity, ranked by that topic’s indexed work links.`
+      : `Showing ${numberFormatter.format(visible.length)} of ${numberFormatter.format(universityRows.length)} returned universities. Up to 500 are returned for each filter combination.`;
+    if (elements.universityHeading) elements.universityHeading.textContent = activeTopic ? `Universities researching ${activeTopicName}.` : 'Universities active in longevity research.';
+    if (elements.universityIntro) elements.universityIntro.textContent = activeTopic
+      ? `This is a topic-specific view. Every university below has source-matched ${activeTopicName} research in the index; the ranking uses that topic’s five-year activity, not the general university list.`
+      : 'Explore universities through several lenses instead of relying on a single unexplained league table. The index counts source-matched scholarly works, recent activity, breadth across longevity topics, and citation context from representative works.';
     renderUniversityMap(visible);
   }
 
@@ -826,7 +871,15 @@
       (data.countries || []).forEach((country) => elements.universityCountry.append(new Option(`${country.name} · ${country.universities}`, country.code)));
       [...new Set((data.countries || []).map((country) => country.continent).filter(Boolean))].sort().forEach((continent) => elements.universityContinent.append(new Option(continent, continent)));
       elements.universitySearch.addEventListener('input', renderUniversityRows);
-      [elements.universityTopic, elements.universityCountry, elements.universityContinent, elements.universitySort].forEach((control) => control.addEventListener('change', () => fetchUniversityIndex().catch(showUniversityError)));
+      [elements.universityTopic, elements.universityCountry, elements.universityContinent, elements.universitySort].forEach((control) => control.addEventListener('change', () => {
+        if (control === elements.universityTopic) {
+          const nextUrl = new URL(location.href);
+          if (elements.universityTopic.value) nextUrl.searchParams.set('topic', elements.universityTopic.value);
+          else nextUrl.searchParams.delete('topic');
+          history.replaceState({}, '', nextUrl);
+        }
+        fetchUniversityIndex().catch(showUniversityError);
+      }));
       elements.clearUniversityCompare.onclick = () => { comparedUniversities.clear(); renderUniversityComparison(); renderUniversityRows(); };
       universityControlsReady = true;
       const requestedTopic = new URLSearchParams(location.search).get('topic');
@@ -1075,7 +1128,14 @@
       } else if (view === 'quality') {
         const data = await request('quality', 100);
         renderQuality(data.telemetry || {});
-        renderSources(data.sources || [], true);
+        const allSources = [...(data.sources || []), ...(data.directory_sources || [])];
+        const seenSources = new Set();
+        renderSources(allSources.filter((source) => {
+          const key = source.id || `${source.name}|${source.homepage_url}`;
+          if (seenSources.has(key)) return false;
+          seenSources.add(key);
+          return true;
+        }), true);
       }
       elements.loading.hidden = true;
     } catch (error) {

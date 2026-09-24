@@ -52,7 +52,7 @@
       </div>
     </section>
 
-    <section class="reader-mode" aria-label="Choose detail level"><div><span>Choose detail level</span><div class="reader-mode-buttons"><button type="button" data-reader-mode="beginner">Beginner</button><button type="button" data-reader-mode="student">Student</button><button type="button" data-reader-mode="professional">Professional</button></div></div><p id="readerModeCopy">Beginner shows the plain-language meaning and the original source.</p></section>
+    <section class="reader-mode" aria-label="Choose detail level"><div><span>Choose detail level</span><div class="reader-mode-buttons"><button type="button" data-reader-mode="beginner">Beginner</button><button type="button" data-reader-mode="student">Student</button><button type="button" data-reader-mode="professional">Professional</button></div></div><p id="readerModeCopy" aria-live="polite">Showing Beginner view — plain-language meaning, the main caution, and where to verify it.</p></section>
 
     {{TOPIC_DOSSIER_HTML}}
 
@@ -145,10 +145,10 @@
     <section class="intel-section university-index" id="universitiesSection" hidden>
       <div class="university-summary" id="universityStats" aria-label="University index coverage"></div>
       <div class="section-heading">
-        <div><span class="section-index">Global research landscape</span><h2>Universities active in longevity research.</h2></div>
+        <div><span class="section-index">Global research landscape</span><h2 id="universityHeading">Universities active in longevity research.</h2></div>
         <a href="/data#university-data" class="section-link">Download the index</a>
       </div>
-      <p class="university-intro">Explore universities through several lenses instead of relying on a single unexplained league table. The index counts source-matched scholarly works, recent activity, breadth across longevity topics, and citation context from representative works.</p>
+      <p class="university-intro" id="universityIntro">Explore universities through several lenses instead of relying on a single unexplained league table. The index counts source-matched scholarly works, recent activity, breadth across longevity topics, and citation context from representative works.</p>
       <div class="university-map-wrap">
         <svg class="university-map" viewBox="0 0 1200 520" role="img" aria-labelledby="universityMapTitle universityMapDescription">
           <title id="universityMapTitle">Universities represented in the longevity research index</title>

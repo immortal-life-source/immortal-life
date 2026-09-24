@@ -19,6 +19,11 @@ const ALLOWED_HOSTS = new Set([
   'www.gov.br', 'cdsco.gov.in', 'www.sahpra.org.za', 'www.medsafe.govt.nz',
   'www.hsa.gov.sg', 'www.mfds.go.kr', 'www.nmpa.gov.cn', 'www.sfda.gov.sa',
   'www.aifa.gov.it', 'www.aemps.gob.es', 'www.bfarm.de',
+  'www.basg.gv.at', 'www.famhp.be', 'www.bda.bg', 'www.halmed.hr', 'www.moh.gov.cy',
+  'laegemiddelstyrelsen.dk', 'www.ravimiamet.ee', 'fimea.fi', 'ansm.sante.fr', 'www.pei.de',
+  'www.eof.gr', 'www.nnk.gov.hu', 'www.hpra.ie', 'www.zva.gov.lv', 'vvkt.lrv.lt',
+  'sante.public.lu', 'medicinesauthority.gov.mt', 'www.cbg-meb.nl', 'www.urpl.gov.pl',
+  'www.infarmed.pt', 'www.anm.ro', 'www.sukl.sk', 'www.jazmp.si', 'www.lakemedelsverket.se',
 ])
 
 function constantTimeMatch(left: string, right: string): boolean {

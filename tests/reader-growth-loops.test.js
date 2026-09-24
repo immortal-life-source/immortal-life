@@ -70,3 +70,21 @@ test('utility measurement is aggregate and identifier-free', () => {
   assert.match(endpoint, /increment_utility_event/);
   assert.doesNotMatch(endpoint, /cookie|user_agent|ip_address|member_id/i);
 });
+
+test('EU regulatory directory covers every member state with official national sources', () => {
+  const migration = read('supabase/migrations/20260924000100_complete_eu_regulatory_sources.sql');
+  const expected = ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE'];
+  for (const code of expected) assert.match(migration, new RegExp(`'${code}'`), `missing EU member ${code}`);
+  assert.equal(new Set([...migration.matchAll(/'([A-Z]{2})',\s*'[^']+',\s*'https:\/\//g)].map((match) => match[1])).size, 27);
+  assert.match(read('supabase/functions/public-intelligence/index.ts'), /directory_sources/);
+  assert.match(read('supabase/functions/check-resource-health/index.ts'), /www\.lakemedelsverket\.se/);
+});
+
+test('topic expansion adds thirty controlled longevity research areas', () => {
+  const migration = read('supabase/migrations/20260924000200_expand_longevity_topics.sql');
+  const quality = read('supabase/functions/_shared/intelligence.ts');
+  const rows = [...migration.matchAll(/^\s*\('([a-z0-9-]+)',/gm)].map((match) => match[1]);
+  assert.equal(rows.length, 30);
+  for (const slug of rows) assert.match(quality, new RegExp(`['\"]?${slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['\"]?\\s*:`), `missing controlled terms for ${slug}`);
+  for (const required of ['genomic-instability', 'autophagy', 'nad-metabolism', 'spermidine', 'frailty', 'immune-aging', 'ovarian-aging']) assert.ok(rows.includes(required));
+});
