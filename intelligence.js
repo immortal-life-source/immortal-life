@@ -1109,6 +1109,7 @@
     url.searchParams.set('quality_rules', '20260916b');
     url.searchParams.set('view', viewName);
     url.searchParams.set('limit', String(limit));
+    if (viewName === 'resources') url.searchParams.set('directory_contract', 'global-195-v2');
     if (topicSlug) url.searchParams.set('topic', topicSlug);
     const res = await fetch(url, { headers: window.ilFnHeaders() });
     if (!res.ok) throw new Error(`Feed request failed with ${res.status}`);
