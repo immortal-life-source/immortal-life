@@ -12,10 +12,8 @@ if (!key) {
 const outputDir = path.join(__dirname, 'dist');
 const staticAssets = [
   'index.html',
-  'join.html',
   'auth-x.html',
   'auth-linkedin.html',
-  'dashboard.html',
   'leaderboard.html',
   'confirmed.html',
   'unsubscribed.html',
@@ -23,10 +21,8 @@ const staticAssets = [
   'style.css',
   'members.css',
   'main.js',
-  'join.js',
   'auth-x.js',
   'auth-linkedin.js',
-  'dashboard.js',
   'leaderboard.js',
   'members-nav.js',
   'news-modal.js',
@@ -45,7 +41,15 @@ const staticAssets = [
 
 const intelligenceTemplate = fs.readFileSync(path.join(__dirname, 'intelligence-template.html'), 'utf8');
 const contentTemplate = fs.readFileSync(path.join(__dirname, 'content-template.html'), 'utf8');
-const intelligenceTopics = JSON.parse(fs.readFileSync(path.join(__dirname, 'intelligence-topics.json'), 'utf8'));
+const coreIntelligenceTopics = JSON.parse(fs.readFileSync(path.join(__dirname, 'intelligence-topics.json'), 'utf8'));
+const expandedIntelligenceTopics = JSON.parse(fs.readFileSync(path.join(__dirname, 'intelligence-topics-expanded.json'), 'utf8'));
+const intelligenceTopics = [...coreIntelligenceTopics, ...expandedIntelligenceTopics].map((topic) => ({
+  ...topic,
+  question: topic.question || `What does current evidence show about ${topic.name.toLowerCase()} and healthy ageing?`,
+  state: topic.state || `This topic is monitored automatically across source-linked research and trial registries. Evidence ranges from laboratory work to human studies and should be read by study type.`,
+  limits: topic.limits || `Definitions, populations, methods, endpoints, and follow-up differ across records. A topic match does not establish clinical benefit, safety, or causality.`,
+  regulatory: topic.regulatory || `Regulatory status is product-, intervention-, indication-, and jurisdiction-specific. Inclusion here is not an approval or recommendation.`,
+}));
 
 function htmlEscape(value) {
   return String(value)
@@ -226,7 +230,7 @@ for (const topic of intelligenceTopics) {
   const dossier = `<section class="intel-section topic-primer" aria-labelledby="topic-question">
     <div class="section-heading"><div><span class="section-index">The question we track</span><h2 id="topic-question">${htmlEscape(topic.question)}</h2></div><a class="section-link" href="/methodology">How records are chosen</a></div>
     <div class="dossier-grid"><article><h3>What the records show</h3><p>${htmlEscape(topic.state)}</p></article><article><h3>What is still uncertain</h3><p>${htmlEscape(topic.limits)}</p></article><article><h3>Regulatory position</h3><p>${htmlEscape(topic.regulatory)}</p></article></div>
-    <aside class="automation-notice"><strong>Built automatically from source records</strong><p>No scientist, clinician, researcher, editor, or human reviewer evaluates this page before publication. Check important details at the linked original source.</p><div class="topic-follow-actions"><button class="section-link save-topic-button" type="button" data-save-topic="${topic.slug}" data-topic-name="${htmlEscape(topic.name)}">☆ Save this topic</button><a class="section-link" href="/feeds/topics/${topic.slug}.xml">Follow by RSS</a><a class="section-link" href="/dashboard">Add to My Radar</a></div></aside>
+    <aside class="automation-notice"><strong>Built automatically from source records</strong><p>No scientist, clinician, researcher, editor, or human reviewer evaluates this page before publication. Check important details at the linked original source.</p><div class="topic-follow-actions"><a class="section-link" href="/feeds/topics/${topic.slug}.xml">Follow this topic by RSS</a></div></aside>
   </section>`;
   fs.writeFileSync(
     path.join(topicOutputDir, `${topic.slug}.html`),

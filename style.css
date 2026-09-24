@@ -1938,11 +1938,11 @@ h1 {
 .hero-quick-links a { color:rgba(237,233,224,.72); font-size:11px; line-height:1.5; text-decoration:none; border-bottom:1px solid transparent; }
 .hero-quick-links a:hover { color:var(--white); border-color:var(--gold); }
 
-.hero-discoveries { position:absolute; right:0; top:50%; width:min(36vw,500px); transform:translateY(-36%); z-index:5; padding:22px 24px; border:1px solid rgba(184,149,90,.24); background:rgba(7,7,6,.82); backdrop-filter:blur(14px); box-shadow:0 24px 80px rgba(0,0,0,.38); }
+.hero-discoveries { position:absolute; right:0; top:50%; width:min(36vw,500px); transform:translateY(-44%); z-index:5; padding:20px 24px; border:1px solid rgba(184,149,90,.24); background:rgba(7,7,6,.86); backdrop-filter:blur(14px); box-shadow:0 24px 80px rgba(0,0,0,.38); }
 .hero-discoveries-head { display:flex; align-items:center; justify-content:space-between; gap:20px; }.hero-discoveries-head span { color:var(--gold); font-size:9px; letter-spacing:.18em; text-transform:uppercase; }.hero-discoveries-head a { color:var(--off); font-size:9px; text-decoration:none; text-transform:uppercase; letter-spacing:.1em; border-bottom:1px solid var(--border-mid); }
-.hero-discoveries h2 { margin:9px 0 14px; color:var(--white); font:300 23px/1.1 'Newsreader',Georgia,serif; }
+.hero-discoveries h2 { margin:8px 0 12px; color:var(--white); font:300 22px/1.1 'Newsreader',Georgia,serif; }
 .hero-discoveries-list { border-top:1px solid var(--border); }.hero-discoveries-list > p { margin:0; padding:15px 0; color:var(--off); font-size:11px; }
-.hero-discovery { display:grid; grid-template-columns:70px 1fr; gap:12px; padding:13px 0; border-bottom:1px solid var(--border); color:var(--white); text-decoration:none; }.hero-discovery span { color:var(--teal); font-size:8px; line-height:1.4; letter-spacing:.09em; text-transform:uppercase; }.hero-discovery strong { font:300 16px/1.22 'Newsreader',Georgia,serif; }.hero-discovery:hover strong{color:var(--gold)}
+.hero-discovery { display:grid; grid-template-columns:70px 1fr; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); color:var(--white); text-decoration:none; }.hero-discovery span { color:var(--teal); font-size:8px; line-height:1.4; letter-spacing:.09em; text-transform:uppercase; }.hero-discovery strong { font:300 15px/1.18 'Newsreader',Georgia,serif; }.hero-discovery:hover strong,.hero-discovery:focus-visible strong{color:var(--gold)}
 
 .home-live,.home-paths,.home-explorer,.home-global,.home-personal { padding:clamp(78px,9vw,130px) var(--pad-x); border-top:1px solid var(--border); position:relative; overflow:hidden; }
 .home-section-head { display:flex; justify-content:space-between; align-items:flex-end; gap:30px; margin-bottom:44px; }

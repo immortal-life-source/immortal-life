@@ -13,7 +13,48 @@ test('homepage is organised around useful visitor goals and live updates', async
   assert.doesNotMatch(html, /You were not meant to expire/)
   assert.match(js, /il_last_visit/)
   assert.match(js, /il_saved_searches/)
-  assert.match(js, /il_saved_topics/)
+  assert.doesNotMatch(html, /My Radar|href="\/dashboard"/)
+  assert.match(js, /renderHeroDiscoveries[\s\S]*?\.slice\(0, 6\)/)
+})
+
+test('changes-page totals are direct links to their relevant indexes', async () => {
+  const [pages, css] = await Promise.all([read('supabase/functions/public-pages/index.ts'), read('intelligence.css')])
+  assert.match(pages, /research: '\/research'/)
+  assert.match(pages, /trials: '\/trials'/)
+  assert.match(pages, /class="report-metric"/)
+  assert.match(pages, /Browse records →/)
+  assert.match(css, /\.report-metric:hover/)
+})
+
+test('topic catalogue is compact, searchable, and does not bury research or trials', async () => {
+  const [template, portal, css] = await Promise.all([read('intelligence-template.html'), read('intelligence.js'), read('intelligence.css')])
+  assert.match(template, /id="topicSearch"/)
+  assert.match(portal, /Showing \$\{numberFormatter\.format\(visible\.length\)\} of/)
+  assert.match(portal, /view === 'trials'[\s\S]*?renderTrials\(data\.trials \|\| \[\]\);[\s\S]*?view === 'topics'/)
+  assert.doesNotMatch(portal, /view === 'trials'[\s\S]*?renderTopics\(topicsData/)
+  assert.match(portal, /allLink\.href = compact \? '\/topics' : '\/resources'/)
+  assert.match(css, /grid-template-columns: repeat\(4, minmax\(0,1fr\)\)/)
+  assert.match(css, /min-height: 158px/)
+})
+
+test('Trial Radar has one canonical visitor route', async () => {
+  const [routes, home, template] = await Promise.all([read('vercel.json'), read('index.html'), read('intelligence-template.html')])
+  assert.match(routes, /"source": "\/discover\/recruiting-trials", "destination": "\/trials", "permanent": true/)
+  assert.doesNotMatch(home, /href="\/discover\/recruiting-trials"/)
+  assert.doesNotMatch(template, /href="\/discover\/recruiting-trials"/)
+})
+
+test('expanded topic catalogue has 82 distinct guides and controlled matching profiles', async () => {
+  const [coreText, expandedText, migration, matcher] = await Promise.all([
+    read('intelligence-topics.json'), read('intelligence-topics-expanded.json'),
+    read('supabase/migrations/20260924000500_expand_longevity_topics_round_two.sql'),
+    read('supabase/functions/_shared/intelligence.ts'),
+  ])
+  const topics = [...JSON.parse(coreText), ...JSON.parse(expandedText)]
+  assert.equal(topics.length, 82)
+  assert.equal(new Set(topics.map((topic) => topic.slug)).size, 82)
+  assert.equal((migration.match(/^  \('/gm) || []).length, 40)
+  for (const slug of ['longevity-genetics', 'single-cell-aging', 'circadian-rhythms', 'digital-biomarkers']) assert.match(matcher, new RegExp(`'${slug}'`))
 })
 
 test('desktop homepage keeps navigation compact and motion clear of the headline', async () => {
@@ -29,7 +70,7 @@ test('desktop homepage keeps navigation compact and motion clear of the headline
   assert.match(css, /\.brand-mark \{[\s\S]*?width: 57px;/)
 })
 
-test('public page shells provide search, reading levels, related journeys and mobile navigation', async () => {
+test('public page shells provide search, related journeys and mobile navigation', async () => {
   const files = await Promise.all([
     read('intelligence-template.html'),
     read('content-template.html'),
@@ -42,16 +83,16 @@ test('public page shells provide search, reading levels, related journeys and mo
     assert.match(source, /<a href="\/topics"[^>]*>Topics<\/a>/)
     assert.match(source, /<a href="\/discover">Explore<\/a>/)
   }
-  assert.match(files[0], /reader-mode/)
-  assert.match(files[2], /reader-mode/)
+  assert.doesNotMatch(files[0], /reader-mode/)
+  assert.doesNotMatch(files[2], /reader-mode/)
 })
 
-test('detail-level controls are explicit and hidden when a page has no alternate copy', async () => {
+test('detail-level controls and their duplicate copy are removed', async () => {
   const [portal, css] = await Promise.all([read('intelligence.js'), read('intelligence.css')])
-  assert.match(portal, /Showing Beginner view/)
-  assert.match(portal, /readerModeControl\.hidden = !document\.querySelector\('\.reader-copy'\)/)
-  assert.match(portal, /reader-mode--changed/)
-  assert.match(css, /reader-mode-confirm/)
+  assert.doesNotMatch(portal, /Showing Beginner view/)
+  assert.doesNotMatch(portal, /data-reader-mode/)
+  assert.doesNotMatch(css, /reader-mode/)
+  assert.match(portal, /plain-record-copy/)
 })
 
 test('record titles use readable article typography on desktop and mobile', async () => {
@@ -70,18 +111,34 @@ test('topic journeys produce a visibly topic-specific university ranking', async
   assert.match(template, /id="universityHeading"/)
 })
 
-test('learning, evidence and return-loop features remain connected', async () => {
-  const [build, portal, dashboardHtml, dashboardJs, publicPages] = await Promise.all([
-    read('build.js'), read('intelligence.js'), read('dashboard.html'), read('dashboard.js'), read('supabase/functions/public-pages/index.ts'),
+test('learning and evidence features remain connected without the retired dashboard', async () => {
+  const [build, portal, routes, publicPages] = await Promise.all([
+    read('build.js'), read('intelligence.js'), read('vercel.json'), read('supabase/functions/public-pages/index.ts'),
   ])
   assert.match(build, /learning-quiz/)
   assert.match(portal, /evidenceLadder/)
   assert.match(portal, /trialLadder/)
   assert.match(portal, /il_recent_topics/)
-  assert.match(dashboardHtml, /Continue where you left off/)
-  assert.match(dashboardJs, /dashSavedSearches/)
+  assert.doesNotMatch(build, /'dashboard\.html'|'join\.html'/)
+  assert.match(routes, /"source": "\/dashboard", "destination": "\/topics"/)
+  assert.match(routes, /"source": "\/join", "destination": "\/topics"/)
   assert.match(publicPages, /evidenceLadderHtml/)
   assert.match(publicPages, /trial-country-map/)
+})
+
+test('quality page exposes publication checks but no private traffic analytics or duplicate source directory', async () => {
+  const [portal, api] = await Promise.all([read('intelligence.js'), read('supabase/functions/public-intelligence/index.ts')])
+  assert.doesNotMatch(portal, /Google impressions|Google visits|Search pages to improve|Weekly briefing delivery/)
+  assert.doesNotMatch(api.match(/if \(view === 'quality'\)[\s\S]*?if \(view === 'entities'\)/)?.[0] || '', /search_utility_telemetry|directory_sources/)
+  assert.doesNotMatch(portal.match(/view === 'quality'[\s\S]*?\n      \}/)?.[0] || '', /renderSources/)
+})
+
+test('summary numbers lead to the records or explanation behind them', async () => {
+  const [template, portal, pages] = await Promise.all([read('intelligence-template.html'), read('intelligence.js'), read('supabase/functions/public-pages/index.ts')])
+  assert.match(template, /<a href="\/research"><strong id="researchCount"/)
+  assert.match(portal, /atlas-stat atlas-stat--action/)
+  assert.match(portal, /quality-stat quality-stat--link/)
+  assert.match(pages, /report-metric/)
 })
 
 test('the visitor experience does not introduce a forum', async () => {

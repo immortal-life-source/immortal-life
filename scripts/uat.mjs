@@ -15,7 +15,7 @@ const defaultRoutes = [
   '/discover', '/changes', '/discover/recruiting-trials', '/discover/regulatory-status', '/discover/research-integrity', '/reports',
   '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/methodology',
   '/resources', '/universities', '/entities', '/entities/topic/rapamycin', '/quality', '/automation', '/publication-policy', '/corrections', '/data', '/dashboard', '/join',
-  '/auth/x', '/auth/linkedin', '/leaderboard', '/privacy', '/confirmed', '/unsubscribed',
+  '/privacy', '/confirmed', '/unsubscribed',
 ];
 const routes = process.env.UAT_ROUTES ? process.env.UAT_ROUTES.split(',').map((route) => route.trim()).filter(Boolean) : defaultRoutes;
 if (!process.env.UAT_ROUTES) {
@@ -162,9 +162,14 @@ async function runViewport(cdp, profileName, width, height, mobile) {
       ,recordGuideLabels: [...document.querySelectorAll('.record-meaning dt')].map(el => el.textContent.trim())
       ,portalIntroBottom: (() => { const el=document.querySelector('.reader-mode') || document.querySelector('.intel-hero'); return el ? Math.round(el.getBoundingClientRect().bottom) : null; })()
       ,regulatoryGuides: document.querySelectorAll('#regulatoryGuideGrid .regulatory-guide-card').length
-      ,readerCopies: document.querySelectorAll('.reader-copy').length
+      ,plainCopies: document.querySelectorAll('.plain-record-copy').length
       ,heroDiscoveries: document.querySelectorAll('#heroDiscoveriesList .hero-discovery').length
-      ,guestRadarVisible: (() => { const el=document.getElementById('guestRadar'); return el ? !el.hidden : null; })()
+      ,topicCards: document.querySelectorAll('#topicGrid .topic-card').length
+      ,resourceRegionCards: document.querySelectorAll('#resourceRegionGrid .resource-region-card').length
+      ,universityRegionCards: document.querySelectorAll('#universityRegionGrid .university-region-card').length
+      ,legacyMapCount: document.querySelectorAll('.resource-map,.university-map').length
+      ,qualityPrivateText: /Google impressions|Google visits|Search pages to improve|Weekly briefing delivery/.test(document.body?.innerText || '')
+      ,qualitySourceDirectory: (() => { const el=document.getElementById('sourceSection'); return el ? !el.hidden : false; })()
     }))()`);
     const recentEvents = cdp.events.slice(eventStart);
     const exceptions = recentEvents.filter((event) => event.method === 'Runtime.exceptionThrown').map((event) => event.params?.exceptionDetails?.text || 'runtime exception');
@@ -183,14 +188,19 @@ async function runViewport(cdp, profileName, width, height, mobile) {
     if (route === '/' && !mobile && state.menuButtonVisible !== false) failures.push('desktop menu button visible');
     if (route === '/' && state.todayCards !== 6) failures.push(`daily briefing has ${state.todayCards} cards instead of 6`);
     if (route === '/' && !state.systemMapLower) failures.push('interactive system map is not below the hero');
-    if (route === '/' && state.heroDiscoveries < 1) failures.push('homepage newest-discoveries rail did not render');
+    if (route === '/' && state.heroDiscoveries !== 6) failures.push(`homepage newest-discoveries rail has ${state.heroDiscoveries} records instead of 6`);
     if (!mobile && ['/research','/trials','/universities','/discover','/changes','/regulatory'].includes(route) && state.portalIntroBottom > 390) failures.push(`portal introduction ends too low at ${state.portalIntroBottom}px`);
     if (route === '/regulatory' && state.regulatoryGuides < 20) failures.push(`regulatory library has only ${state.regulatoryGuides} guides`);
-    if (route === '/regulatory' && state.readerCopies < 3) failures.push('regulatory reading-level copies did not render');
-    if (route === '/dashboard' && state.guestRadarVisible !== true) failures.push('guest My Radar did not render without sign-in');
+    if (route === '/regulatory' && state.plainCopies < 3) failures.push('regulatory plain-language explanations did not render');
+    if ((route === '/dashboard' || route === '/join') && !state.url.endsWith('/topics')) failures.push(`${route} did not redirect to /topics`);
+    if (route === '/topics' && state.topicCards < 82) failures.push(`topic directory has only ${state.topicCards} topic cards`);
+    if (route === '/resources' && state.resourceRegionCards < 5) failures.push(`resource directory has only ${state.resourceRegionCards} regional cards`);
+    if (route === '/universities' && state.universityRegionCards < 1) failures.push('university regional navigator did not render');
+    if ((route === '/resources' || route === '/universities') && state.legacyMapCount) failures.push('obsolete decorative map is still visible');
+    if (route === '/quality' && (state.qualityPrivateText || state.qualitySourceDirectory)) failures.push('quality page exposes private analytics or duplicate source directory');
     if (route === '/topics/rapamycin' && (!state.timelineVisible || state.timelineEvents < 1)) failures.push('topic evidence timeline did not render');
     if (route === '/evidence-graph' && (state.graphMechanisms < 1 || state.graphUniversities < 1)) failures.push(`graph missing layers: ${state.graphMechanisms} mechanisms, ${state.graphUniversities} universities`);
-    if (route === '/discover/recruiting-trials' && state.trialWorldMapNodes < 1) failures.push('trial world map did not render country nodes');
+    if (route === '/discover/recruiting-trials' && !state.url.endsWith('/trials')) failures.push('legacy recruiting-trials route did not redirect to Trial Radar');
     if (/^\/research\/\d+$/.test(route) && !['What this is','Why it may matter','Evidence','Main limitation','What changed','Where to verify'].every(label => state.recordGuideLabels.includes(label))) failures.push('research record plain-language guide is incomplete');
     failures.push(...exceptions, ...consoleErrors);
     results.push({ profile: profileName, route, resolvedUrl: state.url, failures });
@@ -198,19 +208,11 @@ async function runViewport(cdp, profileName, width, height, mobile) {
     const routeName = route === '/' ? 'home' : route.slice(1).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
     await capture(cdp, `${profileName}-${routeName}.png`, false);
 
-    if (route === '/regulatory') {
-      for (const mode of ['beginner', 'student', 'professional']) {
-        const modeState = await evaluate(cdp, `(() => { document.querySelector('[data-reader-mode="${mode}"]')?.click(); const visible=[...document.querySelectorAll('.reader-copy')].filter(el => getComputedStyle(el).display !== 'none'); return { bodyMode:document.body.dataset.readerMode, visible:visible.length, wrong:visible.filter(el => !el.classList.contains('reader-copy--${mode}')).length }; })()`);
-        if (modeState.bodyMode !== mode || modeState.visible < 1 || modeState.wrong) results.at(-1).failures.push(`reader mode ${mode} did not change visible explanations`);
-        await capture(cdp, `${profileName}-regulatory-${mode}.png`, false);
-      }
-    }
-
     if (state.menuButtonVisible === true) {
       if (mobile) {
         const menu = await evaluate(cdp, `(() => { const button = document.querySelector('${navButtonSelector}'); button?.click(); const nav = ${navLookupExpression}; return { expanded: button?.getAttribute('aria-expanded'), visible: nav ? getComputedStyle(nav).display !== 'none' : false, links: nav ? [...nav.querySelectorAll('a')].filter(a => { const r=a.getBoundingClientRect(); return r.width >= 1 && r.height >= 40; }).length : 0 }; })()`);
         if (menu.expanded !== 'true' || !menu.visible || menu.links < 3) results.at(-1).failures.push('mobile menu interaction failed');
-        if (route === '/' || route === '/universities' || route === '/join' || route === '/privacy') {
+        if (route === '/' || route === '/universities' || route === '/resources' || route === '/privacy') {
           await capture(cdp, route === '/' ? 'mobile-home-menu.png' : `mobile-${routeName}-menu.png`, false);
         }
       } else {

@@ -5,7 +5,12 @@
   "outputDirectory": "dist",
   "installCommand": "",
   "redirects": [
-    { "source": "/interventions/:slug", "destination": "/topics/:slug", "permanent": true }
+    { "source": "/interventions/:slug", "destination": "/topics/:slug", "permanent": true },
+    { "source": "/discover/recruiting-trials", "destination": "/trials", "permanent": true },
+    { "source": "/discover/recruiting-trials/:country", "destination": "/trials", "permanent": true },
+    { "source": "/dashboard", "destination": "/topics", "permanent": true },
+    { "source": "/join", "destination": "/topics", "permanent": true },
+    { "source": "/invite/:code", "destination": "/topics", "permanent": true }
   ],
   "headers": [
     {
@@ -139,7 +144,6 @@
   "rewrites": [
     { "source": "/auth/x", "destination": "/auth-x" },
     { "source": "/auth/linkedin", "destination": "/auth-linkedin" },
-    { "source": "/invite/:code", "destination": "/join" },
     { "source": "/research/:id", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=record&kind=research&id=:id" },
     { "source": "/trials/:id", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=record&kind=trials&id=:id" },
     { "source": "/regulatory/:id", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=record&kind=regulatory&id=:id" },
@@ -150,8 +154,6 @@
     { "source": "/changes/feed.xml", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=change-feed&format=rss" },
     { "source": "/changes/feed.json", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=change-feed&format=json" },
     { "source": "/discover", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=discover&view=index" },
-    { "source": "/discover/recruiting-trials", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=discover&view=recruiting" },
-    { "source": "/discover/recruiting-trials/:country", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=discover&view=recruiting&country=:country" },
     { "source": "/discover/regulatory-status", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=discover&view=regulatory-status" },
     { "source": "/discover/research-integrity", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=discover&view=research-integrity" },
     { "source": "/reports", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=reports" },

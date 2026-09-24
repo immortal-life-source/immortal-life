@@ -55,9 +55,12 @@ test('required clean routes are configured', () => {
   const config = JSON.parse(read('vercel.json'));
   assert.equal(config.outputDirectory, 'dist');
   const routes = new Map(config.rewrites.map((route) => [route.source, route.destination]));
+  const redirects = new Map(config.redirects.map((route) => [route.source, route.destination]));
   assert.equal(routes.get('/auth/x'), '/auth-x');
   assert.equal(routes.get('/auth/linkedin'), '/auth-linkedin');
-  assert.equal(routes.get('/invite/:code'), '/join');
+  assert.equal(redirects.get('/invite/:code'), '/topics');
+  assert.equal(redirects.get('/join'), '/topics');
+  assert.equal(redirects.get('/dashboard'), '/topics');
 });
 
 test('the generated browser config never uses a publishable key as bearer identity', () => {

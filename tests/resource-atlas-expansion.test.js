@@ -27,15 +27,17 @@ test('atlas adds dedicated ageing data, review, and worldwide regulator categori
   }
 });
 
-test('resource page provides task-first shortcuts and six-region map support', () => {
+test('resource page provides task-first shortcuts and readable regional coverage', () => {
   const template = read('intelligence-template.html');
   const client = read('intelligence.js');
   assert.match(template, /Find registered trials/);
   assert.match(template, /Check medicines/);
   assert.match(template, /Read evidence summaries/);
   assert.match(template, /Explore ageing data/);
-  assert.match(client, /'Middle East'/);
-  assert.match(client, /Africa:/);
+  assert.match(template, /resourceRegionGrid/);
+  assert.match(client, /resource-region-card/);
+  assert.match(client, /by_region_jurisdictions/);
+  assert.doesNotMatch(template, /resourceMapNodes/);
   assert.match(client, /data-resource-preset/);
 });
 

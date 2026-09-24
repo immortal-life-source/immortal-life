@@ -43,45 +43,6 @@
     if (href === currentPath || (href !== '/' && currentPath.startsWith(`${href}/`))) anchor.setAttribute('aria-current', 'page');
   });
 
-  const readerCopy = {
-    beginner: 'Showing Beginner view — plain-language meaning, the main caution, and where to verify it.',
-    student: 'Showing Student view — evidence stage, study or notice scope, and the most important limitations.',
-    professional: 'Showing Professional view — jurisdiction, source metadata, confidence signals, and operational detail.',
-  };
-  let readerMode = 'beginner';
-  let readerModeReady = false;
-  try { readerMode = localStorage.getItem('il_reader_mode') || 'beginner'; } catch (_) { /* storage is optional */ }
-  function setReaderMode(mode) {
-    if (!readerCopy[mode]) return;
-    readerMode = mode; body.dataset.readerMode = mode;
-    document.querySelectorAll('[data-reader-mode]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.readerMode === mode)));
-    const copy = document.getElementById('readerModeCopy'); if (copy) copy.textContent = readerCopy[mode];
-    const control = document.querySelector('.reader-mode');
-    if (readerModeReady && control) {
-      control.classList.remove('reader-mode--changed');
-      void control.offsetWidth;
-      control.classList.add('reader-mode--changed');
-    }
-    try { localStorage.setItem('il_reader_mode', mode); } catch (_) { /* storage is optional */ }
-  }
-  document.querySelectorAll('[data-reader-mode]').forEach((button) => button.addEventListener('click', () => setReaderMode(button.dataset.readerMode)));
-  setReaderMode(readerMode);
-  readerModeReady = true;
-
-  const readerModeControl = document.querySelector('.reader-mode');
-  let readerVisibilityQueued = false;
-  function syncReaderModeVisibility() {
-    readerVisibilityQueued = false;
-    if (readerModeControl) readerModeControl.hidden = !document.querySelector('.reader-copy');
-  }
-  function queueReaderModeVisibility() {
-    if (readerVisibilityQueued) return;
-    readerVisibilityQueued = true;
-    queueMicrotask(syncReaderModeVisibility);
-  }
-  syncReaderModeVisibility();
-  if (readerModeControl) new MutationObserver(queueReaderModeVisibility).observe(document.querySelector('main') || body, { childList: true, subtree: true });
-
   const topicMatch = currentPath.match(/^\/topics\/([a-z0-9-]+)$/);
   if (topicMatch) {
     const topicName = document.querySelector('h1')?.textContent?.trim() || topicMatch[1].replace(/-/g, ' ');
@@ -91,23 +52,6 @@
       localStorage.setItem('il_recent_topics', JSON.stringify(recent.slice(0, 8)));
     } catch (_) { /* storage is optional */ }
   }
-
-  document.querySelectorAll('[data-save-topic]').forEach((button) => {
-    const slug = button.dataset.saveTopic; const name = button.dataset.topicName || slug.replace(/-/g, ' ');
-    function refresh() {
-      let saved = []; try { saved = JSON.parse(localStorage.getItem('il_saved_topics') || '[]'); } catch (_) { /* empty */ }
-      const active = saved.some((item) => (typeof item === 'string' ? item : item.slug) === slug);
-      button.textContent = active ? '★ Topic saved' : '☆ Save this topic'; button.setAttribute('aria-pressed', String(active));
-    }
-    button.addEventListener('click', () => {
-      let saved = []; try { saved = JSON.parse(localStorage.getItem('il_saved_topics') || '[]'); } catch (_) { /* empty */ }
-      const active = saved.some((item) => (typeof item === 'string' ? item : item.slug) === slug);
-      saved = active ? saved.filter((item) => (typeof item === 'string' ? item : item.slug) !== slug) : [{ slug, name }, ...saved];
-      try { localStorage.setItem('il_saved_topics', JSON.stringify(saved.slice(0, 20))); } catch (_) { /* storage is optional */ }
-      refresh();
-    });
-    refresh();
-  });
 
   document.querySelectorAll('[data-learning-quiz] .quiz-question').forEach((question) => {
     question.querySelectorAll('[data-choice]').forEach((button) => button.addEventListener('click', () => {
@@ -154,6 +98,9 @@
     topicCount: document.getElementById('topicCount'),
     topicsSection: document.getElementById('topicsSection'),
     topicGrid: document.getElementById('topicGrid'),
+    topicTools: document.getElementById('topicTools'),
+    topicSearch: document.getElementById('topicSearch'),
+    topicResult: document.getElementById('topicResult'),
     researchSection: document.getElementById('researchSection'),
     researchList: document.getElementById('researchList'),
     trialsSection: document.getElementById('trialsSection'),
@@ -179,8 +126,7 @@
     entityGrid: document.getElementById('entityGrid'),
     universitiesSection: document.getElementById('universitiesSection'),
     universityStats: document.getElementById('universityStats'),
-    universityMapNodes: document.getElementById('universityMapNodes'),
-    universityMapSummary: document.getElementById('universityMapSummary'),
+    universityRegionGrid: document.getElementById('universityRegionGrid'),
     universityControls: document.getElementById('universityControls'),
     universitySearch: document.getElementById('universitySearch'),
     universityTopic: document.getElementById('universityTopic'),
@@ -196,9 +142,8 @@
     clearUniversityCompare: document.getElementById('clearUniversityCompare'),
     resourcesSection: document.getElementById('resourcesSection'),
     resourceStats: document.getElementById('resourceStats'),
-    resourceMapNodes: document.getElementById('resourceMapNodes'),
+    resourceRegionGrid: document.getElementById('resourceRegionGrid'),
     resourceCountryCoverage: document.getElementById('resourceCountryCoverage'),
-    mapSummary: document.getElementById('mapSummary'),
     resourceControls: document.getElementById('resourceControls'),
     resourceSearch: document.getElementById('resourceSearch'),
     resourceRegion: document.getElementById('resourceRegion'),
@@ -234,13 +179,7 @@
   }
 
   function appendReaderCopy(container, variants) {
-    const group = el('div', 'reader-copy-set');
-    ['beginner', 'student', 'professional'].forEach((mode) => {
-      const copy = el('p', `reader-copy reader-copy--${mode}`, variants[mode] || variants.beginner || '');
-      copy.dataset.readerLevel = mode;
-      group.append(copy);
-    });
-    container.append(group);
+    container.append(el('p', 'plain-record-copy', variants.beginner || variants.student || variants.professional || ''));
   }
 
   function formatDate(value) {
@@ -292,29 +231,44 @@
   }
 
   function renderTopics(topics, compact) {
-    elements.topicGrid.replaceChildren();
-    const search = new URLSearchParams(location.search).get('search')?.trim().toLowerCase() || '';
-    const filtered = search ? topics.filter((topic) => `${topic.name} ${topic.description}`.toLowerCase().includes(search)) : topics;
-    const visible = compact ? filtered.slice(0, 6) : filtered;
-    visible.forEach((topic, index) => {
-      const card = link('topic-card', '', `/topics/${encodeURIComponent(topic.slug)}`);
-      card.append(el('span', 'topic-card-number', String(index + 1).padStart(2, '0')));
-      card.append(el('h3', '', topic.name));
-      card.append(el('p', '', topic.description));
-      const counts = el('span', 'topic-counts');
-      const researchCount = Number(topic.research_count || 0);
-      const trialCount = Number(topic.trial_count || 0);
-      const countParts = [];
-      if (researchCount > 0) countParts.push(`${numberFormatter.format(researchCount)} ${researchCount === 1 ? 'paper' : 'papers'}`);
-      if (trialCount > 0) countParts.push(`${numberFormatter.format(trialCount)} ${trialCount === 1 ? 'trial' : 'trials'}`);
-      counts.textContent = countParts.join(' · ') || 'Index building';
-      card.append(counts);
-      elements.topicGrid.append(card);
-    });
-    if (!visible.length) elements.topicGrid.append(el('p', 'empty-list', `No tracked topic matches “${search}”. Try a broader term or browse all topics.`));
+    const initialSearch = new URLSearchParams(location.search).get('search')?.trim() || '';
+    if (!compact && elements.topicSearch) elements.topicSearch.value = initialSearch;
+    const draw = () => {
+      elements.topicGrid.replaceChildren();
+      const search = String(compact ? initialSearch : elements.topicSearch?.value || initialSearch).trim().toLowerCase();
+      const filtered = search ? topics.filter((topic) => `${topic.name} ${topic.description}`.toLowerCase().includes(search)) : topics;
+      const visible = compact ? filtered.slice(0, 6) : filtered;
+      visible.forEach((topic, index) => {
+        const card = link('topic-card', '', `/topics/${encodeURIComponent(topic.slug)}`);
+        card.append(el('span', 'topic-card-number', String(index + 1).padStart(2, '0')));
+        card.append(el('h3', '', topic.name));
+        card.append(el('p', '', topic.description));
+        const counts = el('span', 'topic-counts');
+        const researchCount = Number(topic.research_count || 0);
+        const trialCount = Number(topic.trial_count || 0);
+        const countParts = [];
+        if (researchCount > 0) countParts.push(`${numberFormatter.format(researchCount)} ${researchCount === 1 ? 'paper' : 'papers'}`);
+        if (trialCount > 0) countParts.push(`${numberFormatter.format(trialCount)} ${trialCount === 1 ? 'trial' : 'trials'}`);
+        counts.textContent = countParts.join(' · ') || 'Index building';
+        card.append(counts);
+        elements.topicGrid.append(card);
+      });
+      if (!visible.length) elements.topicGrid.append(el('p', 'empty-list', `No tracked topic matches “${search}”. Try a broader term or browse all topics.`));
+      if (!compact && elements.topicResult) elements.topicResult.textContent = `Showing ${numberFormatter.format(visible.length)} of ${numberFormatter.format(topics.length)} topics`;
+    };
+    if (!compact && elements.topicSearch && !elements.topicSearch.dataset.ready) {
+      elements.topicSearch.addEventListener('input', draw);
+      elements.topicSearch.dataset.ready = 'true';
+    }
+    if (elements.topicTools) elements.topicTools.hidden = compact;
+    draw();
     elements.topicsSection.hidden = false;
     const allLink = elements.topicsSection.querySelector('.section-link');
-    if (allLink) allLink.hidden = !compact;
+    if (allLink) {
+      allLink.hidden = false;
+      allLink.href = compact ? '/topics' : '/resources';
+      allLink.textContent = compact ? 'Explore all topics' : 'Open global sources';
+    }
   }
 
   function renderResearch(records) {
@@ -733,38 +687,49 @@
   function renderUniversityStats(coverage) {
     elements.universityStats.replaceChildren();
     [
-      ['Universities indexed', coverage?.universities || 0],
-      ['Countries represented', coverage?.countries || 0],
-      ['Longevity-topic links', coverage?.indexed_topic_links || 0],
-      ['Five-year work links', coverage?.indexed_works_five_year || 0],
-    ].forEach(([label, value]) => {
-      const card = el('div', 'atlas-stat');
-      card.append(el('strong', '', numberFormatter.format(Number(value))), el('span', '', label));
+      ['Universities indexed', coverage?.universities || 0, 'ranking'],
+      ['Countries represented', coverage?.countries || 0, 'countries'],
+      ['Longevity-topic links', coverage?.indexed_topic_links || 0, 'topics'],
+      ['Five-year work links', coverage?.indexed_works_five_year || 0, 'activity'],
+    ].forEach(([label, value, action]) => {
+      const card = el('button', 'atlas-stat atlas-stat--action'); card.type = 'button';
+      card.setAttribute('aria-label', `${numberFormatter.format(Number(value))} ${label}. Show what this represents.`);
+      card.append(el('strong', '', numberFormatter.format(Number(value))), el('span', '', label), el('small', '', 'View details →'));
+      card.onclick = () => {
+        if (action === 'topics') elements.universityTopic.focus();
+        else if (action === 'countries') elements.universityCountry.focus();
+        else if (action === 'activity') { elements.universitySort.value = 'activity'; fetchUniversityIndex().catch(showUniversityError); }
+        (action === 'topics' || action === 'countries' ? elements.universityControls : elements.universityList).scrollIntoView({ behavior: 'smooth', block: 'start' });
+      };
       elements.universityStats.append(card);
     });
   }
 
-  function renderUniversityMap(rows) {
-    elements.universityMapNodes.replaceChildren();
-    const ns = 'http://www.w3.org/2000/svg';
-    const visible = rows.filter((item) => Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude))).slice(0, 180);
-    visible.forEach((university) => {
-      const x = 50 + ((Number(university.longitude) + 180) / 360) * 1100;
-      const y = 38 + ((90 - Number(university.latitude)) / 180) * 420;
-      const group = document.createElementNS(ns, 'a');
-      group.setAttribute('href', `/universities/${encodeURIComponent(university.slug)}`);
-      group.setAttribute('class', 'university-map-node');
-      group.setAttribute('aria-label', `${university.name}, ${university.country_name || 'country unavailable'}: ${university.indexed_works_five_year} indexed work links`);
-      const circle = document.createElementNS(ns, 'circle');
-      circle.setAttribute('cx', String(x)); circle.setAttribute('cy', String(y));
-      circle.setAttribute('r', String(3.5 + Math.min(11, Math.log1p(Number(university.indexed_works_five_year || 0)) * 1.4)));
-      const title = document.createElementNS(ns, 'title');
-      title.textContent = `${university.name} · ${numberFormatter.format(Number(university.indexed_works_five_year || 0))} indexed work links`;
-      circle.append(title); group.append(circle); elements.universityMapNodes.append(group);
+  function renderUniversityRegions(rows) {
+    elements.universityRegionGrid.replaceChildren();
+    const groups = new Map();
+    rows.forEach((university) => {
+      const region = university.continent || 'Region unavailable';
+      if (!groups.has(region)) groups.set(region, []);
+      groups.get(region).push(university);
     });
-    elements.universityMapSummary.textContent = visible.length
-      ? `${numberFormatter.format(visible.length)} leading universities from the current result are shown. Select a circle to open its profile; use the filters below for the complete returned ranking.`
-      : 'University locations will appear after the next automated source refresh.';
+    [...groups.entries()].sort((left, right) => right[1].length - left[1].length).forEach(([region, universities]) => {
+      const card = el('button', 'university-region-card'); card.type = 'button';
+      const leaders = [...universities].sort((left, right) => Number(right.indexed_works_five_year || 0) - Number(left.indexed_works_five_year || 0)).slice(0, 3);
+      card.append(
+        el('span', 'section-index', region),
+        el('strong', '', numberFormatter.format(universities.length)),
+        el('small', '', universities.length === 1 ? 'university in this result' : 'universities in this result'),
+        el('p', '', leaders.map((university) => university.name).join(' · ')),
+        el('i', '', 'View regional ranking →'),
+      );
+      card.onclick = () => {
+        if (region !== 'Region unavailable') elements.universityContinent.value = region;
+        fetchUniversityIndex().catch(showUniversityError);
+        elements.universityControls.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      };
+      elements.universityRegionGrid.append(card);
+    });
   }
 
   function metricForSort(university) {
@@ -851,7 +816,7 @@
     if (elements.universityIntro) elements.universityIntro.textContent = activeTopic
       ? `This is a topic-specific view. Every university below has source-matched ${activeTopicName} research in the index; the ranking uses that topic’s five-year activity, not the general university list.`
       : 'Explore universities through several lenses instead of relying on a single unexplained league table. The index counts source-matched scholarly works, recent activity, breadth across longevity topics, and citation context from representative works.';
-    renderUniversityMap(visible);
+    renderUniversityRegions(visible);
   }
 
   async function fetchUniversityIndex() {
@@ -907,51 +872,45 @@
   function renderResourceStats(coverage) {
     elements.resourceStats.replaceChildren();
     [
-      ['Official resources listed', coverage?.total || 0],
-      ['Countries and regions', coverage?.jurisdictions || 0],
-      ['Updated automatically', coverage?.live_integrations || 0],
-      ['Links checked successfully', coverage?.healthy || 0],
-    ].forEach(([label, value]) => {
-      const card = el('div', 'atlas-stat');
-      card.append(el('strong', '', numberFormatter.format(Number(value))), el('span', '', label));
+      ['Official resources listed', coverage?.total || 0, 'all'],
+      ['Countries and regions', coverage?.jurisdictions || 0, 'countries'],
+      ['Updated automatically', coverage?.live_integrations || 0, 'live'],
+      ['Links checked successfully', coverage?.healthy || 0, 'healthy'],
+    ].forEach(([label, value, action]) => {
+      const card = el('button', 'atlas-stat atlas-stat--action'); card.type = 'button';
+      card.setAttribute('aria-label', `${numberFormatter.format(Number(value))} ${label}. Show what this represents.`);
+      card.append(el('strong', '', numberFormatter.format(Number(value))), el('span', '', label), el('small', '', 'View records →'));
+      card.onclick = () => {
+        elements.resourceSearch.value = '';
+        elements.resourceRegion.value = '';
+        elements.resourceType.value = '';
+        elements.resourceIntegration.value = action === 'live' ? 'live' : '';
+        renderFilteredResources(action === 'healthy' ? 'healthy' : '');
+        (action === 'countries' ? elements.resourceCountryCoverage : elements.resourceResult).scrollIntoView({ behavior: 'smooth', block: 'start' });
+      };
       elements.resourceStats.append(card);
     });
   }
 
   function renderResourceMap(coverage, countryDirectory = []) {
-    elements.resourceMapNodes.replaceChildren();
-    const positions = {
-      Global: { x: 600, y: 68 }, Europe: { x: 620, y: 178 }, Americas: { x: 250, y: 220 },
-      'Asia-Pacific': { x: 990, y: 270 }, Africa: { x: 650, y: 365 }, 'Middle East': { x: 765, y: 235 },
-    };
-    const ns = 'http://www.w3.org/2000/svg';
-    Object.entries(coverage?.by_region || {}).forEach(([region, count]) => {
-      const point = positions[region];
-      if (!point) return;
-      const group = document.createElementNS(ns, 'a');
-      group.setAttribute('href', `?region=${encodeURIComponent(region)}`);
-      group.setAttribute('class', 'resource-map-node');
-      group.setAttribute('aria-label', `Show ${region} resources: ${count}`);
-      const pulse = document.createElementNS(ns, 'circle');
-      pulse.setAttribute('class', 'resource-map-pulse'); pulse.setAttribute('cx', point.x); pulse.setAttribute('cy', point.y); pulse.setAttribute('r', '34');
-      const circle = document.createElementNS(ns, 'circle');
-      circle.setAttribute('cx', point.x); circle.setAttribute('cy', point.y); circle.setAttribute('r', String(22 + Math.min(18, Number(count) * 2)));
-      const number = document.createElementNS(ns, 'text');
-      number.setAttribute('x', point.x); number.setAttribute('y', point.y + 6); number.setAttribute('text-anchor', 'middle'); number.textContent = String(count);
-      const label = document.createElementNS(ns, 'text');
-      label.setAttribute('x', point.x); label.setAttribute('y', point.y + 58); label.setAttribute('text-anchor', 'middle'); label.setAttribute('class', 'resource-map-label'); label.textContent = region;
-      const detail = document.createElementNS(ns, 'text');
-      detail.setAttribute('x', point.x); detail.setAttribute('y', point.y + 75); detail.setAttribute('text-anchor', 'middle'); detail.setAttribute('class', 'resource-map-detail');
+    elements.resourceRegionGrid.replaceChildren();
+    Object.entries(coverage?.by_region || {}).sort((left, right) => Number(right[1]) - Number(left[1])).forEach(([region, count]) => {
       const countryCount = Number(coverage?.by_region_jurisdictions?.[region] || 0);
-      detail.textContent = countryCount ? `${countryCount} COUNTRIES` : `${count} SOURCES`;
-      group.append(pulse, circle, number, label, detail);
-      group.addEventListener('click', (event) => {
-        event.preventDefault();
+      const card = el('button', 'resource-region-card'); card.type = 'button';
+      card.setAttribute('aria-label', `Show ${count} official sources covering ${region}`);
+      card.append(
+        el('span', 'section-index', region),
+        el('strong', '', numberFormatter.format(Number(count))),
+        el('small', '', Number(count) === 1 ? 'official source' : 'official sources'),
+        el('p', '', countryCount ? `${numberFormatter.format(countryCount)} countries and regions represented` : 'Global or cross-border coverage'),
+        el('i', '', 'Filter directory →'),
+      );
+      card.onclick = () => {
         elements.resourceRegion.value = region;
         renderFilteredResources();
         elements.resourceControls.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      });
-      elements.resourceMapNodes.append(group);
+      };
+      elements.resourceRegionGrid.append(card);
     });
     const countrySources = countryDirectory
       .map((country) => [country.jurisdiction_code, country.jurisdiction_name, country.region])
@@ -999,19 +958,18 @@
       heading.append(controls);
       elements.resourceCountryCoverage.append(heading);
     }
-    elements.mapSummary.textContent = 'Country coverage uses a national pharmaceutical authority where the WHO directory identifies one; otherwise it links to the official WHO country profile. Each authority applies only within its own jurisdiction.';
   }
 
   let atlasResources = [];
 
-  function renderFilteredResources() {
+  function renderFilteredResources(healthFilter = '') {
     const query = String(elements.resourceSearch.value || '').trim().toLowerCase();
     const region = elements.resourceRegion.value;
     const type = elements.resourceType.value;
     const integration = elements.resourceIntegration.value;
     const visible = atlasResources.filter((resource) => {
       const searchable = `${resource.name} ${resource.jurisdiction_name} ${resource.description} ${resource.resource_type}`.toLowerCase();
-      return (!query || searchable.includes(query)) && (!region || resource.region === region) && (!type || resource.resource_type === type) && (!integration || resource.integration_status === integration);
+      return (!query || searchable.includes(query)) && (!region || resource.region === region) && (!type || resource.resource_type === type) && (!integration || resource.integration_status === integration) && (!healthFilter || resource.health === healthFilter);
     });
     elements.resourceGrid.replaceChildren();
     visible.forEach((resource) => {
@@ -1082,23 +1040,18 @@
   function renderQuality(telemetry) {
     elements.qualityGrid.replaceChildren();
     const groups = [
-      ['Research records shown', telemetry?.research?.published, 'Passed the automatic topic and source checks.'],
-      ['Research records withheld', telemetry?.research?.quarantined, 'Kept off the public site because the match was too weak or uncertain.'],
-      ['Average research match', Number(telemetry?.research?.average_confidence || 0) > 0 ? `${Number(telemetry.research.average_confidence)}%` : 'Pending', 'Average topic relevance of the records currently shown.'],
-      ['Repeated records removed', telemetry?.research?.duplicates_suppressed, 'Near-identical records grouped behind one main entry.'],
-      ['Trial records shown', telemetry?.trials?.published, 'Registry records that passed the automatic checks.'],
-      ['Trial records withheld', telemetry?.trials?.quarantined, 'Registry records held back because the longevity connection was unclear.'],
-      ['Average trial match', Number(telemetry?.trials?.average_confidence || 0) > 0 ? `${Number(telemetry.trials.average_confidence)}%` : 'Pending', 'Average topic relevance of the trials currently shown.'],
-      ['Search engine update', telemetry?.indexing?.succeeded === true ? 'Up to date' : telemetry?.indexing?.succeeded === false ? 'Delayed' : 'Pending', 'Whether the latest changed pages were sent to supported search engines.'],
-      ['Weekly briefing delivery', telemetry?.distribution?.succeeded === true ? 'Up to date' : telemetry?.distribution?.succeeded === false ? 'Delayed' : 'Pending', 'Whether the latest automatic briefing was generated and sent.'],
-      ['Google impressions · 28 days', telemetry?.search?.last_imported_at ? telemetry.search.impressions : 'Not connected yet', 'How often pages appeared in Google search results.'],
-      ['Google visits · 28 days', telemetry?.search?.last_imported_at ? telemetry.search.clicks : 'Not connected yet', 'Visits from Google search results.'],
-      ['Search pages to improve', telemetry?.search?.last_imported_at ? telemetry.search.open_opportunities : 'Not connected yet', telemetry?.search?.last_imported_at ? `Pages appearing in search that may benefit from clearer titles or descriptions. Data updated ${formatTimestamp(telemetry.search.last_imported_at)}.` : 'Search Console data will appear here after its secure connection is configured.'],
+      ['Research records shown', telemetry?.research?.published, 'Passed the automatic topic and source checks.', '/research', 'Browse records'],
+      ['Research records withheld', telemetry?.research?.quarantined, 'Kept off the public site because the match was too weak or uncertain.', '/methodology', 'See the publication rules'],
+      ['Average research match', Number(telemetry?.research?.average_confidence || 0) > 0 ? `${Number(telemetry.research.average_confidence)}%` : 'Pending', 'Average topic relevance of the records currently shown.', '/methodology', 'Understand this score'],
+      ['Repeated records removed', telemetry?.research?.duplicates_suppressed, 'Near-identical records grouped behind one main entry.', '/methodology', 'See how duplicates work'],
+      ['Trial records shown', telemetry?.trials?.published, 'Registry records that passed the automatic checks.', '/trials', 'Browse trials'],
+      ['Trial records withheld', telemetry?.trials?.quarantined, 'Registry records held back because the longevity connection was unclear.', '/methodology', 'See the publication rules'],
+      ['Average trial match', Number(telemetry?.trials?.average_confidence || 0) > 0 ? `${Number(telemetry.trials.average_confidence)}%` : 'Pending', 'Average topic relevance of the trials currently shown.', '/methodology', 'Understand this score'],
     ];
-    groups.forEach(([label, value, description]) => {
-      const card = el('article', 'quality-stat');
+    groups.forEach(([label, value, description, href, action]) => {
+      const card = link('quality-stat quality-stat--link', '', href);
       const displayValue = typeof value === 'number' ? numberFormatter.format(value) : value ?? 'Pending';
-      card.append(el('span', '', label), el('strong', '', displayValue), el('small', '', description));
+      card.append(el('span', '', label), el('strong', '', displayValue), el('small', '', description), el('i', '', `${action} →`));
       elements.qualityGrid.append(card);
     });
     elements.qualitySection.hidden = false;
@@ -1128,19 +1081,17 @@
         renderTrials(data.trials || []);
         renderSources(data.sources || [], true);
       } else if (view === 'research') {
-        const [data, topicsData] = await Promise.all([request('research', 60), request('topics', 100)]);
+        const data = await request('research', 60);
         renderResearch(data.research || []);
         renderSources(data.sources || [], false);
-        renderTopics(topicsData.topics || [], true);
       } else if (view === 'trials') {
-        const [data, topicsData] = await Promise.all([request('trials', 60), request('topics', 100)]);
+        const data = await request('trials', 60);
         renderTrials(data.trials || []);
         renderSources(data.sources || [], false);
-        renderTopics(topicsData.topics || [], true);
       } else if (view === 'topics') {
         const data = await request('topics', 100);
         renderTopics(data.topics || [], false);
-        renderSources(data.sources || [], true);
+        renderSources(data.sources || [], false);
       } else if (view === 'topic') {
         const [research, trials, topics, timeline] = await Promise.all([
           request('research', 12),
@@ -1180,14 +1131,6 @@
       } else if (view === 'quality') {
         const data = await request('quality', 100);
         renderQuality(data.telemetry || {});
-        const allSources = [...(data.sources || []), ...(data.directory_sources || [])];
-        const seenSources = new Set();
-        renderSources(allSources.filter((source) => {
-          const key = source.id || `${source.name}|${source.homepage_url}`;
-          if (seenSources.has(key)) return false;
-          seenSources.add(key);
-          return true;
-        }), true);
       }
       elements.loading.hidden = true;
     } catch (error) {

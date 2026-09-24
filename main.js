@@ -404,28 +404,6 @@ window.handleSubmit = handleSubmit;
     window.location.href = exact ? `/topics/${exact}` : `/topics?search=${encodeURIComponent(query)}`;
   });
 
-  function readJson(key, fallback) {
-    try { return JSON.parse(localStorage.getItem(key) || '') || fallback; } catch (_) { return fallback; }
-  }
-
-  function renderTopicMemory(id, entries, emptyText) {
-    const root = document.getElementById(id);
-    if (!root) return;
-    root.replaceChildren();
-    if (!entries.length) { root.append(Object.assign(document.createElement('span'), { textContent: emptyText })); return; }
-    entries.slice(0, 5).forEach((entry) => {
-      const slug = typeof entry === 'string' ? entry : entry.slug;
-      const label = typeof entry === 'string' ? entry.replace(/-/g, ' ') : entry.name || entry.slug.replace(/-/g, ' ');
-      const anchor = document.createElement('a');
-      anchor.href = `/topics/${encodeURIComponent(slug)}`;
-      anchor.textContent = label;
-      root.append(anchor);
-    });
-  }
-
-  renderTopicMemory('savedTopicsHome', readJson('il_saved_topics', []), 'Save a topic to see it here.');
-  renderTopicMemory('recentTopicsHome', readJson('il_recent_topics', []), 'Your recent topic guides will appear here.');
-
   const previousVisit = localStorage.getItem('il_last_visit');
   localStorage.setItem('il_last_visit', new Date().toISOString());
 
@@ -511,7 +489,7 @@ window.handleSubmit = handleSubmit;
       const key = `${item.url || ''}|${item.title || ''}`;
       if (!isUsefulReaderUpdate(item) || !item.title || !item.url || seen.has(key) || !['research', 'integrity'].includes(kind)) return false;
       seen.add(key); return true;
-    }).slice(0, 3);
+    }).slice(0, 6);
     root.replaceChildren();
     if (!items.length) {
       const fallback = document.createElement('a'); fallback.className = 'hero-discovery'; fallback.href = '/research';

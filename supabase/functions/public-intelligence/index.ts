@@ -128,27 +128,13 @@ Deno.serve(async (req) => {
       .order('name')
 
     if (view === 'quality') {
-      const [{ data: telemetry, error }, { data: search, error: searchError }, { data: sources, error: sourcesError }, { data: directorySources, error: directoryError }] = await Promise.all([
-        supabase.rpc('get_intelligence_quality_telemetry'),
-        supabase.rpc('search_utility_telemetry'),
-        sourcesPromise,
-        supabase.from('global_resources')
-          .select('id,name,resource_type,geographic_scope,jurisdiction_code,jurisdiction_name,region,authority_tier,description,limitations,homepage_url,data_url,terms_url,access_mode,reuse_status,integration_status,update_cadence,eligibility_reason,last_checked_at,last_healthy_at,last_status_code,consecutive_failures')
-          .eq('is_eligible', true)
-          .eq('resource_type', 'regulator')
-          .eq('region', 'Europe')
-          .order('jurisdiction_name')
-          .order('name')
-          .limit(100),
-      ])
+      const { data: telemetry, error } = await supabase.rpc('get_intelligence_quality_telemetry')
       if (error) throw error
-      if (searchError) throw searchError
-      if (sourcesError) throw sourcesError
-      if (directoryError) throw directoryError
       return response(req, {
-        telemetry: { ...(telemetry ?? {}), search: search ?? {} },
-        sources: (sources ?? []).map(publicSourceState),
-        directory_sources: (directorySources ?? []).map((resource: any) => publicResourceState(resource)),
+        telemetry: {
+          research: telemetry?.research ?? {},
+          trials: telemetry?.trials ?? {},
+        },
       })
     }
 

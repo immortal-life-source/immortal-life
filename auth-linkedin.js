@@ -19,7 +19,7 @@
   function fail(error) {
     clearAttempt();
     if (msg) msg.textContent = 'Could not complete LinkedIn login. Redirecting…';
-    window.location.replace('/join?error=' + encodeURIComponent(error || 'auth_failed'));
+    window.location.replace('/topics');
   }
 
   if (providerError) { fail('provider_cancelled'); return; }
@@ -35,7 +35,7 @@
       if (data && data.ok === true && data.session) {
         sessionStorage.setItem('il_session', data.session);
         clearAttempt();
-        window.location.replace('/dashboard');
+        window.location.replace('/topics');
         return;
       }
       fail(data.error || 'auth_failed');

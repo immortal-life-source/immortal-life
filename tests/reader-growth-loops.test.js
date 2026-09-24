@@ -76,7 +76,7 @@ test('EU regulatory directory covers every member state with official national s
   const expected = ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE'];
   for (const code of expected) assert.match(migration, new RegExp(`'${code}'`), `missing EU member ${code}`);
   assert.equal(new Set([...migration.matchAll(/'([A-Z]{2})',\s*'[^']+',\s*'https:\/\//g)].map((match) => match[1])).size, 27);
-  assert.match(read('supabase/functions/public-intelligence/index.ts'), /directory_sources/);
+  assert.match(read('supabase/functions/public-intelligence/index.ts'), /country_directory/);
   assert.match(read('supabase/functions/check-resource-health/index.ts'), /www\.lakemedelsverket\.se/);
 });
 

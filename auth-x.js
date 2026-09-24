@@ -20,7 +20,7 @@
 
   if (!code || !state || !verifier || !expectedState) {
     clearOAuthAttempt();
-    window.location.replace('/join?error=invalid_state');
+    window.location.replace('/topics');
     return;
   }
 
@@ -44,16 +44,16 @@
       if (data && data.ok === true && data.session) {
         sessionStorage.setItem('il_session', data.session);
         clearOAuthAttempt();
-        window.location.replace('/dashboard');
+        window.location.replace('/topics');
         return;
       }
       clearOAuthAttempt();
       if (msg) msg.textContent = 'Something went wrong. Redirecting…';
-      window.location.replace('/join?error=' + encodeURIComponent(data.error || 'auth_failed'));
+      window.location.replace('/topics');
     })
     .catch(function () {
       clearOAuthAttempt();
       if (msg) msg.textContent = 'Something went wrong. Redirecting…';
-      window.location.replace('/join?error=auth_failed');
+      window.location.replace('/topics');
     });
 })();

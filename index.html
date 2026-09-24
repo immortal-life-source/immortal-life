@@ -30,7 +30,7 @@
 
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
 
-  <link rel="stylesheet" href="/style.css?v=20260924-navigation-density-c" />
+  <link rel="stylesheet" href="/style.css?v=20260925-ux-consolidation-a" />
 </head>
 
 <body>
@@ -83,8 +83,6 @@
           <span class="s1-nav-sep" aria-hidden="true"></span>
           <a href="/universities" class="s1-nav-link">Universities</a>
           <span class="s1-nav-sep" aria-hidden="true"></span>
-          <a href="/dashboard" class="s1-nav-link">My Radar</a>
-          <span class="s1-nav-sep" aria-hidden="true"></span>
           <button class="s1-nav-more-toggle" type="button" aria-expanded="false" aria-controls="homeMoreNav">More</button>
         </div>
         <div class="s1-nav-secondary" id="homeMoreNav">
@@ -95,7 +93,6 @@
           <a href="/resources" class="s1-nav-leaderboard">Resources</a>
           <a href="/methodology" class="s1-nav-leaderboard">How it works</a>
           <a href="#" class="s1-nav-leaderboard" data-news-trigger>Project News</a>
-          <a href="/join" class="s1-nav-leaderboard">Sign in</a>
         </div>
       </nav>
     </header>
@@ -124,7 +121,7 @@
         <nav class="hero-quick-links" aria-label="Start exploring">
           <a href="/changes">See what's new this week</a>
           <a href="/topics">Explore a topic</a>
-          <a href="/discover/recruiting-trials">Find recruiting trials</a>
+          <a href="/trials">Find recruiting trials</a>
         </nav>
       </div>
 
@@ -210,7 +207,7 @@
     <div class="path-grid">
       <a class="path-card path-card--learn reveal" href="/learn"><span>01 · Learn</span><h3>I am new to longevity</h3><p>Build a clear foundation and learn how evidence levels differ.</p><b>Start the guided route →</b></a>
       <a class="path-card path-card--evidence reveal" href="/topics"><span>02 · Follow</span><h3>I want to follow a topic</h3><p>See papers, trials, uncertainties and source updates together.</p><b>Choose a topic →</b></a>
-      <a class="path-card path-card--trials reveal" href="/discover/recruiting-trials"><span>03 · Trials</span><h3>I want to find clinical trials</h3><p>Explore active registry records by topic and location.</p><b>Open Trial Radar →</b></a>
+      <a class="path-card path-card--trials reveal" href="/trials"><span>03 · Trials</span><h3>I want to find clinical trials</h3><p>Explore active registry records by topic and location.</p><b>Open Trial Radar →</b></a>
       <a class="path-card path-card--universities reveal" href="/universities"><span>04 · Landscape</span><h3>I want to compare universities</h3><p>See research activity, topic breadth and recent momentum globally.</p><b>Explore universities →</b></a>
       <a class="path-card path-card--safety reveal" href="/regulatory"><span>05 · Safety</span><h3>I want official safety information</h3><p>Navigate regulatory notices, corrections and retractions.</p><b>Check official updates →</b></a>
       <a class="path-card path-card--changes reveal" href="/changes"><span>06 · Updates</span><h3>I want to see what's new</h3><p>Browse newly added research, trial updates and official notices.</p><b>See the latest updates →</b></a>
@@ -235,13 +232,8 @@
   </section>
 
   <section class="home-global" aria-labelledby="globalTitle">
-    <div class="home-global-copy reveal"><span>Global pulse</span><h2 id="globalTitle">See where longevity research is moving.</h2><p>Explore university activity, recruiting trials and official sources around the world. The map is a discovery tool—not a ranking of scientific quality or medical care.</p><div class="home-global-actions"><a href="/universities">University research map</a><a href="/discover/recruiting-trials">Recruiting trials by country</a><a href="/resources">Official source atlas</a></div></div>
+    <div class="home-global-copy reveal"><span>Global pulse</span><h2 id="globalTitle">See where longevity research is moving.</h2><p>Explore university activity, recruiting trials and official sources around the world. The map is a discovery tool—not a ranking of scientific quality or medical care.</p><div class="home-global-actions"><a href="/universities">University research map</a><a href="/trials">Open Trial Radar</a><a href="/resources">Official source atlas</a></div></div>
     <div class="home-world" aria-hidden="true"><span class="world-orbit world-orbit--one"></span><span class="world-orbit world-orbit--two"></span><i style="--x:18%;--y:38%;--tone:var(--violet)"></i><i style="--x:44%;--y:29%;--tone:var(--teal)"></i><i style="--x:62%;--y:44%;--tone:var(--gold)"></i><i style="--x:78%;--y:31%;--tone:var(--coral)"></i><i style="--x:71%;--y:69%;--tone:var(--success)"></i><i style="--x:33%;--y:68%;--tone:var(--blue)"></i></div>
-  </section>
-
-  <section class="home-personal" id="savedForYou" aria-labelledby="personalTitle">
-    <div><span>Your longevity radar</span><h2 id="personalTitle">Make the index yours.</h2><p>Save topics, return to recently viewed guides, and receive only important updates—not a stream of every new paper.</p></div>
-    <div class="personal-grid"><div><strong>Saved topics</strong><div id="savedTopicsHome" class="saved-topic-list"><span>Save a topic to see it here.</span></div></div><div><strong>Recently viewed</strong><div id="recentTopicsHome" class="saved-topic-list"><span>Your recent topic guides will appear here.</span></div></div><a class="personal-cta" href="/dashboard">Open My Radar</a></div>
   </section>
 
   <!-- ══════════════════════════════════════════
@@ -328,11 +320,6 @@
         </div>
       </div>
 
-      <div class="members-cta">
-        <p>Already have an invite code?</p>
-        <a href="/join">Enter the members area →</a>
-      </div>
-
     </div>
   </section>
 
@@ -359,7 +346,7 @@
     </div>
   </footer>
 
-  <nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/topics"><span aria-hidden="true">◇</span>Topics</a><a href="/dashboard"><span aria-hidden="true">☆</span>Saved</a><a href="/changes"><span aria-hidden="true">↻</span>Updates</a><button type="button" data-mobile-menu-open><span aria-hidden="true">☰</span>Menu</button></nav>
+  <nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/topics"><span aria-hidden="true">◇</span>Topics</a><a href="/trials"><span aria-hidden="true">＋</span>Trials</a><a href="/changes"><span aria-hidden="true">↻</span>Updates</a><button type="button" data-mobile-menu-open><span aria-hidden="true">☰</span>Menu</button></nav>
 
   <!-- ══════════════════════════════════════════
        PRIVACY POLICY MODAL
@@ -393,28 +380,19 @@
       <div class="modal-section-title">What we collect</div>
       <p class="modal-text">
         For newsletter subscribers, we collect your <strong>email address</strong>,
-        consent record, submission time, and source page. If you join the members
-        area, we also process the limited profile details returned by your selected
-        sign-in provider (X or LinkedIn), the provider-specific member identifier,
-        invite activity, points, watchlists, briefings, and account timestamps.
-        LinkedIn sign-in is used for account access and is not identity verification.
-        We do not request medical or health information.
+        consent record, submission time, and source page. We do not request medical
+        or health information.
       </p>
 
       <div class="modal-section-title">Why we collect it</div>
       <p class="modal-text">
-        Your email address is used for communications you requested. Social profile
-        data is used to create and secure your member account, operate invitations
-        and rankings, and provide personalised watchlists and briefings. OAuth access
-        tokens are used transiently during sign-in and are not stored by immortal.life.
+        Your email address is used only to deliver and manage the newsletter you requested.
       </p>
 
       <div class="modal-section-title">Legal basis (GDPR)</div>
       <p class="modal-text">
         Newsletter data is processed on the basis of <strong>consent</strong>
-        (Article 6(1)(a) GDPR). Member-account data is processed as necessary to
-        provide the service you request (Article 6(1)(b)) and, where applicable,
-        for proportionate security and abuse-prevention interests (Article 6(1)(f)).
+        (Article 6(1)(a) GDPR).
       </p>
 
       <div class="modal-section-title">Where your data is stored</div>
@@ -428,9 +406,8 @@
 
       <div class="modal-section-title">How long we keep it</div>
       <p class="modal-text">
-        We retain your email address while you remain subscribed and member data
-        while your account is active. You can delete the member account from the
-        dashboard. If you unsubscribe or request deletion, applicable personal data
+        We retain your email address while you remain subscribed. If you unsubscribe
+        or request deletion, applicable personal data
         is removed within 30 days unless law requires longer retention.
       </p>
 
@@ -462,7 +439,7 @@
 
   <script src="/il-config.js"></script>
   <script src="/news-modal.js"></script>
-  <script src="/main.js?v=20260924-content-density-c"></script>
+  <script src="/main.js?v=20260925-ux-consolidation-a"></script>
   <script src="/telemetry.js"></script>
 </body>
 </html>
