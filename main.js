@@ -443,10 +443,15 @@ window.handleSubmit = handleSubmit;
     return clean.length > limit ? `${clean.slice(0, limit - 1).trim()}…` : clean;
   }
 
-  function renderToday(feedItems, changeItems, currentTrial, regulatory, university) {
+  function isUsefulReaderUpdate(item) {
+    const title = String(item?.title || '');
+    return item?.event_type !== 'quality_state_changed' && !/^publication[- ]quality status changed\s*:/i.test(title);
+  }
+
+  function renderToday(feedItems, changeItems, currentTrial, regulatory, regulatoryGuide, regulatoryCoverage, university) {
     const root = document.getElementById('todayGrid');
     if (!root) return;
-    const combined = [...changeItems, ...feedItems].map((item) => ({ ...item, kind: recordKind(item) }));
+    const combined = [...changeItems, ...feedItems].filter(isUsefulReaderUpdate).map((item) => ({ ...item, kind: recordKind(item) }));
     const unique = (items) => {
       const seen = new Set();
       return items.filter((item) => { const key = `${item.url || ''}|${item.title || ''}`; if (!key || seen.has(key)) return false; seen.add(key); return true; });
@@ -460,7 +465,17 @@ window.handleSubmit = handleSubmit;
     const official = regulatory ? {
       kind: 'regulatory', title: regulatory.title, content_text: regulatory.summary,
       date_published: regulatory.published_at, url: `/regulatory/${regulatory.id}`,
-    } : { kind: 'regulatory', title: 'No new official notice matched this window', content_text: 'Official regulatory sources remain under automatic monitoring. Open Regulatory Watch to inspect the latest available notices.', url: '/regulatory' };
+    } : regulatoryGuide ? {
+      kind: 'regulatory',
+      title: `Check health claims with ${regulatoryGuide.name}`,
+      content_text: `Use this official ${regulatoryGuide.jurisdiction_name || regulatoryGuide.geographic_scope || 'regulatory'} authority to verify medicine approvals, safety notices, and health-claim rules. Our directory currently covers ${Number(regulatoryCoverage?.authorities || 0).toLocaleString('en')} authorities worldwide.`,
+      url: '/regulatory#regulatoryGuideGrid',
+    } : {
+      kind: 'regulatory',
+      title: 'How to verify a longevity health claim',
+      content_text: 'Check whether the product is authorised, whether its health claims are allowed, and whether an official safety notice exists. Start with the authority for your country.',
+      url: '/regulatory#regulatoryGuideGrid',
+    };
     const campus = university ? {
       kind: 'university', title: university.name,
       content_text: `${Number(university.indexed_works_two_year || 0).toLocaleString('en')} recent topic-linked works across ${Number(university.indexed_topic_count || 0)} tracked areas. Activity is not a quality ranking.`,
@@ -479,7 +494,7 @@ window.handleSubmit = handleSubmit;
     candidates.slice(0, 6).forEach((item) => {
       const card = document.createElement('a');
       card.className = 'today-card'; card.dataset.kind = item.kind; card.href = item.url || '/changes';
-      const labels = { trials: 'Trial status', integrity: 'Evidence change', regulatory: 'Official signal', university: 'University momentum', research: 'Development' };
+      const labels = { trials: 'Trial status', integrity: 'Evidence change', regulatory: 'Official guidance', university: 'University momentum', research: 'Development' };
       const label = document.createElement('span'); label.textContent = `${labels[item.kind] || 'Update'} · ${item.date_published ? new Date(item.date_published).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : 'Latest check'}`;
       const heading = document.createElement('h3'); heading.textContent = shortCopy(item.title, 92);
       const copy = document.createElement('p'); copy.textContent = shortCopy(item.content_text || 'Open the source-linked record to see what changed and why it appears here.');
@@ -494,7 +509,7 @@ window.handleSubmit = handleSubmit;
     const items = [...changeItems, ...feedItems].filter((item) => {
       const kind = recordKind(item);
       const key = `${item.url || ''}|${item.title || ''}`;
-      if (!item.title || !item.url || seen.has(key) || !['research', 'integrity'].includes(kind)) return false;
+      if (!isUsefulReaderUpdate(item) || !item.title || !item.url || seen.has(key) || !['research', 'integrity'].includes(kind)) return false;
       seen.add(key); return true;
     }).slice(0, 3);
     root.replaceChildren();
@@ -522,19 +537,27 @@ window.handleSubmit = handleSubmit;
   const universityPromise = optionalJson(`${window.IL_FN_BASE}/public-intelligence?view=universities&sort=momentum&limit=1`, { headers: window.ilFnHeaders() });
 
   renderHeroDiscoveries([], []);
-  renderToday([], [], null, null, null);
+  renderToday([], [], null, null, null, null, null);
 
   Promise.all([feedPromise, changesPromise]).then(([feed, changes]) => {
     const feedItems = Array.isArray(feed?.items) ? feed.items : [];
     const changeItems = Array.isArray(changes?.items) ? changes.items : [];
     renderHeroDiscoveries(feedItems, changeItems);
-    renderToday(feedItems, changeItems, null, null, null);
+    renderToday(feedItems, changeItems, null, null, null, null, null);
   });
 
   Promise.all([feedPromise, changesPromise, trialPromise, regulatoryPromise, universityPromise]).then(([feed, changes, trialData, regulatoryData, universityData]) => {
     const feedItems = Array.isArray(feed?.items) ? feed.items : [];
     const changeItems = Array.isArray(changes?.items) ? changes.items : [];
-    renderToday(feedItems, changeItems, trialData?.trials?.[0], regulatoryData?.regulatory?.[0], universityData?.universities?.[0]);
+    renderToday(
+      feedItems,
+      changeItems,
+      trialData?.trials?.[0],
+      regulatoryData?.regulatory?.[0],
+      regulatoryData?.regulatory_guides?.[0],
+      regulatoryData?.regulatory_coverage,
+      universityData?.universities?.[0],
+    );
     const status = document.getElementById('homeDataStatus');
     if (status) status.textContent = `Live index checked ${new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}. Every item links to its original record.`;
     if (previousVisit) {
