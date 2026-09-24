@@ -147,13 +147,8 @@
 
     <section class="intel-section university-index" id="universitiesSection" hidden>
       <div class="university-summary" id="universityStats" aria-label="University index coverage"></div>
-      <div class="section-heading">
-        <div><span class="section-index">Global research landscape</span><h2 id="universityHeading">Universities active in longevity research.</h2></div>
-        <a href="/data#university-data" class="section-link">Download the index</a>
-      </div>
-      <p class="university-intro" id="universityIntro">Explore universities through several lenses instead of relying on a single unexplained league table. The index counts source-matched scholarly works, recent activity, breadth across longevity topics, and citation context from representative works.</p>
-      <section class="university-regions" aria-labelledby="universityRegionsTitle">
-        <div class="region-browser-heading"><div><span class="section-index">Browse by region</span><h3 id="universityRegionsTitle">See where longevity research is concentrated</h3></div><p>Select a region to filter the complete, readable university ranking below.</p></div>
+      <section class="university-regions" aria-labelledby="universityHeading">
+        <div class="region-browser-heading"><div><span class="section-index">Browse by region</span><h3 id="universityHeading">Universities active in longevity research.</h3></div><div class="region-browser-copy"><p id="universityIntro">Select a region to filter the complete ranking. Activity counts source-matched work and topic breadth; it does not rank research quality.</p><a href="/data#university-data" class="section-link">Download the index</a></div></div>
         <div class="university-region-grid" id="universityRegionGrid"></div>
       </section>
       <form class="university-controls" id="universityControls" role="search" aria-label="Filter universities">
@@ -174,11 +169,6 @@
 
     <section class="intel-section resource-atlas" id="resourcesSection" hidden>
       <div class="atlas-summary" id="resourceStats" aria-label="Resource coverage statistics"></div>
-      <div class="section-heading atlas-heading">
-        <div><span class="section-index">Global source directory</span><h2>Official health and research sources worldwide.</h2></div>
-        <a href="/entities" class="section-link">Explore the evidence directory</a>
-      </div>
-      <p class="atlas-intro">Search official health and medicines information for every country, find a registered trial, read a systematic review, or explore datasets built for ageing research. Every link opens the original source.</p>
       <nav class="resource-pathways" aria-label="Choose a resource task">
         <button type="button" data-resource-preset="" aria-pressed="true"><strong>Browse everything</strong><span>All qualified public resources</span></button>
         <button type="button" data-resource-preset="trial_registry" aria-pressed="false"><strong>Find registered trials</strong><span>WHO-recognised and official registries</span></button>
@@ -203,10 +193,8 @@
     </section>
 
     <section class="intel-section" id="qualitySection" hidden>
-      <div class="section-heading"><div><span class="section-index">Live quality checks</span><h2>How well the automated checks are working</h2></div><a href="/methodology" class="section-link">How records are checked</a></div>
-      <p class="quality-intro">These figures show what the system published, withheld, or removed as a duplicate. Match confidence estimates topic relevance; it does not rate whether an intervention is safe or effective.</p>
       <div class="quality-grid" id="qualityGrid"></div>
-      <p class="quality-note">All checks run automatically. No scientist, clinician, editor, or human reviewer approves individual records before publication.</p>
+      <p class="quality-note">All checks run automatically. Match confidence estimates topic relevance; it does not rate safety or effectiveness. No scientist, clinician, editor, or human reviewer approves individual records before publication. <a href="/methodology">See how records are checked.</a></p>
     </section>
 
     <section class="source-section" id="sourceSection" hidden>

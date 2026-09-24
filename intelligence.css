@@ -276,6 +276,7 @@ body[data-view="topics"] .intel-section { padding-top: clamp(38px, 4vw, 58px); }
 .entity-record-list span { color: var(--muted); font-size: 10px; text-align: right; }
 
 .resource-atlas { padding-top: 0; }
+.resource-atlas .atlas-summary { margin-bottom:32px; }
 .atlas-summary { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0 calc(clamp(22px, 5vw, 72px) * -1) 88px; border-bottom: 1px solid var(--border); }
 .atlas-stat { padding: clamp(28px, 4vw, 52px); border-right: 1px solid var(--border); }
 .atlas-stat--action { width:100%; border-top:0; border-bottom:0; border-left:0; background:transparent; color:inherit; text-align:left; cursor:pointer; }
@@ -295,6 +296,8 @@ body[data-view="topics"] .intel-section { padding-top: clamp(38px, 4vw, 58px); }
 .region-browser-heading { display:flex; justify-content:space-between; gap:32px; align-items:end; padding:24px; border-bottom:1px solid var(--border); }
 .region-browser-heading h3 { margin:7px 0 0; font:300 clamp(25px,3vw,36px)/1.08 var(--serif); }
 .region-browser-heading p { max-width:500px; margin:0; color:var(--muted); font-size:11px; line-height:1.65; }
+.region-browser-copy { max-width:500px; }
+.region-browser-copy .section-link { display:inline-block; margin-top:12px; }
 .resource-region-grid,.university-region-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
 .resource-region-card,.university-region-card { min-height:190px; padding:24px; border:0; border-right:1px solid var(--border); border-bottom:1px solid var(--border); background:transparent; color:var(--text); text-align:left; cursor:pointer; }
 .resource-region-card:nth-child(3n),.university-region-card:nth-child(3n) { border-right:0; }
@@ -511,6 +514,9 @@ body[data-view="topics"] .intel-section { padding-top: clamp(38px, 4vw, 58px); }
 .report-metrics strong { display: block; color: var(--gold); font: 300 clamp(36px, 4vw, 58px)/1 var(--serif); }
 .report-metrics span { display: block; margin-top: 12px; color: var(--muted); font-size: 10px; line-height: 1.5; letter-spacing: .1em; text-transform: uppercase; }
 .report-heading { margin-top: 84px; }
+.changes-section { padding-top:24px; }
+.changes-section .report-heading { margin-top:36px; }
+.changes-section .report-metrics > a { padding:24px 40px; }
 .report-ranking { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--border); }
 .report-ranking li { display: grid; grid-template-columns: 44px 1fr auto; gap: 20px; align-items: center; padding: 18px 0; border-bottom: 1px solid var(--border); }
 .report-ranking li > span { color: var(--muted); font-size: 11px; }
@@ -539,6 +545,9 @@ body[data-view="topics"] .intel-section { padding-top: clamp(38px, 4vw, 58px); }
 .university-index { padding-top: 0; }
 .university-summary { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0 calc(clamp(22px, 5vw, 72px) * -1) 88px; border-bottom: 1px solid var(--border); }
 .university-intro { max-width: 850px; margin: -20px 0 42px; color: var(--muted); font-size: 14px; line-height: 1.8; }
+body[data-view="research"] #researchSection,body[data-view="trials"] #trialsSection { padding-top:24px; }
+body[data-view="research"] #researchSection > .section-heading,body[data-view="trials"] #trialsSection > .section-heading { display:none; }
+body[data-view="quality"] #qualitySection { padding-top:24px; }
 .university-controls { display: grid; grid-template-columns: 1.4fr repeat(4, 1fr); gap: 12px; margin: 42px 0 0; }
 .university-controls label { display: flex; flex-direction: column; gap: 9px; color: var(--muted); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
 .university-controls input, .university-controls select { width: 100%; min-height: 48px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); color: var(--text); font: 300 12px var(--sans); }

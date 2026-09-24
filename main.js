@@ -404,6 +404,14 @@ window.handleSubmit = handleSubmit;
     window.location.href = exact ? `/topics/${exact}` : `/topics?search=${encodeURIComponent(query)}`;
   });
 
+  document.querySelector('.home-nav-search')?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const input = event.currentTarget.querySelector('input[type="search"]');
+    const query = String(input?.value || '').trim();
+    if (!query) return input?.focus();
+    window.location.href = `/topics?search=${encodeURIComponent(query)}`;
+  });
+
   const previousVisit = localStorage.getItem('il_last_visit');
   localStorage.setItem('il_last_visit', new Date().toISOString());
 

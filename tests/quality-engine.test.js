@@ -112,7 +112,7 @@ test('global resource atlas is authority-based, jurisdiction-aware, and automati
   assert.match(migration, /having count\(\*\) >= 3/);
   assert.match(api, /view === 'resources'/);
   assert.match(monitor, /refresh_global_resource_eligibility/);
-  assert.match(template, /Global source directory/);
+  assert.match(template, /Choose a region, then a country/);
   assert.match(template, /resourceRegionGrid/);
   assert.doesNotMatch(template, /resourceMapNodes/);
   assert.match(template, /Regulatory information applies only to the country or region/);

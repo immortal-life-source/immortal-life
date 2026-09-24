@@ -87,6 +87,25 @@ test('public page shells provide search, related journeys and mobile navigation'
   assert.doesNotMatch(files[2], /reader-mode/)
 })
 
+test('mobile hamburger and dock navigation are identical on every public shell', async () => {
+  const [home, intelligence, content, privacy] = await Promise.all([
+    read('index.html'), read('intelligence-template.html'), read('content-template.html'), read('privacy.html'),
+  ])
+  const menuLinks = (source, id) => {
+    const menu = source.match(new RegExp(`<nav[^>]+id="${id}"[\\s\\S]*?<\\/nav>`))?.[0] || ''
+    return [...menu.matchAll(/<a href="([^"]+)"[^>]*>([^<]+)<\/a>/g)].map((match) => `${match[1]}:${match[2].trim()}`)
+  }
+  const expected = menuLinks(intelligence, 'intelNav')
+  assert.deepEqual(menuLinks(home, 'primaryNav'), expected)
+  assert.deepEqual(menuLinks(content, 'intelNav'), expected)
+  assert.deepEqual(menuLinks(privacy, 'intelNav'), expected)
+  const dock = (source) => source.match(/<nav class="mobile-dock"[\s\S]*?<\/nav>/)?.[0].replace(/\s+/g, ' ')
+  assert.equal(dock(home), dock(intelligence))
+  assert.equal(dock(content), dock(intelligence))
+  assert.equal(dock(privacy), dock(intelligence))
+  assert.doesNotMatch(home, /Project News|href="\/dashboard"|href="\/join"/)
+})
+
 test('detail-level controls and their duplicate copy are removed', async () => {
   const [portal, css] = await Promise.all([read('intelligence.js'), read('intelligence.css')])
   assert.doesNotMatch(portal, /Showing Beginner view/)

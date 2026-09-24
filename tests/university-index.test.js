@@ -48,7 +48,7 @@ test('university pages, profiles, datasets, social cards, and sitemap are public
 test('public interface explains the ranking and provides global comparison controls', () => {
   const template = read('intelligence-template.html')
   const script = read('intelligence.js')
-  assert.match(template, /Global research landscape/)
+  assert.match(template, /Browse by region/)
   assert.match(template, /Country/)
   assert.match(template, /Continent/)
   assert.match(template, /Rank by/)
