@@ -675,6 +675,7 @@ body[data-reader-mode="professional"] .reader-copy--professional { display:block
 
 .regulatory-intro { max-width:850px; margin:-24px 0 34px; color:var(--muted); font-size:13px; line-height:1.7; }
 .regulatory-live-state { padding:20px 22px; border:1px solid rgba(201,130,119,.25); background:rgba(201,130,119,.045); color:var(--muted); font-size:12px; line-height:1.65; }
+.intel-section[data-has-notices="false"] > .section-heading,.intel-section[data-has-notices="false"] > .regulatory-intro{display:none}.intel-section[data-has-notices="false"] .regulatory-library{margin-top:26px;padding-top:34px}.intel-section[data-has-notices="false"] .regulatory-live-state{padding:14px 18px}
 .regulatory-library { margin-top:70px; padding-top:62px; border-top:1px solid var(--border-strong); }
 .regulatory-library-heading { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:48px; align-items:end; }
 .regulatory-library-heading h2 { max-width:780px; margin:12px 0 14px; font:300 clamp(34px,5vw,62px)/1 var(--serif); }

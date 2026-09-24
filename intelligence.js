@@ -475,6 +475,7 @@
 
   function renderRegulatory(records, guides = [], coverage = {}) {
     elements.regulatoryList.replaceChildren();
+    elements.regulatorySection.dataset.hasNotices = String(records.length > 0);
     if (!records.length) elements.regulatoryList.append(el('div', 'regulatory-live-state', 'No new notice passed the public relevance checks in this window. Monitoring continues automatically; use the official-source guides below for current authority information.'));
     records.forEach((record) => {
       const card = el('article', 'record-card');

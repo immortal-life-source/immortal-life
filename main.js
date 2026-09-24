@@ -510,15 +510,22 @@ window.handleSubmit = handleSubmit;
   const mapTarget = document.getElementById('explorerSystemMap');
   if (systemMap && mapTarget) mapTarget.append(systemMap.content.cloneNode(true));
 
-  Promise.all([
-    optionalJson('/feed.json'), optionalJson('/changes/feed.json'),
-    optionalJson(`${window.IL_FN_BASE}/public-intelligence?view=trials&limit=1`, { headers: window.ilFnHeaders() }),
-    optionalJson(`${window.IL_FN_BASE}/public-intelligence?view=regulatory&limit=1`, { headers: window.ilFnHeaders() }),
-    optionalJson(`${window.IL_FN_BASE}/public-intelligence?view=universities&sort=momentum&limit=1`, { headers: window.ilFnHeaders() }),
-  ]).then(([feed, changes, trialData, regulatoryData, universityData]) => {
+  const feedPromise = optionalJson('/feed.json');
+  const changesPromise = optionalJson('/changes/feed.json');
+  const trialPromise = optionalJson(`${window.IL_FN_BASE}/public-intelligence?view=trials&limit=1`, { headers: window.ilFnHeaders() });
+  const regulatoryPromise = optionalJson(`${window.IL_FN_BASE}/public-intelligence?view=regulatory&limit=1`, { headers: window.ilFnHeaders() });
+  const universityPromise = optionalJson(`${window.IL_FN_BASE}/public-intelligence?view=universities&sort=momentum&limit=1`, { headers: window.ilFnHeaders() });
+
+  Promise.all([feedPromise, changesPromise]).then(([feed, changes]) => {
     const feedItems = Array.isArray(feed?.items) ? feed.items : [];
     const changeItems = Array.isArray(changes?.items) ? changes.items : [];
     renderHeroDiscoveries(feedItems, changeItems);
+    renderToday(feedItems, changeItems, null, null, null);
+  });
+
+  Promise.all([feedPromise, changesPromise, trialPromise, regulatoryPromise, universityPromise]).then(([feed, changes, trialData, regulatoryData, universityData]) => {
+    const feedItems = Array.isArray(feed?.items) ? feed.items : [];
+    const changeItems = Array.isArray(changes?.items) ? changes.items : [];
     renderToday(feedItems, changeItems, trialData?.trials?.[0], regulatoryData?.regulatory?.[0], universityData?.universities?.[0]);
     const status = document.getElementById('homeDataStatus');
     if (status) status.textContent = `Live index checked ${new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}. Every item links to its original record.`;
