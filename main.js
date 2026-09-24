@@ -466,8 +466,13 @@ window.handleSubmit = handleSubmit;
       content_text: `${Number(university.indexed_works_two_year || 0).toLocaleString('en')} recent topic-linked works across ${Number(university.indexed_topic_count || 0)} tracked areas. Activity is not a quality ranking.`,
       date_published: university.updated_at, url: `/universities/${university.slug}`,
     } : { kind: 'university', title: 'University activity is being refreshed', content_text: 'Open the global university index to compare topic breadth and recent research momentum.', url: '/universities' };
+    const discoveryFallbacks = [
+      { kind: 'research', title: 'Browse the newest longevity research', content_text: 'Open the source-linked research index, sorted by the date supplied by the original scholarly source.', url: '/research' },
+      { kind: 'integrity', title: 'See meaningful evidence changes', content_text: 'Review new records, corrections, retractions, trial-status changes, and other automatically detected differences.', url: '/changes' },
+      { kind: 'research', title: 'Choose a longevity topic to follow', content_text: 'Start with a plain-language topic guide, then move into matching papers, trials, limitations, and source records.', url: '/topics' },
+    ];
     const candidates = [...developments];
-    while (candidates.length < 3) candidates.push({ kind: 'research', title: 'The live evidence index is current', content_text: 'No additional distinct research development passed the public checks in this window. Browse the full research feed for source-linked records.', url: '/research' });
+    while (candidates.length < 3) candidates.push(discoveryFallbacks[candidates.length]);
     candidates.push(trial || { kind: 'trials', title: 'No new trial status change matched this window', content_text: 'Trial registries remain under automatic monitoring. Open Trial Radar for current registry statuses.', url: '/trials' }, official, campus);
     root.replaceChildren();
     if (!candidates.length) { root.append(Object.assign(document.createElement('article'), { className: 'today-loading', textContent: 'The live index is current; no new eligible records are available in this window.' })); return; }
@@ -515,6 +520,9 @@ window.handleSubmit = handleSubmit;
   const trialPromise = optionalJson(`${window.IL_FN_BASE}/public-intelligence?view=trials&limit=1`, { headers: window.ilFnHeaders() });
   const regulatoryPromise = optionalJson(`${window.IL_FN_BASE}/public-intelligence?view=regulatory&limit=1`, { headers: window.ilFnHeaders() });
   const universityPromise = optionalJson(`${window.IL_FN_BASE}/public-intelligence?view=universities&sort=momentum&limit=1`, { headers: window.ilFnHeaders() });
+
+  renderHeroDiscoveries([], []);
+  renderToday([], [], null, null, null);
 
   Promise.all([feedPromise, changesPromise]).then(([feed, changes]) => {
     const feedItems = Array.isArray(feed?.items) ? feed.items : [];
