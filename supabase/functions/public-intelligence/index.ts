@@ -332,7 +332,7 @@ Deno.serve(async (req) => {
       const [{ data: events, error }, { data: topicRow, error: topicError }, { data: sources, error: sourcesError }] = await Promise.all([
         supabase.from('intelligence_change_events')
           .select('id,event_type,importance,record_type,record_id,title,source_url,occurred_at,topic_slugs,metadata')
-          .contains('topic_slugs', [topic]).order('occurred_at', { ascending: false }).limit(limit),
+          .neq('event_type', 'quality_state_changed').contains('topic_slugs', [topic]).order('occurred_at', { ascending: false }).limit(limit),
         supabase.from('intelligence_topics').select('slug,name,description').eq('slug', topic).eq('enabled', true).maybeSingle(),
         sourcesPromise,
       ])

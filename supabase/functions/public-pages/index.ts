@@ -302,24 +302,24 @@ function changeLabel(value: string): string {
   const labels: Record<string, string> = {
     new_research: 'New research record', research_updated: 'Research record changed', new_trial: 'New trial record',
     trial_status_changed: 'Trial status changed', new_regulatory_notice: 'New regulatory notice',
-    new_integrity_event: 'Correction or retraction signal', quality_state_changed: 'Publication-quality status changed',
+    new_integrity_event: 'Correction or retraction signal',
   }
   return labels[value] || value.replace(/_/g, ' ')
 }
 
 async function changesPage(supabase: any): Promise<string> {
   const since = new Date(Date.now() - 30 * 86400000).toISOString()
-  const { data, error } = await supabase.from('intelligence_change_events').select('id,event_type,importance,record_type,record_id,title,occurred_at,topic_slugs,metadata').gte('occurred_at', since).order('occurred_at', { ascending: false }).limit(250)
+  const { data, error } = await supabase.from('intelligence_change_events').select('id,event_type,importance,record_type,record_id,title,occurred_at,topic_slugs,metadata').neq('event_type', 'quality_state_changed').gte('occurred_at', since).order('occurred_at', { ascending: false }).limit(250)
   if (error) throw error
   const events = data ?? []
   const counts = ['research', 'trials', 'regulatory', 'integrity'].map((kind) => ({ kind, count: events.filter((event: any) => event.record_type === kind).length }))
   const rows = events.slice(0, 100).map((event: any) => `<li class="change-row${event.importance === 'important' ? ' is-important' : ''}"><div><span class="section-index">${escapeHtml(changeLabel(event.event_type))} · ${escapeHtml(formatDate(event.occurred_at))}</span><h2><a data-il-event="open_change" href="/${escapeHtml(event.record_type)}/${Number(event.record_id)}">${escapeHtml(event.title)}</a></h2>${event.topic_slugs?.length ? `<div class="record-tags">${chips(event.topic_slugs)}</div>` : ''}</div><span class="change-kind">${escapeHtml(event.record_type)}</span></li>`).join('')
-  const body = `<section class="intel-section"><div class="report-metrics">${counts.map(({ kind, count }) => `<div><strong>${count}</strong><span>${escapeHtml(kind)} changes in 30 days</span></div>`).join('')}</div><div class="section-heading report-heading"><div><span class="section-index">Living change log</span><h2>Latest meaningful changes</h2></div><a class="section-link" href="/changes/feed.xml">Follow by RSS</a></div><ol class="change-list">${rows || '<li class="empty-list">No eligible changes have been recorded in this window. Source monitoring continues automatically.</li>'}</ol><aside class="automation-notice"><strong>A factual change log</strong><p>Entries describe source, registry, regulatory, integrity, or publication-rule changes. They do not claim that an intervention works, is safe, or is clinically important.</p></aside></section>`
-  return pageShell({ title: 'What changed in longevity evidence — immortal.life', description: 'An automatically updated log of new research, trial status changes, regulatory notices, corrections, retractions, and publication-quality changes.', canonical: `${SITE}/changes`, kicker: 'Updated from source differences', heading: 'What changed?', body, indexable: events.length >= 3, socialImage: `${SITE}/social-card/changes/latest.png` })
+  const body = `<section class="intel-section"><div class="report-metrics">${counts.map(({ kind, count }) => `<div><strong>${count}</strong><span>${escapeHtml(kind)} changes in 30 days</span></div>`).join('')}</div><div class="section-heading report-heading"><div><span class="section-index">Living change log</span><h2>Latest meaningful changes</h2></div><a class="section-link" href="/changes/feed.xml">Follow by RSS</a></div><ol class="change-list">${rows || '<li class="empty-list">No eligible changes have been recorded in this window. Source monitoring continues automatically.</li>'}</ol><aside class="automation-notice"><strong>A factual change log</strong><p>Entries describe new source records, trial updates, official notices, corrections, and retractions. They do not claim that an intervention works, is safe, or is clinically important.</p></aside></section>`
+  return pageShell({ title: 'What changed in longevity evidence — immortal.life', description: 'An automatically updated log of new research, trial status changes, regulatory notices, corrections, and retractions.', canonical: `${SITE}/changes`, kicker: 'Updated from source differences', heading: 'What changed?', body, indexable: events.length >= 3, socialImage: `${SITE}/social-card/changes/latest.png` })
 }
 
 async function changeFeed(supabase: any, format: string): Promise<Response> {
-  const { data, error } = await supabase.from('intelligence_change_events').select('id,event_type,record_type,record_id,title,occurred_at').order('occurred_at', { ascending: false }).limit(50)
+  const { data, error } = await supabase.from('intelligence_change_events').select('id,event_type,record_type,record_id,title,occurred_at').neq('event_type', 'quality_state_changed').order('occurred_at', { ascending: false }).limit(50)
   if (error) throw error
   const items = data ?? []
   if (format === 'json') return response(JSON.stringify({ version: 'https://jsonfeed.org/version/1.1', title: 'immortal.life · what changed', home_page_url: `${SITE}/changes`, feed_url: `${SITE}/changes/feed.json`, description: DISCLOSURE, items: items.map((item: any) => ({ id: `${SITE}/changes#${item.id}`, url: `${SITE}/${item.record_type}/${item.record_id}`, title: `${changeLabel(item.event_type)}: ${item.title}`, date_published: item.occurred_at })) }), 'application/feed+json; charset=utf-8')

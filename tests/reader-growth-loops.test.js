@@ -29,6 +29,8 @@ test('personal radar and weekly briefings exclude routine record noise', () => {
   }
   assert.doesNotMatch(member.match(/MEANINGFUL_EVENT_TYPES[^\n]+/)?.[0] || '', /new_research|new_trial/);
   assert.doesNotMatch(briefing.match(/MEANINGFUL_EVENT_TYPES[^\n]+/)?.[0] || '', /new_research|new_trial/);
+  assert.doesNotMatch(member.match(/MEANINGFUL_EVENT_TYPES[^\n]+/)?.[0] || '', /quality_state_changed/);
+  assert.doesNotMatch(briefing.match(/MEANINGFUL_EVENT_TYPES[^\n]+/)?.[0] || '', /quality_state_changed/);
 });
 
 test('meaningful changes have public pages, feeds, social cards, and navigation', () => {

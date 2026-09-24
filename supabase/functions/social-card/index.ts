@@ -12,7 +12,7 @@ function safeKey(value: string): string {
 async function cardData(supabase: any, kind: string, key: string): Promise<{ title: string; kicker: string; confidence?: number } | null> {
   if (kind === 'changes' && key === 'latest') {
     const since = new Date(Date.now() - 7 * 86400000).toISOString()
-    const { count } = await supabase.from('intelligence_change_events').select('id', { count: 'exact', head: true }).gte('occurred_at', since)
+    const { count } = await supabase.from('intelligence_change_events').select('id', { count: 'exact', head: true }).neq('event_type', 'quality_state_changed').gte('occurred_at', since)
     return { title: `${count ?? 0} longevity evidence changes this week`, kicker: 'What changed' }
   }
   if (kind === 'briefing') {

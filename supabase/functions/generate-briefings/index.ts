@@ -30,7 +30,7 @@ function matches(event: any, watches: any[]): boolean {
   return watches.some((watch) => watch.watch_type === 'topic' ? topics.has(watch.watch_key) : keys.has(watch.watch_type === 'entity' ? watch.watch_key : `${watch.watch_type}:${watch.watch_key}`))
 }
 
-const MEANINGFUL_EVENT_TYPES = new Set(['trial_status_changed', 'new_regulatory_notice', 'new_integrity_event', 'quality_state_changed', 'research_updated'])
+const MEANINGFUL_EVENT_TYPES = new Set(['trial_status_changed', 'new_regulatory_notice', 'new_integrity_event', 'research_updated'])
 
 function isMeaningfulEvent(event: any): boolean {
   if (!MEANINGFUL_EVENT_TYPES.has(String(event?.event_type ?? ''))) return false
@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     const period = mondayPeriod()
     const [{ data: preferences, error: preferencesError }, { data: events, error: eventsError }] = await Promise.all([
       supabase.from('member_briefing_preferences').select('member_id').eq('enabled', true).limit(1000),
-      supabase.from('intelligence_change_events').select('event_type,importance,record_type,record_id,title,source_url,occurred_at,topic_slugs,watch_keys,metadata').gte('occurred_at', period.since).lt('occurred_at', period.until).order('occurred_at', { ascending: false }).limit(2000),
+      supabase.from('intelligence_change_events').select('event_type,importance,record_type,record_id,title,source_url,occurred_at,topic_slugs,watch_keys,metadata').neq('event_type', 'quality_state_changed').gte('occurred_at', period.since).lt('occurred_at', period.until).order('occurred_at', { ascending: false }).limit(2000),
     ])
     if (preferencesError || eventsError) throw preferencesError ?? eventsError
     let generated = 0

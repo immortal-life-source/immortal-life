@@ -206,7 +206,7 @@
       return ({
         new_research: 'New research', research_updated: 'Research changed', new_trial: 'New trial',
         trial_status_changed: 'Trial status changed', new_regulatory_notice: 'Regulatory notice',
-        new_integrity_event: 'Correction or retraction', quality_state_changed: 'Quality status changed',
+        new_integrity_event: 'Correction or retraction',
       })[value] || String(value || '').replace(/_/g, ' ');
     }
 

@@ -4,7 +4,7 @@ import { corsHeaders, isAllowedOrigin, jsonResponse, serviceRoleKey, sessionFrom
 
 const METHODS = 'GET, POST, OPTIONS'
 const WATCH_TYPES = new Set(['topic', 'entity', 'country', 'trial'])
-const MEANINGFUL_EVENT_TYPES = new Set(['trial_status_changed', 'new_regulatory_notice', 'new_integrity_event', 'quality_state_changed', 'research_updated'])
+const MEANINGFUL_EVENT_TYPES = new Set(['trial_status_changed', 'new_regulatory_notice', 'new_integrity_event', 'research_updated'])
 
 function isMeaningfulEvent(event: any): boolean {
   if (!MEANINGFUL_EVENT_TYPES.has(String(event?.event_type ?? ''))) return false
@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
       supabase.from('intelligence_entities').select('kind,slug,name,record_count').in('kind', ['sponsor', 'source']).gt('record_count', 0).order('record_count', { ascending: false }).limit(30),
       supabase.from('clinical_trials').select('id,title,overall_status,countries,sponsor,last_update_date').eq('publication_state', 'published').order('last_update_date', { ascending: false, nullsFirst: false }).limit(60),
       supabase.from('member_radar_state').select('last_seen_at').eq('member_id', session.member_id).maybeSingle(),
-      supabase.from('intelligence_change_events').select('id,event_type,importance,record_type,record_id,title,source_url,occurred_at,topic_slugs,watch_keys,metadata').gte('occurred_at', new Date(Date.now() - 90 * 86400000).toISOString()).order('occurred_at', { ascending: false }).limit(250),
+      supabase.from('intelligence_change_events').select('id,event_type,importance,record_type,record_id,title,source_url,occurred_at,topic_slugs,watch_keys,metadata').neq('event_type', 'quality_state_changed').gte('occurred_at', new Date(Date.now() - 90 * 86400000).toISOString()).order('occurred_at', { ascending: false }).limit(250),
     ])
     for (const result of [topicsResult, watchesResult, preferenceResult, briefingsResult, entitiesResult, trialsResult, stateResult, eventsResult]) if (result.error) throw result.error
 
