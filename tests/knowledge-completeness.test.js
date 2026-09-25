@@ -44,4 +44,8 @@ test('public browsing, graph totals, sitemaps and downloads traverse the complet
   const datasetImplementation = pages.match(/async function dataset[\s\S]*?async function universityWorks/)?.[0] || ''
   assert.doesNotMatch(datasetImplementation, /\.limit\(5000\)/)
   assert.doesNotMatch(datasetImplementation, /\.limit\(10000\)/)
+  const topicCounts = await read('supabase/migrations/20260925001300_set_based_topic_counts.sql')
+  assert.match(topicCounts, /with research_counts as/)
+  assert.match(topicCounts, /group by relation\.topic_slug/)
+  assert.doesNotMatch(topicCounts, /where rit\.topic_slug = topic\.slug/)
 })
