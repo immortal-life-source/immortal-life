@@ -32,10 +32,13 @@ test('evidence snapshots and topic evidence are exposed on public pages', async 
     read('intelligence.js'),
   ])
   assert.match(api, /view === 'topic-evidence'/)
+  assert.match(api, /view === 'topic-dossier'/)
   assert.match(api, /evidence_snapshot/)
   assert.match(pages, /What the source actually supports/)
   assert.match(portal, /appendEvidenceSnapshot/)
   assert.match(portal, /renderTopicEvidence/)
+  assert.match(portal, /request\('topic-dossier', 12\)/)
+  assert.doesNotMatch(portal, /const \[research, trials, topics, timeline, evidence\] = await Promise\.all/)
   assert.match(api, /Only use an inner relationship when a topic filter needs it/)
 })
 

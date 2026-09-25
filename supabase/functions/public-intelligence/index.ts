@@ -298,6 +298,57 @@ Deno.serve(async (req) => {
       return response(req, { topic, evidence: snapshot ?? {}, sources: (sources ?? []).map(publicSourceState) })
     }
 
+    if (view === 'topic-dossier') {
+      if (!topic) return response(req, { error: 'Topic is required' }, 400)
+      const researchRelation = 'research_item_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
+      const trialRelation = 'clinical_trial_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
+      const [researchResult, trialResult, topicResult, evidenceResult, timelineResult, sourcesResult] = await Promise.all([
+        supabase.from('research_items')
+          .select(`id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,evidence_snapshot,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${researchRelation}`)
+          .eq('publication_state', 'published').eq('research_item_topics.topic_slug', topic).eq('research_item_topics.is_published', true)
+          .order('published_on', { ascending: false, nullsFirst: false }).order('id', { ascending: false }).limit(12),
+        supabase.from('clinical_trials')
+          .select(`id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,evidence_snapshot,source_url,editorial_summary,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${trialRelation}`)
+          .eq('publication_state', 'published').eq('clinical_trial_topics.topic_slug', topic).eq('clinical_trial_topics.is_published', true)
+          .order('last_update_date', { ascending: false, nullsFirst: false }).order('id', { ascending: false }).limit(12),
+        supabase.from('intelligence_topics').select('slug,name,description').eq('slug', topic).eq('enabled', true).maybeSingle(),
+        supabase.rpc('get_topic_evidence_snapshot', { requested_topic: topic }),
+        supabase.from('intelligence_change_events')
+          .select('id,event_type,importance,record_type,record_id,title,source_url,occurred_at,topic_slugs,metadata')
+          .neq('event_type', 'quality_state_changed').contains('topic_slugs', [topic]).order('occurred_at', { ascending: false }).limit(40),
+        sourcesPromise,
+      ])
+      for (const result of [researchResult, trialResult, topicResult, evidenceResult, timelineResult, sourcesResult]) if (result.error) throw result.error
+
+      const related = new Map<string, number>()
+      for (const event of timelineResult.data ?? []) for (const slug of event.topic_slugs ?? []) if (slug !== topic) related.set(slug, (related.get(slug) ?? 0) + 1)
+      const relatedSlugs = [...related.entries()].sort((left, right) => right[1] - left[1]).slice(0, 6)
+      let relatedTopics: any[] = []
+      if (relatedSlugs.length) {
+        const result = await supabase.from('intelligence_topics').select('slug,name,description').in('slug', relatedSlugs.map(([slug]) => slug))
+        if (result.error) throw result.error
+        const bySlug = new Map((result.data ?? []).map((item: any) => [item.slug, item]))
+        relatedTopics = relatedSlugs.map(([slug, shared_events]) => ({ ...bySlug.get(slug), shared_events })).filter((item: any) => item.slug)
+      }
+
+      const research = publicRecords(researchResult.data, 'research_item_topics').map((record: any) => ({
+        ...record,
+        evidence_snapshot: record.evidence_snapshot && Object.keys(record.evidence_snapshot).length ? record.evidence_snapshot : researchEvidenceSnapshot(record),
+      }))
+      const trials = publicRecords(trialResult.data, 'clinical_trial_topics').map((record: any) => ({
+        ...record,
+        evidence_snapshot: record.evidence_snapshot && Object.keys(record.evidence_snapshot).length ? record.evidence_snapshot : trialEvidenceSnapshot(record),
+      }))
+      return response(req, {
+        generated_at: new Date().toISOString(),
+        research,
+        trials,
+        evidence: evidenceResult.data ?? {},
+        timeline: { topic: topicResult.data, events: timelineResult.data ?? [], related_topics: relatedTopics },
+        sources: (sourcesResult.data ?? []).map(publicSourceState),
+      })
+    }
+
     if (view === 'research') {
       const search = publicSearchTerm(url.searchParams.get('q'))
       const evidence = cleanText(url.searchParams.get('evidence') ?? '', 40)

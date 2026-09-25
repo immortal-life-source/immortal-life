@@ -139,7 +139,17 @@ async function runViewport(cdp, profileName, width, height, mobile) {
   for (const route of routes) {
     const eventStart = cdp.events.length;
     await cdp.call('Page.navigate', { url: `${baseUrl}${route}` });
-    await waitForReady(cdp);
+    try {
+      await waitForReady(cdp);
+    } catch (error) {
+      const diagnostic = await evaluate(cdp, `(() => ({
+        route: location.pathname,
+        loading: (() => { const el=document.getElementById('loadingState'); return el ? { hidden: el.hidden, display: getComputedStyle(el).display, text: el.textContent?.trim() } : null; })(),
+        error: document.getElementById('errorState')?.textContent?.trim() || '',
+      }))()`);
+      const recent = cdp.events.slice(eventStart).filter((event) => event.method === 'Runtime.exceptionThrown' || event.method === 'Runtime.consoleAPICalled').map((event) => event.params);
+      throw new Error(`${error instanceof Error ? error.message : error}; ${JSON.stringify({ diagnostic, recent })}`);
+    }
     const state = await evaluate(cdp, `(() => ({
       url: location.href,
       title: document.title,

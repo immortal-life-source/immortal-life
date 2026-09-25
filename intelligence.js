@@ -1394,22 +1394,13 @@
         renderTopics(data.topics || [], false);
         renderSources(data.sources || [], false);
       } else if (view === 'topic') {
-        const [research, trials, topics, timeline, evidence] = await Promise.all([
-          request('research', 12),
-          request('trials', 12),
-          request('topics', 100),
-          request('timeline', 40),
-          request('topic-evidence', 1),
-        ]);
-        renderResearch(research.research || []);
-        renderTrials(trials.trials || []);
-        renderSources(research.sources || trials.sources || [], false);
-        const selected = (topics.topics || []).find((topic) => topic.slug === topicSlug);
-        if (selected) {
-          renderStats({ research: selected.research_count, trials: selected.trial_count });
-        }
-        renderTimeline(timeline);
-        renderTopicEvidence(evidence);
+        const dossier = await request('topic-dossier', 12);
+        renderResearch(dossier.research || []);
+        renderTrials(dossier.trials || []);
+        renderSources(dossier.sources || [], false);
+        renderStats({ research: dossier.evidence?.research_total, trials: dossier.evidence?.trial_total });
+        renderTimeline(dossier.timeline || {});
+        renderTopicEvidence({ evidence: dossier.evidence || {} });
       } else if (view === 'regulatory') {
         const data = await request('regulatory', 80);
         renderRegulatory(data.regulatory || [], data.regulatory_guides || [], data.regulatory_coverage || {});
