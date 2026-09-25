@@ -361,7 +361,9 @@ Deno.serve(async (req) => {
         : 'research_item_topics(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
       let query = supabase
         .from('research_items')
-        .select(`id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,evidence_snapshot,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${topicRelation}`, { count: 'exact' })
+        // A planned count avoids a full-corpus count scan on every visitor
+        // request while retaining uncapped cursor pagination through history.
+        .select(`id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,evidence_snapshot,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${topicRelation}`, { count: 'planned' })
         .eq('publication_state', 'published')
         .eq('research_item_topics.is_published', true)
         .order('published_on', { ascending: false, nullsFirst: false })
@@ -392,7 +394,7 @@ Deno.serve(async (req) => {
         : 'clinical_trial_topics(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
       let query = supabase
         .from('clinical_trials')
-        .select(`id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,evidence_snapshot,source_url,editorial_summary,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${topicRelation}`, { count: 'exact' })
+        .select(`id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,evidence_snapshot,source_url,editorial_summary,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${topicRelation}`, { count: 'planned' })
         .eq('publication_state', 'published')
         .eq('clinical_trial_topics.is_published', true)
         .order('last_update_date', { ascending: false, nullsFirst: false })
