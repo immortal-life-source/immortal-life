@@ -241,10 +241,59 @@ async function collectAllRows(fetchPage: (from: number, to: number) => PromiseLi
   }
 }
 
+const SITEMAP_SEGMENT_SIZE = 25_000
+const RECORD_SITEMAPS: Record<string, { table: string; modified: string }> = {
+  research: { table: 'research_items', modified: 'last_seen_at' },
+  trials: { table: 'clinical_trials', modified: 'last_seen_at' },
+  regulatory: { table: 'regulatory_events', modified: 'last_seen_at' },
+  integrity: { table: 'research_integrity_events', modified: 'detected_at' },
+}
+
+async function recordSitemapResponse(supabase: any, type: string, segment = 0): Promise<Response> {
+  const selected = RECORD_SITEMAPS[type]
+  const encoder = new TextEncoder()
+  const pageSize = 1000
+  const segmentStart = Math.max(0, segment) * SITEMAP_SEGMENT_SIZE
+  const segmentEnd = segmentStart + SITEMAP_SEGMENT_SIZE
+  const fetchPage = (from: number, to: number) => supabase.from(selected.table)
+    .select(`id,${selected.modified}`).eq('publication_state', 'published')
+    .order('id', { ascending: false }).range(from, to)
+  const first = await fetchPage(segmentStart, Math.min(segmentStart + pageSize, segmentEnd) - 1)
+  if (first.error) throw first.error
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      try {
+        controller.enqueue(encoder.encode('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'))
+        let offset = segmentStart
+        let page = first.data ?? []
+        while (page.length && offset < segmentEnd) {
+          controller.enqueue(encoder.encode(page.map((row: any) => `<url><loc>${xml(`${SITE}/${type}/${row.id}`)}</loc>${row[selected.modified] ? `<lastmod>${xml(String(row[selected.modified]).slice(0, 10))}</lastmod>` : ''}</url>`).join('')))
+          offset += page.length
+          if (page.length < pageSize || offset >= segmentEnd) break
+          const next = await fetchPage(offset, Math.min(offset + pageSize, segmentEnd) - 1)
+          if (next.error) throw next.error
+          page = next.data ?? []
+        }
+        controller.enqueue(encoder.encode('</urlset>'))
+        controller.close()
+      } catch (error) {
+        controller.error(error)
+      }
+    },
+  })
+  return streamResponse(stream, 'application/xml; charset=utf-8')
+}
+
 async function sitemap(supabase: any, type = 'index'): Promise<string> {
-  const allowed = ['static', 'topics', 'research', 'trials', 'regulatory', 'integrity', 'briefings', 'entities', 'universities']
+  const allowed = ['static', 'topics', 'briefings', 'entities', 'universities']
   if (type === 'index') {
-    return `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${allowed.map((name) => `<sitemap><loc>${SITE}/sitemaps/${name}.xml</loc></sitemap>`).join('')}</sitemapindex>`
+    const counts = await Promise.all(Object.entries(RECORD_SITEMAPS).map(async ([name, spec]) => {
+      const result = await supabase.from(spec.table).select('id', { count: 'exact', head: true }).eq('publication_state', 'published')
+      if (result.error) throw result.error
+      return { name, count: Number(result.count ?? 0) }
+    }))
+    const segmented = counts.flatMap(({ name, count }) => Array.from({ length: Math.max(1, Math.ceil(count / SITEMAP_SEGMENT_SIZE)) }, (_, segment) => `${name}-${segment}`))
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[...allowed, ...segmented].map((name) => `<sitemap><loc>${SITE}/sitemaps/${name}.xml</loc></sitemap>`).join('')}</sitemapindex>`
   }
   if (!allowed.includes(type)) return sitemapUrlset([])
   if (type === 'static') {
@@ -263,14 +312,6 @@ async function sitemap(supabase: any, type = 'index'): Promise<string> {
   } else if (type === 'universities') {
     const rows = await collectAllRows((from, to) => supabase.from('university_research_institutions').select('slug,updated_at').eq('is_eligible', true).order('research_index_score', { ascending: false }).order('slug').range(from, to))
     urls = rows.map((row: any) => ({ path: `/universities/${row.slug}`, modified: row.updated_at }))
-  } else {
-    const spec: Record<string, { table: string; modified: string }> = {
-      research: { table: 'research_items', modified: 'last_seen_at' }, trials: { table: 'clinical_trials', modified: 'last_seen_at' },
-      regulatory: { table: 'regulatory_events', modified: 'last_seen_at' }, integrity: { table: 'research_integrity_events', modified: 'detected_at' },
-    }
-    const selected = spec[type]
-    const rows = await collectAllRows((from, to) => supabase.from(selected.table).select(`id,${selected.modified}`).eq('publication_state', 'published').order('id', { ascending: false }).range(from, to))
-    urls = rows.map((row: any) => ({ path: `/${type}/${row.id}`, modified: row[selected.modified] }))
   }
   return sitemapUrlset(urls)
 }
@@ -667,7 +708,12 @@ Deno.serve(async (req) => {
   const url = new URL(req.url)
   const mode = url.searchParams.get('mode') || 'record'
   try {
-    if (mode === 'sitemap') return response(await sitemap(supabase, url.searchParams.get('type') || 'index'), 'application/xml; charset=utf-8')
+    if (mode === 'sitemap') {
+      const sitemapType = url.searchParams.get('type') || 'index'
+      const recordMatch = sitemapType.match(/^(research|trials|regulatory|integrity)(?:-(\d+))?$/)
+      if (recordMatch) return await recordSitemapResponse(supabase, recordMatch[1], Number(recordMatch[2] ?? 0))
+      return response(await sitemap(supabase, sitemapType), 'application/xml; charset=utf-8')
+    }
     if (mode === 'feed') return await feed(supabase, url.searchParams.get('format') || 'rss', url.searchParams.get('topic') || '')
     if (mode === 'changes') return response(await changesPage(supabase), 'text/html; charset=utf-8')
     if (mode === 'change-feed') return await changeFeed(supabase, url.searchParams.get('format') || 'rss')

@@ -33,6 +33,8 @@ test('public browsing, graph totals, sitemaps and downloads traverse the complet
   assert.match(portal, /Load more research/)
   assert.match(portal, /Load more trials/)
   assert.match(pages, /new ReadableStream/)
+  assert.match(pages, /SITEMAP_SEGMENT_SIZE = 25_000/)
+  assert.match(pages, /recordSitemapResponse/)
   assert.match(pages, /while \(true\)/)
   assert.match(pages, /collectAllRows/)
   assert.doesNotMatch(pages, /modified: string; limit: number/)
