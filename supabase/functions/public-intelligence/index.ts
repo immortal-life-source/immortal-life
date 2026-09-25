@@ -186,6 +186,8 @@ Deno.serve(async (req) => {
         country_directory: countryDirectory ?? [],
         coverage: {
           total: resources.length,
+          countries: (countryDirectory ?? []).length,
+          regions: Object.keys(countBy('region')).length,
           jurisdictions: new Set(resources.map((item: any) => item.jurisdiction_code)).size,
           live_integrations: resources.filter((item: any) => item.integration_status === 'live').length,
           healthy: resources.filter((item: any) => item.health === 'healthy').length,

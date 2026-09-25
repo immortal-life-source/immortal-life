@@ -873,8 +873,8 @@
     elements.resourceStats.replaceChildren();
     [
       ['Official resources listed', coverage?.total || 0, 'all'],
-      ['Countries and regions', coverage?.jurisdictions || 0, 'countries'],
-      ['Updated automatically', coverage?.live_integrations || 0, 'live'],
+      ['Countries covered', coverage?.countries || 0, 'countries'],
+      ['Coverage regions', coverage?.regions || 0, 'regions'],
       ['Links checked successfully', coverage?.healthy || 0, 'healthy'],
     ].forEach(([label, value, action]) => {
       const card = el('button', 'atlas-stat atlas-stat--action'); card.type = 'button';
@@ -884,9 +884,9 @@
         elements.resourceSearch.value = '';
         elements.resourceRegion.value = '';
         elements.resourceType.value = '';
-        elements.resourceIntegration.value = action === 'live' ? 'live' : '';
+        elements.resourceIntegration.value = '';
         renderFilteredResources(action === 'healthy' ? 'healthy' : '');
-        (action === 'countries' ? elements.resourceCountryCoverage : elements.resourceResult).scrollIntoView({ behavior: 'smooth', block: 'start' });
+        (action === 'countries' ? elements.resourceCountryCoverage : action === 'regions' ? elements.resourceRegionGrid : elements.resourceResult).scrollIntoView({ behavior: 'smooth', block: 'start' });
       };
       elements.resourceStats.append(card);
     });
@@ -987,7 +987,7 @@
       const jurisdiction = el('p', 'resource-jurisdiction', `${resource.jurisdiction_name} · ${resourceLabel(resource.geographic_scope)} scope`);
       const badges = el('div', 'resource-badges');
       badges.append(
-        el('span', resource.integration_status === 'live' ? 'resource-badge resource-badge--live' : 'resource-badge', resource.integration_status === 'live' ? 'Updated automatically' : 'Verified official link'),
+        el('span', resource.integration_status === 'live' ? 'resource-badge resource-badge--live' : 'resource-badge', resource.integration_status === 'live' ? 'Live data feed' : 'Verified official link'),
         el('span', 'resource-badge', resource.access_mode === 'api' ? 'Data interface available' : resourceLabel(resource.access_mode)),
         el('span', 'resource-badge', resource.reuse_status === 'open' ? 'Reuse allowed' : resource.reuse_status === 'link-only' ? 'Link to source' : 'Source terms apply'),
       );

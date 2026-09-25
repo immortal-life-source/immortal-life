@@ -160,6 +160,18 @@ test('summary numbers lead to the records or explanation behind them', async () 
   assert.match(pages, /report-metric/)
 })
 
+test('resource summary reports complete reader-facing coverage, not the internal feed count', async () => {
+  const [portal, api, template] = await Promise.all([
+    read('intelligence.js'), read('supabase/functions/public-intelligence/index.ts'), read('intelligence-template.html'),
+  ])
+  assert.match(portal, /Countries covered/)
+  assert.match(portal, /Coverage regions/)
+  assert.doesNotMatch(portal.match(/function renderResourceStats[\s\S]*?\n  \}/)?.[0] || '', /Updated automatically|live_integrations/)
+  assert.match(api, /countries: \(countryDirectory \?\? \[\]\)\.length/)
+  assert.match(api, /regions: Object\.keys\(countBy\('region'\)\)\.length/)
+  assert.match(template, /Live data feed/)
+})
+
 test('the visitor experience does not introduce a forum', async () => {
   const sources = await Promise.all([read('index.html'), read('intelligence-template.html'), read('content-template.html')])
   for (const source of sources) assert.doesNotMatch(source, /\bforum\b/i)
