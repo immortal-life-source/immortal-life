@@ -38,7 +38,7 @@ type Job = {
 }
 
 const SIX_HOURS_MS = 6 * 60 * 60 * 1000
-const RUN_TIME_BUDGET_MS = 118_000
+const RUN_TIME_BUDGET_MS = 55_000
 const PUBMED_PAGE_SIZE = 200
 const EUROPE_PMC_PAGE_SIZE = 1000
 const CLINICAL_TRIALS_PAGE_SIZE = 1000
@@ -1060,7 +1060,7 @@ Deno.serve(async (req) => {
   if (runError) return jsonResponse(req, { error: 'Unable to create ingestion run' }, 500, 'POST')
   // Source-scoped workers deliberately yield well before the platform timeout.
   // This leaves Edge capacity available for the reader-facing public API.
-  const runTimeBudgetMs = requestedSource === 'all' ? RUN_TIME_BUDGET_MS : 40_000
+  const runTimeBudgetMs = requestedSource === 'all' ? RUN_TIME_BUDGET_MS : 25_000
 
   try {
     const { data: topics, error: topicsError } = await supabase

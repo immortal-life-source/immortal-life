@@ -61,6 +61,7 @@ test('ISRCTN and DOAJ are explicit, commercially-cleared live feeds', async () =
   assert.match(sync, /last_success_at: completedAt/)
   assert.match(workers, /immortal-life-doaj-sync/)
   assert.match(workers, /immortal-life-isrctn-sync/)
-  assert.match(sync, /requestedSource === 'all' \? RUN_TIME_BUDGET_MS : 40_000/)
+  assert.match(sync, /RUN_TIME_BUDGET_MS = 55_000/)
+  assert.match(sync, /requestedSource === 'all' \? RUN_TIME_BUDGET_MS : 25_000/)
   assert.match(capacity, /Stagger long-running ingestion/)
 })

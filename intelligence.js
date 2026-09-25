@@ -1088,16 +1088,13 @@
 
   async function fetchUniversityIndex(append = false) {
     elements.universityResult.textContent = 'Updating the university view…';
-    const url = new URL(endpoint);
-    url.searchParams.set('view', 'universities'); url.searchParams.set('limit', '100');
-    url.searchParams.set('offset', String(append ? universityNextOffset || 0 : 0));
-    if (elements.universityTopic?.value) url.searchParams.set('topic', elements.universityTopic.value);
-    if (elements.universityCountry?.value) url.searchParams.set('country', elements.universityCountry.value);
-    if (elements.universityContinent?.value) url.searchParams.set('continent', elements.universityContinent.value);
-    if (elements.universitySort?.value) url.searchParams.set('sort', elements.universitySort.value);
-    const response = await fetch(url, { headers: window.ilFnHeaders() });
-    if (!response.ok) throw new Error(`University index request failed with ${response.status}`);
-    const data = await response.json();
+    const data = await request('universities', 100, {
+      offset: append ? universityNextOffset || 0 : 0,
+      topic: elements.universityTopic?.value,
+      country: elements.universityCountry?.value,
+      continent: elements.universityContinent?.value,
+      sort: elements.universitySort?.value,
+    });
     const incoming = Array.isArray(data.universities) ? data.universities : [];
     if (append) {
       const known = new Set(universityRows.map((university) => university.openalex_id));
