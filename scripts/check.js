@@ -90,6 +90,7 @@ const requiredFiles = [
   'supabase/migrations/20260925000700_evidence_snapshots_and_global_live_sources.sql',
   'supabase/migrations/20260925000800_prioritize_evidence_snapshot_backfill.sql',
   'supabase/migrations/20260925000900_dedicated_global_feed_workers.sql',
+  'supabase/migrations/20260925001000_stagger_global_feed_capacity.sql',
   'supabase/audits/membership-integrity.sql',
   'intelligence-template.html',
   'content-template.html',

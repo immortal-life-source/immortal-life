@@ -39,10 +39,11 @@ test('evidence snapshots and topic evidence are exposed on public pages', async 
 })
 
 test('ISRCTN and DOAJ are explicit, commercially-cleared live feeds', async () => {
-  const [migration, sync, workers] = await Promise.all([
+  const [migration, sync, workers, capacity] = await Promise.all([
     read('supabase/migrations/20260925000700_evidence_snapshots_and_global_live_sources.sql'),
     read('supabase/functions/sync-intelligence/index.ts'),
     read('supabase/migrations/20260925000900_dedicated_global_feed_workers.sql'),
+    read('supabase/migrations/20260925001000_stagger_global_feed_capacity.sql'),
   ])
   for (const source of ['isrctn', 'doaj']) {
     assert.match(migration, new RegExp(`'${source}'`))
@@ -56,4 +57,6 @@ test('ISRCTN and DOAJ are explicit, commercially-cleared live feeds', async () =
   assert.match(sync, /last_success_at: completedAt/)
   assert.match(workers, /immortal-life-doaj-sync/)
   assert.match(workers, /immortal-life-isrctn-sync/)
+  assert.match(sync, /requestedSource === 'all' \? RUN_TIME_BUDGET_MS : 40_000/)
+  assert.match(capacity, /Stagger long-running ingestion/)
 })

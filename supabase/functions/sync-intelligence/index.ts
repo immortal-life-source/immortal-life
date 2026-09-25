@@ -1058,6 +1058,9 @@ Deno.serve(async (req) => {
     .select('id')
     .single()
   if (runError) return jsonResponse(req, { error: 'Unable to create ingestion run' }, 500, 'POST')
+  // Source-scoped workers deliberately yield well before the platform timeout.
+  // This leaves Edge capacity available for the reader-facing public API.
+  const runTimeBudgetMs = requestedSource === 'all' ? RUN_TIME_BUDGET_MS : 40_000
 
   try {
     const { data: topics, error: topicsError } = await supabase
@@ -1118,7 +1121,7 @@ Deno.serve(async (req) => {
     const errorSources = new Set<string>()
     const successfulSources = new Set<string>()
 
-    while (Date.now() - runStartedAt < RUN_TIME_BUDGET_MS) {
+    while (Date.now() - runStartedAt < runTimeBudgetMs) {
       let jobsQuery = supabase
         .from('ingestion_jobs')
         .select('id,source_id,topic_slug,job_key,attempts,sync_mode,cursor_state,pages_processed,items_seen,items_written,window_start')
