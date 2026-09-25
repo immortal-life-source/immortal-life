@@ -234,7 +234,7 @@ Deno.serve(async (req) => {
       const [{ data, error, count }, coverage, topicsResult, countriesResult, { data: sources, error: sourcesError }] = await Promise.all([
         query,
         supabase.rpc('get_university_index_coverage'),
-        supabase.from('intelligence_topics').select('slug,name,sort_order').eq('enabled', true).order('sort_order'),
+        supabase.from('intelligence_topics').select('slug,name,sort_order,domain_slug,domain_name,domain_sort').eq('enabled', true).order('sort_order'),
         allUniversityLocations(supabase),
         sourcesPromise,
       ])
@@ -311,7 +311,7 @@ Deno.serve(async (req) => {
           .select(`id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,evidence_snapshot,source_url,editorial_summary,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${trialRelation}`)
           .eq('publication_state', 'published').eq('clinical_trial_topics.topic_slug', topic).eq('clinical_trial_topics.is_published', true)
           .order('last_update_date', { ascending: false, nullsFirst: false }).order('id', { ascending: false }).limit(12),
-        supabase.from('intelligence_topics').select('slug,name,description').eq('slug', topic).eq('enabled', true).maybeSingle(),
+        supabase.from('intelligence_topics').select('slug,name,description,domain_slug,domain_name,domain_description').eq('slug', topic).eq('enabled', true).maybeSingle(),
         supabase.rpc('get_topic_evidence_snapshot', { requested_topic: topic }),
         supabase.from('intelligence_change_events')
           .select('id,event_type,importance,record_type,record_id,title,source_url,occurred_at,topic_slugs,metadata')
@@ -325,7 +325,7 @@ Deno.serve(async (req) => {
       const relatedSlugs = [...related.entries()].sort((left, right) => right[1] - left[1]).slice(0, 6)
       let relatedTopics: any[] = []
       if (relatedSlugs.length) {
-        const result = await supabase.from('intelligence_topics').select('slug,name,description').in('slug', relatedSlugs.map(([slug]) => slug))
+        const result = await supabase.from('intelligence_topics').select('slug,name,description,domain_slug,domain_name').in('slug', relatedSlugs.map(([slug]) => slug))
         if (result.error) throw result.error
         const bySlug = new Map((result.data ?? []).map((item: any) => [item.slug, item]))
         relatedTopics = relatedSlugs.map(([slug, shared_events]) => ({ ...bySlug.get(slug), shared_events })).filter((item: any) => item.slug)
@@ -472,7 +472,7 @@ Deno.serve(async (req) => {
         supabase.from('intelligence_change_events')
           .select('id,event_type,importance,record_type,record_id,title,source_url,occurred_at,topic_slugs,metadata')
           .neq('event_type', 'quality_state_changed').contains('topic_slugs', [topic]).order('occurred_at', { ascending: false }).limit(limit),
-        supabase.from('intelligence_topics').select('slug,name,description').eq('slug', topic).eq('enabled', true).maybeSingle(),
+        supabase.from('intelligence_topics').select('slug,name,description,domain_slug,domain_name,domain_description').eq('slug', topic).eq('enabled', true).maybeSingle(),
         sourcesPromise,
       ])
       if (error) throw error
@@ -483,7 +483,7 @@ Deno.serve(async (req) => {
       const relatedSlugs = [...related.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6)
       let relatedTopics: any[] = []
       if (relatedSlugs.length) {
-        const result = await supabase.from('intelligence_topics').select('slug,name,description').in('slug', relatedSlugs.map(([slug]) => slug))
+        const result = await supabase.from('intelligence_topics').select('slug,name,description,domain_slug,domain_name').in('slug', relatedSlugs.map(([slug]) => slug))
         if (result.error) throw result.error
         const bySlug = new Map((result.data ?? []).map((item: any) => [item.slug, item]))
         relatedTopics = relatedSlugs.map(([slug, shared_events]) => ({ ...bySlug.get(slug), shared_events })).filter((item: any) => item.slug)

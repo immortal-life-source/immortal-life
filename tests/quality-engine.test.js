@@ -71,6 +71,20 @@ test('broad topics cannot publish from source tags alone', async () => {
   assert.equal(explicit.publish, true);
 });
 
+test('database-owned topic profiles can safely expand the taxonomy', async () => {
+  const { assessTopicMatch } = await import('../supabase/functions/_shared/intelligence.ts');
+  const result = assessTopicMatch('future-topic', {
+    title: 'A future topic intervention for healthy ageing',
+    abstract: 'A controlled study in older adults.',
+    sourceId: 'pubmed',
+  }, {
+    matching_terms: ['future topic intervention'],
+    requires_ageing_context: true,
+  });
+  assert.equal(result.publish, true);
+  assert.ok(result.relevanceScore >= 60);
+});
+
 test('all public discovery surfaces exclude quarantined records', () => {
   const publicApi = read('supabase/functions/public-intelligence/index.ts');
   const pages = read('supabase/functions/public-pages/index.ts');

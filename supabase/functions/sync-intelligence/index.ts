@@ -21,6 +21,25 @@ type Topic = {
   name: string
   literature_query: string
   trials_query: string
+  matching_terms: string[]
+  requires_ageing_context: boolean
+}
+
+function topicDefinition(topic: Topic) {
+  return {
+    matching_terms: Array.isArray(topic.matching_terms) ? topic.matching_terms : [],
+    requires_ageing_context: topic.requires_ageing_context,
+  }
+}
+
+function assessTopic(topic: Topic, input: Parameters<typeof assessTopicMatch>[1]) {
+  return assessTopicMatch(topic.slug, input, topicDefinition(topic))
+}
+
+function topicAppearsInText(topic: Topic, value: string): boolean {
+  const haystack = cleanText(value, 20_000).toLocaleLowerCase('en').normalize('NFKD')
+  const terms = Array.isArray(topic.matching_terms) ? topic.matching_terms : []
+  return terms.some((term) => haystack.includes(cleanText(term, 200).toLocaleLowerCase('en').normalize('NFKD')))
 }
 
 type Job = {
@@ -308,7 +327,7 @@ async function syncCrossref(supabase: any, job: Job): Promise<SyncOutcome> {
   return { seen: notices.length, written: events.length, done, cursorState: done ? {} : { cursor }, totalAvailable: Number(payload?.message?.['total-results'] ?? 0) || null }
 }
 
-async function syncRegulatoryFeed(supabase: any, sourceId: RegulatorySourceId): Promise<{ seen: number; written: number }> {
+async function syncRegulatoryFeed(supabase: any, sourceId: RegulatorySourceId, topics: Topic[]): Promise<{ seen: number; written: number }> {
   const source = REGULATORY_FEEDS[sourceId]
   const xml = await fetchText(new URL(source.url))
   const blocks = xml.match(/<item\b[\s\S]*?<\/item>/gi) ?? xml.match(/<entry\b[\s\S]*?<\/entry>/gi) ?? []
@@ -322,8 +341,8 @@ async function syncRegulatoryFeed(supabase: any, sourceId: RegulatorySourceId): 
     const publishedRaw = xmlText(block, 'pubDate') || xmlText(block, 'published') || xmlText(block, 'updated')
     const parsedDate = new Date(publishedRaw)
     const haystack = `${title} ${rawSummary}`
-    const candidateTopics = Object.entries(TOPIC_KEYWORDS).filter(([, pattern]) => pattern.test(haystack)).map(([slug]) => slug)
-    const assessments = candidateTopics.map((slug) => ({ slug, assessment: assessTopicMatch(slug, {
+    const candidateTopics = topics.filter((topic) => topicAppearsInText(topic, haystack) || TOPIC_KEYWORDS[topic.slug]?.test(haystack))
+    const assessments = candidateTopics.map((topic) => ({ slug: topic.slug, assessment: assessTopic(topic, {
       title,
       abstract: rawSummary,
       sourceId,
@@ -483,7 +502,7 @@ async function syncPubMed(supabase: any, topic: Topic, job: Job): Promise<SyncOu
     const journal = xmlText(article, 'Title') || null
     const status = publicationTypes.some((value) => /retracted publication/i.test(value)) ? 'retracted' : 'published'
     const level = classifyEvidence(publicationType, title, 'pubmed')
-    const assessment = assessTopicMatch(topic.slug, {
+    const assessment = assessTopic(topic, {
       title,
       controlledTerms,
       studyType: publicationType,
@@ -534,7 +553,7 @@ async function syncPubMed(supabase: any, topic: Topic, job: Job): Promise<SyncOu
     .select('id,external_id')
   if (error) throw error
   const topicLinks = (data ?? []).map((record: { id: number; external_id: string }) => {
-    const assessment = assessments.get(record.external_id) ?? assessTopicMatch(topic.slug, { title: '', sourceId: 'pubmed' })
+    const assessment = assessments.get(record.external_id) ?? assessTopic(topic, { title: '', sourceId: 'pubmed' })
     return {
       research_item_id: record.id,
       topic_slug: topic.slug,
@@ -599,7 +618,7 @@ async function syncEuropePmc(supabase: any, topic: Topic, job: Job): Promise<Syn
         : []
       const keywordTerms = Array.isArray(item?.keywordList?.keyword) ? item.keywordList.keyword : []
       const controlledTerms = uniqueStrings([...meshTerms, ...keywordTerms], 80)
-      const assessment = assessTopicMatch(topic.slug, {
+      const assessment = assessTopic(topic, {
         title,
         controlledTerms,
         studyType: publicationType,
@@ -660,7 +679,7 @@ async function syncEuropePmc(supabase: any, topic: Topic, job: Job): Promise<Syn
   if (error) throw error
 
   const topicLinks = (data ?? []).map((record: { id: number; external_id: string }) => {
-    const assessment = assessments.get(record.external_id) ?? assessTopicMatch(topic.slug, { title: '', sourceId: 'europe-pmc' })
+    const assessment = assessments.get(record.external_id) ?? assessTopic(topic, { title: '', sourceId: 'europe-pmc' })
     return {
       research_item_id: record.id,
       topic_slug: topic.slug,
@@ -707,7 +726,7 @@ async function syncDoaj(supabase: any, topic: Topic, job: Job): Promise<SyncOutc
     const publishedOn = dateOnly(String(bib?.year ?? ''))
     const publicationType = 'Open-access journal article'
     const level = classifyEvidence(publicationType, title, 'doaj')
-    const assessment = assessTopicMatch(topic.slug, {
+    const assessment = assessTopic(topic, {
       title,
       controlledTerms,
       studyType: publicationType,
@@ -756,7 +775,7 @@ async function syncDoaj(supabase: any, topic: Topic, job: Job): Promise<SyncOutc
     .select('id,external_id')
   if (error) throw error
   const topicLinks = (data ?? []).map((record: { id: number; external_id: string }) => {
-    const assessment = assessments.get(record.external_id) ?? assessTopicMatch(topic.slug, { title: '', sourceId: 'doaj' })
+    const assessment = assessments.get(record.external_id) ?? assessTopic(topic, { title: '', sourceId: 'doaj' })
     return {
       research_item_id: record.id,
       topic_slug: topic.slug,
@@ -852,7 +871,7 @@ async function syncIsrctn(supabase: any, topic: Topic, job: Job): Promise<SyncOu
       reuse_license: 'Registry contribution CC BY 4.0; generated metadata CC0',
       attribution: `Source: ISRCTN ${externalId}; retrieved ${now.slice(0, 10)}`,
     }
-    const assessment = assessTopicMatch(topic.slug, { title, abstract: hypothesis, controlledTerms, studyType: design, sourceId: 'isrctn', sourceDate: lastUpdateDate })
+    const assessment = assessTopic(topic, { title, abstract: hypothesis, controlledTerms, studyType: design, sourceId: 'isrctn', sourceDate: lastUpdateDate })
     assessments.set(externalId, assessment)
     return {
       source_id: 'isrctn', external_id: externalId, title, brief_summary: hypothesis,
@@ -876,7 +895,7 @@ async function syncIsrctn(supabase: any, topic: Topic, job: Job): Promise<SyncOu
     .select('id,external_id')
   if (error) throw error
   const topicLinks = (data ?? []).map((record: { id: number; external_id: string }) => {
-    const assessment = assessments.get(record.external_id) ?? assessTopicMatch(topic.slug, { title: '', sourceId: 'isrctn' })
+    const assessment = assessments.get(record.external_id) ?? assessTopic(topic, { title: '', sourceId: 'isrctn' })
     return { clinical_trial_id: record.id, topic_slug: topic.slug, matched_by: 'source-query', relevance_score: assessment.relevanceScore, match_reasons: assessment.reasons, matched_fields: assessment.matchedFields, is_published: assessment.publish, evaluated_at: now }
   })
   if (topicLinks.length) {
@@ -957,7 +976,7 @@ async function syncClinicalTrials(supabase: any, topic: Topic, job: Job): Promis
         design_description: designParts.join(' · ') || null,
         registry_source: 'ClinicalTrials.gov',
       }
-      const assessment = assessTopicMatch(topic.slug, {
+      const assessment = assessTopic(topic, {
         title,
         abstract: briefSummary,
         controlledTerms,
@@ -1012,7 +1031,7 @@ async function syncClinicalTrials(supabase: any, topic: Topic, job: Job): Promis
   if (error) throw error
 
   const topicLinks = (data ?? []).map((record: { id: number; external_id: string }) => {
-    const assessment = assessments.get(record.external_id) ?? assessTopicMatch(topic.slug, { title: '', sourceId: 'clinicaltrials-gov' })
+    const assessment = assessments.get(record.external_id) ?? assessTopic(topic, { title: '', sourceId: 'clinicaltrials-gov' })
     return {
       clinical_trial_id: record.id,
       topic_slug: topic.slug,
@@ -1066,7 +1085,7 @@ Deno.serve(async (req) => {
   try {
     const { data: topics, error: topicsError } = await supabase
       .from('intelligence_topics')
-      .select('slug,name,literature_query,trials_query')
+      .select('slug,name,literature_query,trials_query,matching_terms,requires_ageing_context')
       .eq('enabled', true)
       .order('sort_order')
     if (topicsError) throw topicsError
@@ -1165,7 +1184,7 @@ Deno.serve(async (req) => {
         else if (job.source_id === 'clinicaltrials-gov') outcome = await syncClinicalTrials(supabase, topic as Topic, job)
         else if (job.source_id === 'isrctn') outcome = await syncIsrctn(supabase, topic as Topic, job)
         else if (job.source_id === 'crossref') outcome = await syncCrossref(supabase, job)
-        else if (job.source_id in REGULATORY_FEEDS) outcome = { ...await syncRegulatoryFeed(supabase, job.source_id as RegulatorySourceId), done: true }
+        else if (job.source_id in REGULATORY_FEEDS) outcome = { ...await syncRegulatoryFeed(supabase, job.source_id as RegulatorySourceId, topics as Topic[]), done: true }
         else throw new Error(`Unsupported source ${job.source_id}`)
         seen += outcome.seen
         written += outcome.written

@@ -196,7 +196,10 @@ async function processWorksPage(supabase: any, topic: any, state: SyncState): Pr
       const publicationType = clean(work?.type, 120).replace(/_/g, ' ') || null
       const journal = clean(work?.primary_location?.source?.display_name, 240) || null
       const publishedOn = clean(work?.publication_date, 10) || null
-      const assessment = assessTopicMatch(topic.slug, { title, controlledTerms, studyType: publicationType, sourceId: SOURCE_ID, sourceDate: publishedOn })
+      const assessment = assessTopicMatch(topic.slug, { title, controlledTerms, studyType: publicationType, sourceId: SOURCE_ID, sourceDate: publishedOn }, {
+        matching_terms: Array.isArray(topic.matching_terms) ? topic.matching_terms : [],
+        requires_ageing_context: topic.requires_ageing_context,
+      })
       assessments.set(externalId, assessment)
       const level = classifyEvidence(publicationType, title, SOURCE_ID)
       const doi = clean(work?.doi, 300).replace(/^https:\/\/doi\.org\//i, '') || null
@@ -261,7 +264,7 @@ Deno.serve(async (req) => {
     while (Date.now() - runStartedAt < RUN_TIME_BUDGET_MS) {
       state = await prepareState(supabase)
       if (!state) break
-      const topic = await supabase.from('intelligence_topics').select('slug,literature_query').eq('slug', state.topic_slug).eq('enabled', true).single(); if (topic.error) throw topic.error
+      const topic = await supabase.from('intelligence_topics').select('slug,literature_query,matching_terms,requires_ageing_context').eq('slug', state.topic_slug).eq('enabled', true).single(); if (topic.error) throw topic.error
       const result = state.phase === 'works' ? await processWorksPage(supabase, topic.data, state) : await processGroupPage(supabase, topic.data, state)
       const phases: Record<string, SyncState['phase']> = { all: 'five', five: 'two', two: 'works', works: 'complete' }
       const finished = !result.next; const nextPhase = finished ? phases[state.phase] : state.phase; const now = new Date().toISOString()

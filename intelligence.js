@@ -83,6 +83,7 @@
     topicGrid: document.getElementById('topicGrid'),
     topicTools: document.getElementById('topicTools'),
     topicSearch: document.getElementById('topicSearch'),
+    topicDomain: document.getElementById('topicDomain'),
     topicResult: document.getElementById('topicResult'),
     researchSection: document.getElementById('researchSection'),
     researchList: document.getElementById('researchList'),
@@ -261,34 +262,69 @@
   }
 
   function renderTopics(topics, compact) {
-    const initialSearch = new URLSearchParams(location.search).get('search')?.trim() || '';
+    elements.topicGrid.classList.toggle('topic-grid--grouped', !compact);
+    const queryParameters = new URLSearchParams(location.search);
+    const initialSearch = queryParameters.get('search')?.trim() || '';
+    const initialDomain = queryParameters.get('domain')?.trim() || '';
     if (!compact && elements.topicSearch) elements.topicSearch.value = initialSearch;
+    if (!compact && elements.topicDomain && !elements.topicDomain.dataset.ready) {
+      const domains = [...new Map(topics.filter((topic) => topic.domain_slug).map((topic) => [topic.domain_slug, topic.domain_name])).entries()];
+      domains.forEach(([slug, name]) => elements.topicDomain.append(new Option(name, slug)));
+      if (domains.some(([slug]) => slug === initialDomain)) elements.topicDomain.value = initialDomain;
+    }
+    const topicCard = (topic, index) => {
+      const card = link('topic-card', '', `/topics/${encodeURIComponent(topic.slug)}`);
+      card.append(el('span', 'topic-card-number', String(index + 1).padStart(2, '0')));
+      card.append(el('h3', '', topic.name));
+      card.append(el('p', '', topic.description));
+      const counts = el('span', 'topic-counts');
+      const researchCount = Number(topic.research_count || 0);
+      const trialCount = Number(topic.trial_count || 0);
+      const countParts = [];
+      if (researchCount > 0) countParts.push(`${numberFormatter.format(researchCount)} ${researchCount === 1 ? 'paper' : 'papers'}`);
+      if (trialCount > 0) countParts.push(`${numberFormatter.format(trialCount)} ${trialCount === 1 ? 'trial' : 'trials'}`);
+      counts.textContent = countParts.join(' · ') || (topic.directory_only ? 'Open evidence guide' : 'Index building');
+      card.append(counts);
+      return card;
+    };
     const draw = () => {
       elements.topicGrid.replaceChildren();
       const search = String(compact ? initialSearch : elements.topicSearch?.value || initialSearch).trim().toLowerCase();
-      const filtered = search ? topics.filter((topic) => `${topic.name} ${topic.description}`.toLowerCase().includes(search)) : topics;
-      const visible = compact ? filtered.slice(0, 6) : filtered;
-      visible.forEach((topic, index) => {
-        const card = link('topic-card', '', `/topics/${encodeURIComponent(topic.slug)}`);
-        card.append(el('span', 'topic-card-number', String(index + 1).padStart(2, '0')));
-        card.append(el('h3', '', topic.name));
-        card.append(el('p', '', topic.description));
-        const counts = el('span', 'topic-counts');
-        const researchCount = Number(topic.research_count || 0);
-        const trialCount = Number(topic.trial_count || 0);
-        const countParts = [];
-        if (researchCount > 0) countParts.push(`${numberFormatter.format(researchCount)} ${researchCount === 1 ? 'paper' : 'papers'}`);
-        if (trialCount > 0) countParts.push(`${numberFormatter.format(trialCount)} ${trialCount === 1 ? 'trial' : 'trials'}`);
-        counts.textContent = countParts.join(' · ') || 'Index building';
-        card.append(counts);
-        elements.topicGrid.append(card);
+      const domain = compact ? '' : String(elements.topicDomain?.value || initialDomain);
+      const filtered = topics.filter((topic) => {
+        const searchable = `${topic.name} ${topic.description} ${topic.domain_name || ''}`.toLowerCase();
+        return (!search || searchable.includes(search)) && (!domain || topic.domain_slug === domain);
       });
+      const visible = compact ? filtered.slice(0, 6) : filtered;
+      if (compact) visible.forEach((topic, index) => elements.topicGrid.append(topicCard(topic, index)));
+      else {
+        const groups = new Map();
+        visible.forEach((topic) => {
+          const slug = topic.domain_slug || 'other';
+          if (!groups.has(slug)) groups.set(slug, { name: topic.domain_name || 'Other topics', description: topic.domain_description || '', topics: [] });
+          groups.get(slug).topics.push(topic);
+        });
+        let runningIndex = 0;
+        groups.forEach((group, slug) => {
+          const section = el('section', 'topic-domain'); section.id = `domain-${slug}`;
+          const heading = el('div', 'topic-domain-heading');
+          const copy = el('div'); copy.append(el('span', 'section-index', `${group.topics.length} topics`), el('h3', '', group.name), el('p', '', group.description));
+          heading.append(copy);
+          const cards = el('div', 'topic-domain-grid');
+          group.topics.forEach((topic) => { cards.append(topicCard(topic, runningIndex)); runningIndex += 1; });
+          section.append(heading, cards); elements.topicGrid.append(section);
+        });
+      }
       if (!visible.length) elements.topicGrid.append(el('p', 'empty-list', `No tracked topic matches “${search}”. Try a broader term or browse all topics.`));
       if (!compact && elements.topicResult) elements.topicResult.textContent = `Showing ${numberFormatter.format(visible.length)} of ${numberFormatter.format(topics.length)} topics`;
     };
     if (!compact && elements.topicSearch && !elements.topicSearch.dataset.ready) {
       elements.topicSearch.addEventListener('input', draw);
       elements.topicSearch.dataset.ready = 'true';
+    }
+    if (!compact && elements.topicDomain && !elements.topicDomain.dataset.ready) {
+      elements.topicDomain.addEventListener('change', draw);
+      elements.topicDomain.dataset.ready = 'true';
     }
     if (elements.topicTools) elements.topicTools.hidden = compact;
     draw();
@@ -1400,9 +1436,12 @@
         elements.trialLoadMore.onclick = () => loadMoreTrials().catch((error) => console.error('Trial page request failed:', error));
         renderSources(data.sources || [], false);
       } else if (view === 'topics') {
-        const data = await request('topics', 100);
+        const response = await fetch('/topics-directory.json', { headers: { Accept: 'application/json' } });
+        if (!response.ok) throw new Error(`Topic directory failed with ${response.status}`);
+        const data = await response.json();
         renderTopics(data.topics || [], false);
-        renderSources(data.sources || [], false);
+        elements.freshness.dataset.health = 'healthy';
+        elements.freshnessText.textContent = `${numberFormatter.format(data.topic_count || data.topics?.length || 0)} topics organized across ${numberFormatter.format(data.domain_count || 0)} domains.`;
       } else if (view === 'topic') {
         const dossier = await request('topic-dossier', 12);
         renderResearch(dossier.research || []);

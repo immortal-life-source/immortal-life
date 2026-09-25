@@ -178,6 +178,8 @@ async function runViewport(cdp, profileName, width, height, mobile) {
       ,regulatoryGuides: document.querySelectorAll('#regulatoryGuideGrid .regulatory-guide-card').length
       ,plainCopies: document.querySelectorAll('.plain-record-copy').length
       ,heroDiscoveries: document.querySelectorAll('#heroDiscoveriesList .hero-discovery').length
+      ,homeSearch: Boolean(document.getElementById('homeSearch'))
+      ,homeExtraSections: document.querySelectorAll('.home-live,.home-paths,.home-explorer,.home-global,.home-personal,.site-footer').length
       ,topicCards: document.querySelectorAll('#topicGrid .topic-card').length
       ,resourceRegionCards: document.querySelectorAll('#resourceRegionGrid .resource-region-card').length
       ,universityRegionCards: document.querySelectorAll('#universityRegionGrid .university-region-card').length
@@ -195,21 +197,20 @@ async function runViewport(cdp, profileName, width, height, mobile) {
     if (!state.mainLandmark) failures.push('missing main landmark');
     if (state.unlabelledInputs) failures.push(`${state.unlabelledInputs} unlabelled form controls`);
     if (state.genericLinks) failures.push(`${state.genericLinks} generic link labels`);
-    if (state.bodyText < 80) failures.push('insufficient visible content');
+    if (state.bodyText < 80 && route !== '/') failures.push('insufficient visible content');
     if (state.overflow > 2) failures.push(`horizontal overflow ${state.overflow}px: ${JSON.stringify({ outside: state.overflowing, internal: state.internalOverflow })}`);
     if (state.brokenImages.length) failures.push(`broken images: ${state.brokenImages.join(', ')}`);
     if (!state.logoLoaded) failures.push('brand mark failed to load');
     if (!state.completePrimaryNav) failures.push('complete primary navigation is not exposed without a More dropdown');
     if (mobile && state.menuButtonVisible !== true) failures.push('mobile menu button hidden or missing');
     if (route === '/' && !mobile && state.menuButtonVisible !== false) failures.push('desktop menu button visible');
-    if (route === '/' && state.todayCards !== 6) failures.push(`daily briefing has ${state.todayCards} cards instead of 6`);
-    if (route === '/' && !state.systemMapLower) failures.push('interactive system map is not below the hero');
-    if (route === '/' && state.heroDiscoveries !== 6) failures.push(`homepage newest-discoveries rail has ${state.heroDiscoveries} records instead of 6`);
+    if (route === '/' && !state.homeSearch) failures.push('homepage search is missing');
+    if (route === '/' && state.homeExtraSections) failures.push(`homepage still has ${state.homeExtraSections} below-the-fold sections`);
     if (!mobile && ['/research','/trials','/universities','/discover','/changes','/regulatory'].includes(route) && state.portalIntroBottom > 390) failures.push(`portal introduction ends too low at ${state.portalIntroBottom}px`);
     if (route === '/regulatory' && state.regulatoryGuides < 20) failures.push(`regulatory library has only ${state.regulatoryGuides} guides`);
     if (route === '/regulatory' && state.plainCopies < 3) failures.push('regulatory plain-language explanations did not render');
     if ((route === '/dashboard' || route === '/join') && !state.url.endsWith('/topics')) failures.push(`${route} did not redirect to /topics`);
-    if (route === '/topics' && state.topicCards < 82) failures.push(`topic directory has only ${state.topicCards} topic cards`);
+    if (route === '/topics' && state.topicCards < 180) failures.push(`topic directory has only ${state.topicCards} topic cards`);
     if (route === '/resources' && state.resourceRegionCards < 5) failures.push(`resource directory has only ${state.resourceRegionCards} regional cards`);
     if (route === '/universities' && state.universityRegionCards < 1) failures.push('university regional navigator did not render');
     if ((route === '/resources' || route === '/universities') && state.legacyMapCount) failures.push('obsolete decorative map is still visible');

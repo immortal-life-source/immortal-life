@@ -1,0 +1,65 @@
+[
+  {
+    "slug": "ageing-mechanisms",
+    "name": "Ageing mechanisms",
+    "description": "The cellular and molecular processes that drive biological ageing.",
+    "sortOrder": 10,
+    "topics": ["genomic-instability", "telomeres-telomerase", "epigenetic-alterations", "proteostasis", "autophagy", "nutrient-sensing", "mitochondrial-function", "intercellular-communication", "chronic-inflammation", "microbiome-dysbiosis", "rna-splicing-aging", "extracellular-matrix-aging", "glycation-ages", "oxidative-stress", "ferroptosis-aging", "cell-competition", "senescence-sasp", "lysosomal-dysfunction", "endoplasmic-reticulum-stress", "mitochondrial-dynamics", "mitochondrial-dna-mutations", "cellular-energetics", "lipid-metabolism-aging", "calcium-homeostasis-aging", "iron-homeostasis-aging", "nuclear-architecture-aging", "transposable-elements-aging", "somatic-mosaicism-aging", "translation-fidelity-aging"]
+  },
+  {
+    "slug": "geroscience-interventions",
+    "name": "Geroscience interventions",
+    "description": "Drugs, compounds and therapeutic strategies intended to alter ageing biology.",
+    "sortOrder": 20,
+    "topics": ["rapamycin", "senolytics", "metformin", "glp-1-therapies", "plasma-exchange", "nad-metabolism", "sirtuins", "spermidine", "urolithin-a", "taurine", "glycine-glynac", "alpha-ketoglutarate", "acarbose", "canagliflozin", "17alpha-estradiol", "young-blood-parabiosis", "fisetin", "dasatinib-quercetin", "resveratrol", "anti-inflammatory-gerotherapy", "autophagy-enhancers", "mitochondrial-targeted-therapies", "age-crosslink-breakers", "klotho-therapies", "myostatin-inhibition", "immune-rejuvenation", "car-t-senescent-cells", "peptide-geroprotectors", "combination-gerotherapies"]
+  },
+  {
+    "slug": "nutrition-metabolism",
+    "name": "Nutrition & metabolism",
+    "description": "Dietary patterns, nutrients and metabolic strategies studied for healthy ageing.",
+    "sortOrder": 30,
+    "topics": ["caloric-restriction", "ketogenic-diets", "protein-restriction", "time-restricted-eating", "mediterranean-diet", "intermittent-fasting", "fasting-mimicking-diet", "alternate-day-fasting", "plant-based-diets", "dietary-fiber", "omega-3-fatty-acids", "vitamin-d-aging", "magnesium-aging", "creatine-aging", "polyphenols-aging", "probiotics-prebiotics-aging"]
+  },
+  {
+    "slug": "lifestyle-environment",
+    "name": "Lifestyle & environment",
+    "description": "Daily behaviours, social conditions and environmental exposures linked with healthspan.",
+    "sortOrder": 40,
+    "topics": ["exercise", "sleep", "heat-cold-hormesis", "circadian-rhythms", "resistance-training", "aerobic-fitness", "walking-longevity", "balance-training", "high-intensity-interval-training", "sedentary-behavior", "social-connection", "loneliness-aging", "cognitive-training", "stress-management", "smoking-cessation-longevity", "alcohol-aging", "light-exposure-aging", "air-pollution-aging"]
+  },
+  {
+    "slug": "biomarkers-measurement",
+    "name": "Biomarkers & measurement",
+    "description": "Ways to estimate biological age, resilience, function and intervention response.",
+    "sortOrder": 50,
+    "topics": ["epigenetic-clocks", "biological-age-biomarkers", "proteomic-aging", "metabolomic-aging", "transcriptomic-aging", "single-cell-aging", "multi-omics-aging", "digital-biomarkers", "immune-age-biomarkers", "glycan-clocks", "microbiome-clocks", "brain-age-imaging", "retinal-age", "organ-aging-clocks", "telomere-length-biomarkers", "grip-strength", "gait-speed", "heart-rate-variability", "inflammaging-biomarkers", "homeostatic-dysregulation"]
+  },
+  {
+    "slug": "organs-systems",
+    "name": "Organs & systems",
+    "description": "How ageing affects particular organs, tissues and physiological systems.",
+    "sortOrder": 60,
+    "topics": ["sarcopenia", "cognitive-aging", "cardiovascular-aging", "immune-aging", "ovarian-aging", "thymic-aging", "hematopoietic-stem-cell-aging", "neuroinflammation", "blood-brain-barrier-aging", "glymphatic-clearance", "kidney-aging", "liver-aging", "lung-aging", "skin-aging", "bone-aging", "joint-cartilage-aging", "vision-aging", "hearing-aging", "oral-health-aging", "gut-aging", "adipose-tissue-aging", "pancreatic-aging", "heart-aging", "endothelial-aging", "male-reproductive-aging", "endocrine-aging", "hair-follicle-aging", "bladder-aging", "vestibular-aging"]
+  },
+  {
+    "slug": "healthspan-clinical-ageing",
+    "name": "Healthspan & clinical ageing",
+    "description": "Function, resilience and the outcomes that determine how well people live as they age.",
+    "sortOrder": 70,
+    "topics": ["frailty", "cancer-and-aging", "multimorbidity", "physiological-resilience", "falls-prevention", "mobility-disability", "activities-daily-living", "disability-free-survival", "compression-of-morbidity", "chronic-pain-aging", "mental-health-aging", "polypharmacy", "deprescribing", "vaccination-older-adults"]
+  },
+  {
+    "slug": "genetics-regeneration-futures",
+    "name": "Genetics, regeneration & futures",
+    "description": "Genetic, regenerative and frontier technologies, clearly separated by evidence maturity.",
+    "sortOrder": 80,
+    "topics": ["partial-reprogramming", "stem-cells", "gene-therapy", "longevity-genetics", "clonal-hematopoiesis", "regenerative-medicine", "crispr-aging", "mitochondrial-replacement", "mitochondrial-transplantation", "organ-bioprinting", "xenotransplantation-longevity", "cryobiology", "biostasis", "cryonics", "whole-brain-emulation"]
+  },
+  {
+    "slug": "population-longevity-prevention",
+    "name": "Population longevity & prevention",
+    "description": "Life-course, demographic, social and preventive determinants of long and healthy lives.",
+    "sortOrder": 90,
+    "topics": ["centenarian-biology", "healthy-life-expectancy", "lifespan-inequality", "sex-differences-longevity", "socioeconomic-longevity", "blue-zones", "life-course-longevity", "exposome-aging", "preventive-gerontology", "ageism-healthy-aging"]
+  }
+]

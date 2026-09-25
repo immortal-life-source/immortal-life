@@ -43,13 +43,22 @@ const intelligenceTemplate = fs.readFileSync(path.join(__dirname, 'intelligence-
 const contentTemplate = fs.readFileSync(path.join(__dirname, 'content-template.html'), 'utf8');
 const coreIntelligenceTopics = JSON.parse(fs.readFileSync(path.join(__dirname, 'intelligence-topics.json'), 'utf8'));
 const expandedIntelligenceTopics = JSON.parse(fs.readFileSync(path.join(__dirname, 'intelligence-topics-expanded.json'), 'utf8'));
-const intelligenceTopics = [...coreIntelligenceTopics, ...expandedIntelligenceTopics].map((topic) => ({
+const roundThreeIntelligenceTopics = JSON.parse(fs.readFileSync(path.join(__dirname, 'intelligence-topics-round-three.json'), 'utf8'));
+const intelligenceTopicDomains = JSON.parse(fs.readFileSync(path.join(__dirname, 'intelligence-topic-domains.json'), 'utf8'));
+const domainByTopic = new Map(intelligenceTopicDomains.flatMap((domain) => domain.topics.map((slug) => [slug, domain])));
+const topicPosition = new Map(intelligenceTopicDomains.flatMap((domain) => domain.topics.map((slug, index) => [slug, [domain.sortOrder, index]])));
+const intelligenceTopics = [...coreIntelligenceTopics, ...expandedIntelligenceTopics, ...roundThreeIntelligenceTopics].map((topic) => ({
   ...topic,
+  domain: domainByTopic.get(topic.slug),
   question: topic.question || `What does current evidence show about ${topic.name.toLowerCase()} and healthy ageing?`,
   state: topic.state || `This topic is monitored automatically across source-linked research and trial registries. Evidence ranges from laboratory work to human studies and should be read by study type.`,
   limits: topic.limits || `Definitions, populations, methods, endpoints, and follow-up differ across records. A topic match does not establish clinical benefit, safety, or causality.`,
   regulatory: topic.regulatory || `Regulatory status is product-, intervention-, indication-, and jurisdiction-specific. Inclusion here is not an approval or recommendation.`,
-}));
+})).sort((left, right) => {
+  const [leftDomain, leftPosition] = topicPosition.get(left.slug) || [999, 999];
+  const [rightDomain, rightPosition] = topicPosition.get(right.slug) || [999, 999];
+  return leftDomain - rightDomain || leftPosition - rightPosition;
+});
 
 function htmlEscape(value) {
   return String(value)
@@ -116,6 +125,24 @@ fs.mkdirSync(outputDir, { recursive: true });
 for (const asset of staticAssets) {
   fs.copyFileSync(path.join(__dirname, asset), path.join(outputDir, asset));
 }
+
+// The taxonomy is a maintained site asset, not a live analytical query. Serving
+// it statically keeps the complete directory available during source delays and
+// avoids spending database IO every time a visitor opens /topics.
+fs.writeFileSync(path.join(outputDir, 'topics-directory.json'), JSON.stringify({
+  topics: intelligenceTopics.map((topic) => ({
+    slug: topic.slug,
+    name: topic.name,
+    description: topic.description,
+    domain_slug: topic.domain.slug,
+    domain_name: topic.domain.name,
+    domain_description: topic.domain.description,
+    domain_sort: topic.domain.sortOrder,
+    directory_only: true,
+  })),
+  topic_count: intelligenceTopics.length,
+  domain_count: intelligenceTopicDomains.length,
+}, null, 2));
 
 const intelligencePages = [
   {
@@ -228,7 +255,7 @@ const topicOutputDir = path.join(outputDir, 'topics');
 fs.mkdirSync(topicOutputDir, { recursive: true });
 for (const topic of intelligenceTopics) {
   const dossier = `<section class="intel-section topic-primer" aria-labelledby="topic-question">
-    <div class="section-heading"><div><span class="section-index">The question we track</span><h2 id="topic-question">${htmlEscape(topic.question)}</h2></div><a class="section-link" href="/methodology">How records are chosen</a></div>
+    <div class="section-heading"><div><a class="topic-domain-badge" href="/topics?domain=${encodeURIComponent(topic.domain.slug)}">${htmlEscape(topic.domain.name)}</a><span class="section-index">The question we track</span><h2 id="topic-question">${htmlEscape(topic.question)}</h2></div><a class="section-link" href="/methodology">How records are chosen</a></div>
     <div class="dossier-grid"><article><h3>What the records show</h3><p>${htmlEscape(topic.state)}</p></article><article><h3>What is still uncertain</h3><p>${htmlEscape(topic.limits)}</p></article><article><h3>Regulatory position</h3><p>${htmlEscape(topic.regulatory)}</p></article></div>
     <aside class="automation-notice"><strong>Built automatically from source records</strong><p>No scientist, clinician, researcher, editor, or human reviewer evaluates this page before publication. Check important details at the linked original source.</p><div class="topic-follow-actions"><a class="section-link" href="/feeds/topics/${topic.slug}.xml">Follow this topic by RSS</a></div></aside>
   </section>`;
@@ -256,7 +283,7 @@ const contentPages = [
   {
     filename: 'methodology.html', title: 'How immortal.life works', heading: 'How records reach the website.', kicker: 'A transparent automatic process',
     description: 'How immortal.life automatically discovers, classifies, links, updates, and publishes longevity intelligence without human review.',
-    body: `<h2>1. Records are collected</h2><p>immortal.life reads public information from named research databases, trial registries, correction services, and official regulatory feeds. Every published item keeps a direct link to its original source.</p><h2>2. Topic relevance is checked</h2><p>The system looks for topic terms in titles, summaries, source keywords, and study types. Broad subjects such as sleep, exercise, stem cells, or gene therapy must also mention ageing, longevity, healthspan, or frailty in the title or summary.</p><h2>3. Weak matches are held back</h2><p>A record needs a topic-match score of at least 60% to appear publicly. Lower-scoring records are withheld from pages, counts, feeds, briefings, graphs, search notifications, and the sitemap.</p><h2>4. Repeated records are grouped</h2><p>DOIs, trial identifiers, and simplified titles help identify duplicate or near-duplicate entries. One main record is shown; the repeated versions are withheld.</p><h2>5. Readers can inspect the result</h2><p>Each record explains why it appeared, shows its topic-match percentage, and links to the source. These figures help organise information; they do not rate safety, effectiveness, or scientific quality. Overall results appear on the <a href="/quality">quality checks page</a>.</p><h2>No human review before publication</h2><p>No scientist, clinician, researcher, editor, or human reviewer screens individual records before they appear. The website is a discovery tool, not a peer-review service or a source of personal medical advice.</p><h2>Known limitations</h2><p>Source information can be incomplete, delayed, duplicated, corrected, or wrong. A registered trial is not proof of quality, safety, effectiveness, completion, or regulatory approval. Always check important details at the original source.</p>`
+    body: `<h2>1. Records are collected</h2><p>immortal.life reads public information from named research databases, trial registries, correction services, and official regulatory feeds. Every published item keeps a direct link to its original source.</p><h2>2. Topic relevance is checked</h2><p>The system looks for topic terms in titles, summaries, source keywords, and study types. Broad subjects such as sleep, exercise, stem cells, or gene therapy must also mention ageing, longevity, healthspan, or frailty in the title or summary.</p><h2>3. Weak matches are held back</h2><p>A record needs a topic-match score of at least 60% to appear publicly. Lower-scoring records are withheld from pages, counts, feeds, briefings, graphs, search notifications, and the sitemap.</p><h2>4. Repeated records are grouped</h2><p>DOIs, trial identifiers, and simplified titles help identify duplicate or near-duplicate entries. One main record is shown; the repeated versions are withheld.</p><h2>5. Readers can inspect the result</h2><p>Each record explains why it appeared, shows its topic-match percentage, and links to the source. These figures help organise information; they do not rate safety, effectiveness, or scientific quality. Overall results appear on the <a href="/quality">quality checks page</a>.</p><h2>6. Topics are maintained as a taxonomy</h2><p>The index currently follows 180 distinct topics in nine domains: ageing mechanisms; geroscience interventions; nutrition and metabolism; lifestyle and environment; biomarkers and measurement; organs and systems; healthspan and clinical ageing; genetics, regeneration and futures; and population longevity and prevention. A topic is admitted only when it represents a distinct reader question, can be described with controlled matching terms, and has a defensible connection to longevity or healthy ageing. Emerging ideas remain visible, but they are not presented as established therapies.</p><h2>No human review before publication</h2><p>No scientist, clinician, researcher, editor, or human reviewer screens individual records before they appear. The website is a discovery tool, not a peer-review service or a source of personal medical advice.</p><h2>Known limitations</h2><p>Source information can be incomplete, delayed, duplicated, corrected, or wrong. A registered trial is not proof of quality, safety, effectiveness, completion, or regulatory approval. Always check important details at the original source.</p><section class="methodology-directory" aria-labelledby="methodologyDirectory"><span class="section-index">Site directory</span><h2 id="methodologyDirectory">Find every public part of immortal.life</h2><p>The supporting links formerly shown at the bottom of the homepage now live here, beside the explanation of how the service works.</p><nav aria-label="Site information and tools"><a href="/privacy"><strong>Privacy policy</strong><span>How visitor and subscriber data is handled</span></a><a href="/automation"><strong>Automation</strong><span>What is produced automatically</span></a><a href="/resources"><strong>Resources</strong><span>Official sources and coverage</span></a><a href="/universities"><strong>Universities</strong><span>Global research activity</span></a><a href="/learn"><strong>Start here</strong><span>A guided introduction to longevity evidence</span></a><a href="/discover"><strong>Explore</strong><span>Choose the evidence path you need</span></a><a href="/reports"><strong>Reports</strong><span>Current index activity</span></a><a href="/quality"><strong>Quality checks</strong><span>What is published or held back</span></a><a href="/feed.xml"><strong>RSS</strong><span>Follow new public records</span></a><a href="mailto:hello@immortal.life"><strong>Contact</strong><span>Reach the project</span></a></nav></section>`
   },
   {
     filename: 'automation.html', title: 'Automation disclosure — immortal.life', heading: 'Built by systems, not a newsroom.', kicker: 'Permanent publication disclosure',

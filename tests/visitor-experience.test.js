@@ -4,17 +4,17 @@ import test from 'node:test'
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('homepage is organised around useful visitor goals and live updates', async () => {
+test('homepage is a single-screen search entry with no below-the-fold portal duplicate', async () => {
   const [html, js] = await Promise.all([read('index.html'), read('main.js')])
-  assert.match(html, /Today in longevity/)
   assert.match(html, /What are you curious about/)
-  assert.match(html, /Choose your route/)
-  assert.match(html, /mobile-dock/)
+  assert.match(html, /id="homeSearch"/)
+  assert.doesNotMatch(html, /home-live|home-paths|home-explorer|home-global|home-personal|site-footer|mobile-dock/)
+  assert.doesNotMatch(html, /heroDiscoveriesList|Today in longevity|Choose your route/)
   assert.doesNotMatch(html, /You were not meant to expire/)
   assert.match(js, /il_last_visit/)
   assert.match(js, /il_saved_searches/)
   assert.doesNotMatch(html, /My Radar|href="\/dashboard"/)
-  assert.match(js, /renderHeroDiscoveries[\s\S]*?\.slice\(0, 6\)/)
+  assert.match(js, /if \(!document\.getElementById\('todayGrid'\) && !document\.getElementById\('heroDiscoveriesList'\)\) return/)
 })
 
 test('changes-page totals are direct links to their relevant indexes', async () => {
@@ -27,8 +27,12 @@ test('changes-page totals are direct links to their relevant indexes', async () 
 })
 
 test('topic catalogue is compact, searchable, and does not bury research or trials', async () => {
-  const [template, portal, css] = await Promise.all([read('intelligence-template.html'), read('intelligence.js'), read('intelligence.css')])
+  const [template, portal, css, build] = await Promise.all([read('intelligence-template.html'), read('intelligence.js'), read('intelligence.css'), read('build.js')])
   assert.match(template, /id="topicSearch"/)
+  assert.match(template, /id="topicDomain"/)
+  assert.match(build, /topics-directory\.json/)
+  assert.match(portal, /fetch\('\/topics-directory\.json'/)
+  assert.doesNotMatch(portal.match(/else if \(view === 'topics'\)[\s\S]*?else if \(view === 'topic'\)/)?.[0] || '', /request\('topics'/)
   assert.match(portal, /Showing \$\{numberFormatter\.format\(visible\.length\)\} of/)
   assert.match(portal, /view === 'trials'[\s\S]*?renderTrials\(data\.trials \|\| \[\]\);[\s\S]*?view === 'topics'/)
   assert.doesNotMatch(portal, /view === 'trials'[\s\S]*?renderTopics\(topicsData/)
@@ -44,17 +48,26 @@ test('Trial Radar has one canonical visitor route', async () => {
   assert.doesNotMatch(template, /href="\/discover\/recruiting-trials"/)
 })
 
-test('expanded topic catalogue has 82 distinct guides and controlled matching profiles', async () => {
-  const [coreText, expandedText, migration, matcher] = await Promise.all([
-    read('intelligence-topics.json'), read('intelligence-topics-expanded.json'),
-    read('supabase/migrations/20260924000500_expand_longevity_topics_round_two.sql'),
+test('expanded topic catalogue has 180 distinct guides in nine controlled domains', async () => {
+  const [coreText, expandedText, roundThreeText, domainsText, migration, matcher] = await Promise.all([
+    read('intelligence-topics.json'), read('intelligence-topics-expanded.json'), read('intelligence-topics-round-three.json'), read('intelligence-topic-domains.json'),
+    read('supabase/migrations/20260925001800_expand_topics_by_domain.sql'),
     read('supabase/functions/_shared/intelligence.ts'),
   ])
-  const topics = [...JSON.parse(coreText), ...JSON.parse(expandedText)]
-  assert.equal(topics.length, 82)
-  assert.equal(new Set(topics.map((topic) => topic.slug)).size, 82)
-  assert.equal((migration.match(/^  \('/gm) || []).length, 40)
-  for (const slug of ['longevity-genetics', 'single-cell-aging', 'circadian-rhythms', 'digital-biomarkers']) assert.match(matcher, new RegExp(`'${slug}'`))
+  const roundThree = JSON.parse(roundThreeText)
+  const topics = [...JSON.parse(coreText), ...JSON.parse(expandedText), ...roundThree]
+  const domains = JSON.parse(domainsText)
+  const mapped = domains.flatMap((domain) => domain.topics)
+  assert.equal(topics.length, 180)
+  assert.equal(roundThree.length, 98)
+  assert.equal(domains.length, 9)
+  assert.equal(new Set(topics.map((topic) => topic.slug)).size, 180)
+  assert.equal(mapped.length, 180)
+  assert.equal(new Set(mapped).size, 180)
+  assert.deepEqual(new Set(mapped), new Set(topics.map((topic) => topic.slug)))
+  assert.match(migration, /matching_terms text\[\]/)
+  assert.match(migration, /Expected at least 180 enabled topics/)
+  assert.match(matcher, /matching_terms\?: string\[\]/)
 })
 
 test('desktop homepage exposes the complete navigation and keeps motion clear of the headline', async () => {
@@ -115,7 +128,7 @@ test('public page shells provide search, related journeys and mobile navigation'
   assert.doesNotMatch(files[2], /reader-mode/)
 })
 
-test('mobile hamburger and dock navigation are identical on every public shell', async () => {
+test('mobile hamburger navigation is identical on every public shell', async () => {
   const [home, intelligence, content, privacy, confirmed, unsubscribed] = await Promise.all([
     read('index.html'), read('intelligence-template.html'), read('content-template.html'), read('privacy.html'), read('confirmed.html'), read('unsubscribed.html'),
   ])
@@ -130,7 +143,7 @@ test('mobile hamburger and dock navigation are identical on every public shell',
   assert.deepEqual(menuLinks(confirmed, 'confirmedMemberNav'), expected)
   assert.deepEqual(menuLinks(unsubscribed, 'unsubscribedMemberNav'), expected)
   const dock = (source) => source.match(/<nav class="mobile-dock"[\s\S]*?<\/nav>/)?.[0].replace(/\s+/g, ' ')
-  assert.equal(dock(home), dock(intelligence))
+  assert.equal(dock(home), undefined)
   assert.equal(dock(content), dock(intelligence))
   assert.equal(dock(privacy), dock(intelligence))
   assert.doesNotMatch(home, /Project News|href="\/dashboard"|href="\/join"/)
@@ -230,13 +243,7 @@ test('the completed living atlas includes daily signals, timelines, plain-langua
   ])
   assert.doesNotMatch(home, /systemMapTemplate/)
   assert.doesNotMatch(home, /Weekly longevity briefing/)
-  assert.match(home, /Mechanisms/)
-  assert.match(main, /candidates\.slice\(0, 6\)/)
-  assert.match(main, /University momentum/)
-  assert.match(main, /Official guidance/)
-  assert.match(main, /How to verify a longevity health claim/)
-  assert.doesNotMatch(main, /Official signal/)
-  assert.doesNotMatch(main, /Publication-quality status changed/)
+  assert.doesNotMatch(home, /home-live|home-paths|home-explorer|home-global|home-personal/)
   assert.match(portalTemplate, /Evidence timeline/)
   assert.match(portal, /renderTimeline/)
   assert.match(publicApi, /view === 'timeline'/)

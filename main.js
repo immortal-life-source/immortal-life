@@ -395,6 +395,10 @@ window.handleSubmit = handleSubmit;
     window.location.href = `/topics?search=${encodeURIComponent(query)}`;
   });
 
+  // The search-first homepage has no live feed below the opening screen.
+  // Avoid spending reader requests and database IO on content that is not shown.
+  if (!document.getElementById('todayGrid') && !document.getElementById('heroDiscoveriesList')) return;
+
   const previousVisit = localStorage.getItem('il_last_visit');
   localStorage.setItem('il_last_visit', new Date().toISOString());
 

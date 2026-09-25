@@ -47,6 +47,13 @@ type MatchInput = {
   sourceDate?: unknown
 }
 
+export type TopicMatchDefinition = {
+  anchors?: string[]
+  matching_terms?: string[]
+  requiresAgeingContext?: boolean
+  requires_ageing_context?: boolean
+}
+
 const TOPIC_TERMS: Record<string, { anchors: string[]; requiresAgeingContext?: boolean }> = {
   rapamycin: { anchors: ['rapamycin', 'sirolimus', 'everolimus', 'rapalog', 'mtor inhibitor'] },
   senolytics: { anchors: ['senolytic', 'senomorphic', 'cellular senescence', 'senescent cell'] },
@@ -181,8 +188,16 @@ export function freshnessScore(value: unknown, now = new Date()): number {
   return 35
 }
 
-export function assessTopicMatch(topicSlug: string, input: MatchInput): QualityAssessment {
-  const definition = TOPIC_TERMS[topicSlug]
+export function assessTopicMatch(topicSlug: string, input: MatchInput, override?: TopicMatchDefinition): QualityAssessment {
+  const overrideAnchors = (override?.anchors ?? override?.matching_terms ?? [])
+    .map((term) => normaliseForMatch(term))
+    .filter(Boolean)
+  const definition = overrideAnchors.length
+    ? {
+        anchors: [...new Set(overrideAnchors)],
+        requiresAgeingContext: override?.requiresAgeingContext ?? override?.requires_ageing_context ?? true,
+      }
+    : TOPIC_TERMS[topicSlug]
   const title = normaliseForMatch(input.title)
   const abstract = normaliseForMatch(input.abstract)
   const controlled = normaliseForMatch(Array.isArray(input.controlledTerms) ? input.controlledTerms.join(' ') : input.controlledTerms)

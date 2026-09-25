@@ -1971,14 +1971,14 @@ h1 {
 :root {
   --bg: #fffafd;
   --bg2: #fff4f8;
-  --gold: #dd477d;
-  --gold-faint: rgba(221, 71, 125, .09);
-  --gold-mid: rgba(221, 71, 125, .24);
+  --gold: #c73572;
+  --gold-faint: rgba(199, 53, 114, .09);
+  --gold-mid: rgba(199, 53, 114, .24);
   --white: #241d23;
   --off: #6f636c;
   --teal: #c43f73;
   --violet: #b9548d;
-  --coral: #f08152;
+  --coral: #e86d43;
   --sage: #b85d7f;
   --blue: #d85888;
   --border: rgba(78, 41, 61, .10);
@@ -2037,11 +2037,22 @@ body::after { display: none; }
   animation: none;
   text-align: center;
 }
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
 .hero-actions::before {
   content: 'immortal.life';
   display: block;
   margin-bottom: 34px;
-  color: var(--gold);
+  color: #d83f78;
   font: 600 clamp(44px, 6vw, 76px)/1 var(--font-sans);
   letter-spacing: -.055em;
 }
@@ -2084,13 +2095,13 @@ body::after { display: none; }
   padding: 0 24px;
   border: 0;
   border-radius: 999px;
-  background: linear-gradient(135deg, #dd477d, #ec685f);
+  background: linear-gradient(135deg, #d83f78, #e86d43);
   color: #fff;
   font: 500 11px var(--font-sans);
   letter-spacing: .04em;
   text-transform: none;
 }
-.home-search button:hover { box-shadow: 0 5px 16px rgba(221, 71, 125, .24); }
+.home-search button:hover { box-shadow: 0 5px 16px rgba(199, 53, 114, .24); }
 
 /* Existing homepage content remains below the search-first opening. */
 .home-live,
@@ -2137,7 +2148,8 @@ footer { background: var(--bg); color: var(--white); }
 .mobile-dock a[aria-current='page'] { color: var(--gold) !important; background: var(--gold-faint) !important; }
 
 @media (max-width: 768px) {
-  .s1 { min-height: 100svh; padding: 16px 18px; }
+  body { padding-bottom: 0; }
+  .s1 { min-height: 100dvh; height: 100dvh; padding: 16px 18px; overflow: hidden; }
   .s1-header { align-items: center; }
   .s1-header .logo { display: inline-flex; }
   .brand-mark { width: 44px; height: 44px; }
