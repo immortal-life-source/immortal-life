@@ -1303,9 +1303,19 @@
     });
     if (viewName === 'resources') url.searchParams.set('directory_contract', 'global-195-v2');
     if (topicSlug) url.searchParams.set('topic', topicSlug);
-    const res = await fetch(url, { headers: window.ilFnHeaders() });
-    if (!res.ok) throw new Error(`Feed request failed with ${res.status}`);
-    return res.json();
+    const transientStatuses = new Set([500, 502, 503, 504]);
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      let res;
+      try {
+        res = await fetch(url, { headers: window.ilFnHeaders() });
+      } catch (error) {
+        if (attempt === 2) throw error;
+      }
+      if (res?.ok) return res.json();
+      if (res && (!transientStatuses.has(res.status) || attempt === 2)) throw new Error(`Feed request failed with ${res.status}`);
+      await new Promise((resolve) => window.setTimeout(resolve, 300 * (attempt + 1)));
+    }
+    throw new Error('Feed request failed');
   }
 
   async function load() {

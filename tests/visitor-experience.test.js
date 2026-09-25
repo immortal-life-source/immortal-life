@@ -90,6 +90,13 @@ test('research and trials use complete searchable filter systems', async () => {
   assert.doesNotMatch(build, /filename: 'research\.html',[\s\S]{0,300}?PAGE_VIEW: 'overview'/)
 })
 
+test('public data views recover from brief Edge Function saturation', async () => {
+  const portal = await read('intelligence.js')
+  assert.match(portal, /new Set\(\[500, 502, 503, 504\]\)/)
+  assert.match(portal, /for \(let attempt = 0; attempt < 3; attempt \+= 1\)/)
+  assert.match(portal, /300 \* \(attempt \+ 1\)/)
+})
+
 test('public page shells provide search, related journeys and mobile navigation', async () => {
   const files = await Promise.all([
     read('intelligence-template.html'),
