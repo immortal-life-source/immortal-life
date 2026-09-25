@@ -170,13 +170,13 @@ const intelligencePages = [
   },
   {
     filename: 'evidence-graph.html',
-    PAGE_TITLE: 'Visual Longevity Evidence Graph — immortal.life',
-    PAGE_DESCRIPTION: 'A visual map showing how longevity topics connect to papers, trials, regulatory notices, and corrections.',
+    PAGE_TITLE: 'Longevity Evidence Explorer — immortal.life',
+    PAGE_DESCRIPTION: 'A searchable evidence directory connecting longevity topics to research, trials, university activity, regulatory notices, and corrections.',
     CANONICAL_URL: `${site}/evidence-graph`,
     PAGE_VIEW: 'graph',
     TOPIC_SLUG: '',
-    PAGE_KICKER: 'Evidence connections',
-    PAGE_HEADING: 'See how topics and sources connect.',
+    PAGE_KICKER: 'Evidence explorer',
+    PAGE_HEADING: 'Find the evidence behind each longevity topic.',
   },
   {
     filename: 'entities.html',

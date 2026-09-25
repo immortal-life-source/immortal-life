@@ -117,8 +117,12 @@
     integritySection: document.getElementById('integritySection'),
     integrityList: document.getElementById('integrityList'),
     graphSection: document.getElementById('graphSection'),
-    graph: document.getElementById('evidenceGraph'),
-    graphFallback: document.getElementById('graphFallback'),
+    graphControls: document.getElementById('graphControls'),
+    graphSearch: document.getElementById('graphSearch'),
+    graphFocus: document.getElementById('graphFocus'),
+    graphSort: document.getElementById('graphSort'),
+    graphResult: document.getElementById('graphResult'),
+    graphTopicList: document.getElementById('graphTopicList'),
     timelineSection: document.getElementById('timelineSection'),
     timelineList: document.getElementById('evidenceTimeline'),
     relatedJourneys: document.getElementById('relatedJourneys'),
@@ -496,6 +500,7 @@
       .sort((left, right) => left[1].localeCompare(right[1]));
     replaceFilterOptions(elements.researchEvidence, 'All evidence stages', evidence);
     elements.researchSearch.value = new URLSearchParams(location.search).get('search')?.trim() || '';
+    elements.researchTopic.value = new URLSearchParams(location.search).get('topic')?.trim() || '';
     elements.researchControls.addEventListener('input', () => {
       filterResearchRecords();
       window.clearTimeout(researchSearchTimer);
@@ -577,6 +582,7 @@
     replaceFilterOptions(elements.trialPhase, 'All phases', [...new Set(searchableTrials.flatMap((record) => record.phases || []).filter(Boolean))].sort().map((value) => [value, readableStatus(value)]));
     replaceFilterOptions(elements.trialCountry, 'All countries', [...new Set(searchableTrials.flatMap((record) => record.countries || []).filter(Boolean))].sort((left, right) => left.localeCompare(right)).map((value) => [value, value]));
     elements.trialSearch.value = new URLSearchParams(location.search).get('search')?.trim() || '';
+    elements.trialTopic.value = new URLSearchParams(location.search).get('topic')?.trim() || '';
     elements.trialControls.addEventListener('input', () => {
       filterTrialRecords();
       window.clearTimeout(trialSearchTimer);
@@ -757,57 +763,57 @@
   }
 
   function renderGraph(data) {
-    const svg = elements.graph;
-    svg.replaceChildren(svg.querySelector('title'), svg.querySelector('desc'));
-    const width = 1200, height = 720, centerX = width / 2, centerY = height / 2;
-    const layerPositions = {
-      'layer:research': { x: 95, y: 92 }, 'layer:trials': { x: 1105, y: 92 },
-      'layer:regulatory': { x: 1105, y: 628 }, 'layer:integrity': { x: 95, y: 628 },
-      'layer:universities': { x: 600, y: 680 },
+    const topics = Array.isArray(data.topics) ? data.topics.filter((topic) => Number(topic.evidence_total || 0) > 0) : [];
+    const metricDefinitions = [
+      ['research_count', 'Research', '/research'], ['trial_count', 'Trials', '/trials'],
+      ['university_work_count', 'University works', '/universities'], ['regulatory_count', 'Regulatory', '/regulatory'],
+      ['integrity_count', 'Integrity', '/integrity'],
+    ];
+    const draw = () => {
+      const query = String(elements.graphSearch?.value || '').trim().toLowerCase();
+      const focus = elements.graphFocus?.value || '';
+      const sort = elements.graphSort?.value || 'evidence';
+      const visible = topics.filter((topic) => {
+        const searchable = `${topic.name || ''} ${topic.description || ''} ${topic.mechanism || ''}`.toLowerCase();
+        return (!query || searchable.includes(query)) && (!focus || Number(topic[focus] || 0) > 0);
+      }).sort((left, right) => sort === 'name'
+        ? String(left.name).localeCompare(String(right.name))
+        : Number(right[sort === 'evidence' ? 'evidence_total' : sort] || 0) - Number(left[sort === 'evidence' ? 'evidence_total' : sort] || 0)
+          || String(left.name).localeCompare(String(right.name)));
+      elements.graphTopicList.replaceChildren();
+      visible.forEach((topic) => {
+        const row = el('article', 'evidence-topic-row');
+        const copy = el('div', 'evidence-topic-copy');
+        if (topic.mechanism) copy.append(el('span', 'evidence-topic-mechanism', topic.mechanism));
+        const heading = el('h3'); heading.append(link('', topic.name, `/topics/${encodeURIComponent(topic.slug)}`));
+        copy.append(heading, el('p', '', topic.description || 'Open the topic guide for its evidence and limitations.'));
+        const metrics = el('div', 'evidence-topic-metrics');
+        metricDefinitions.forEach(([field, label, destination]) => {
+          const count = Number(topic[field] || 0);
+          if (!count) return;
+          const metric = link(`evidence-topic-metric evidence-topic-metric--${field}`, '', `${destination}?topic=${encodeURIComponent(topic.slug)}`);
+          metric.setAttribute('aria-label', `${numberFormatter.format(count)} ${label.toLowerCase()} records for ${topic.name}`);
+          metric.append(el('strong', '', numberFormatter.format(count)), el('span', '', label));
+          metrics.append(metric);
+        });
+        const related = el('nav', 'evidence-topic-related');
+        if (Array.isArray(topic.related_topics) && topic.related_topics.length) {
+          related.append(el('span', '', 'Related'));
+          topic.related_topics.forEach((item) => related.append(link('', item.name, `/topics/${encodeURIComponent(item.slug)}`)));
+        }
+        row.append(copy, metrics);
+        if (related.childElementCount) row.append(related);
+        elements.graphTopicList.append(row);
+      });
+      if (!visible.length) elements.graphTopicList.append(el('p', 'empty-list', 'No topic matches these filters. Try a broader search.'));
+      elements.graphResult.textContent = `Showing ${numberFormatter.format(visible.length)} of ${numberFormatter.format(topics.length)} topics with indexed evidence.`;
     };
-    const topicNodes = (data.nodes || []).filter((node) => node.kind === 'topic' && Number(node.weight || 0) > 0);
-    const positions = {};
-    topicNodes.forEach((node, index) => {
-      const angle = -Math.PI / 2 + index * Math.PI * 2 / Math.max(topicNodes.length, 1);
-      positions[node.id] = { x: centerX + Math.cos(angle) * 325, y: centerY + Math.sin(angle) * 205 };
-    });
-    (data.nodes || []).filter((node) => node.kind === 'mechanism').forEach((node, index) => {
-      const topicPoint = positions[`topic:${node.slug}`];
-      if (topicPoint) positions[node.id] = { x: centerX + (topicPoint.x - centerX) * .58, y: centerY + (topicPoint.y - centerY) * .58 };
-      else positions[node.id] = { x: centerX + Math.cos(index) * 120, y: centerY + Math.sin(index) * 90 };
-    });
-    Object.assign(positions, layerPositions);
-    const ns = 'http://www.w3.org/2000/svg';
-    (data.links || []).forEach((edge) => {
-      const from = positions[edge.source], to = positions[edge.target];
-      if (!from || !to || edge.weight <= 0) return;
-      const line = document.createElementNS(ns, 'line');
-      line.setAttribute('x1', from.x); line.setAttribute('y1', from.y); line.setAttribute('x2', to.x); line.setAttribute('y2', to.y);
-      line.setAttribute('class', `graph-link graph-link--${edge.kind}`);
-      line.setAttribute('stroke-width', String(Math.min(4, 0.7 + Math.log2(edge.weight + 1) * .55)));
-      svg.append(line);
-    });
-    (data.nodes || []).filter((node) => Number(node.weight || 0) > 0).forEach((node) => {
-      const point = positions[node.id]; if (!point) return;
-      const group = document.createElementNS(ns, node.kind === 'topic' ? 'a' : 'g');
-      if (node.kind === 'topic') group.setAttribute('href', `/topics/${encodeURIComponent(node.slug)}`);
-      group.setAttribute('class', `graph-node graph-node--${node.kind}`);
-      const circle = document.createElementNS(ns, 'circle');
-      circle.setAttribute('cx', point.x); circle.setAttribute('cy', point.y);
-      circle.setAttribute('r', String(node.kind === 'topic' ? Math.min(32, 17 + Math.log2(Number(node.weight || 0) + 1) * 1.8) : node.kind === 'mechanism' ? 10 : 37));
-      const label = document.createElementNS(ns, 'text');
-      label.setAttribute('x', point.x); label.setAttribute('y', point.y + (node.kind === 'topic' ? 48 : 57));
-      label.setAttribute('text-anchor', 'middle'); label.textContent = node.label;
-      const count = document.createElementNS(ns, 'text');
-      count.setAttribute('x', point.x); count.setAttribute('y', point.y + 4); count.setAttribute('text-anchor', 'middle');
-      count.setAttribute('class', 'graph-count'); count.textContent = node.kind === 'mechanism' ? '' : numberFormatter.format(Number(node.weight || 0));
-      group.append(circle, count, label); svg.append(group);
-    });
-    elements.graphFallback.replaceChildren();
-    const fallbackTitle = el('h3', '', 'Evidence by topic'); elements.graphFallback.append(fallbackTitle);
-    const fallbackList = el('ul', 'graph-fallback-list');
-    topicNodes.forEach((node) => { const item = el('li'); item.append(link('', node.label, `/topics/${encodeURIComponent(node.slug)}`), el('span', '', numberFormatter.format(Number(node.weight || 0)))); fallbackList.append(item); });
-    elements.graphFallback.append(fallbackList); elements.graphSection.hidden = false;
+    if (!elements.graphControls.dataset.ready) {
+      elements.graphControls.addEventListener('input', draw);
+      elements.graphControls.dataset.ready = 'true';
+    }
+    draw();
+    elements.graphSection.hidden = false;
   }
 
   function renderTimeline(data) {
@@ -1376,7 +1382,8 @@
         renderTrials(data.trials || []);
         renderSources(data.sources || [], true);
       } else if (view === 'research') {
-        const data = await request('research', 100, { q: new URLSearchParams(location.search).get('search')?.trim() || '' });
+        const params = new URLSearchParams(location.search);
+        const data = await request('research', 100, { q: params.get('search')?.trim() || '', topic: params.get('topic')?.trim() || '' });
         researchNextOffset = data.next_offset;
         researchTotal = Number(data.total_matching || data.research?.length || 0);
         renderResearch(data.research || []);
@@ -1384,7 +1391,8 @@
         elements.researchLoadMore.onclick = () => loadMoreResearch().catch((error) => console.error('Research page request failed:', error));
         renderSources(data.sources || [], false);
       } else if (view === 'trials') {
-        const data = await request('trials', 100, { q: new URLSearchParams(location.search).get('search')?.trim() || '' });
+        const params = new URLSearchParams(location.search);
+        const data = await request('trials', 100, { q: params.get('search')?.trim() || '', topic: params.get('topic')?.trim() || '' });
         trialNextOffset = data.next_offset;
         trialTotal = Number(data.total_matching || data.trials?.length || 0);
         renderTrials(data.trials || []);
@@ -1404,17 +1412,17 @@
         renderTimeline(dossier.timeline || {});
         renderTopicEvidence({ evidence: dossier.evidence || {} });
       } else if (view === 'regulatory') {
-        const data = await request('regulatory', 80);
+        const data = await request('regulatory', 80, { topic: new URLSearchParams(location.search).get('topic')?.trim() || '' });
         renderRegulatory(data.regulatory || [], data.regulatory_guides || [], data.regulatory_coverage || {});
         renderSources(data.sources || [], false);
       } else if (view === 'integrity') {
-        const data = await request('integrity', 80);
+        const data = await request('integrity', 80, { topic: new URLSearchParams(location.search).get('topic')?.trim() || '' });
         renderIntegrity(data.integrity || []);
         renderSources(data.sources || [], false);
       } else if (view === 'graph') {
         const data = await request('graph', 100);
         renderGraph(data);
-        renderSources(data.sources || [], true);
+        renderSources(data.sources || [], false);
       } else if (view === 'entities') {
         const data = await request('entities', 100);
         renderEntities(data.entities || []);

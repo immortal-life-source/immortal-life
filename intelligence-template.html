@@ -142,19 +142,17 @@
 
     <section class="intel-section graph-section" id="graphSection" hidden>
       <div class="section-heading">
-        <div><span class="section-index">How the evidence connects</span><h2>Evidence connections</h2></div>
-        <span class="graph-hint">Choose a topic circle to open its guide</span>
+        <div><span class="section-index">Browse the evidence</span><h2>Evidence by topic</h2></div>
+        <span class="graph-hint">Every number opens the records behind it</span>
       </div>
-      <div class="evidence-graph-wrap">
-        <svg id="evidenceGraph" class="evidence-graph" viewBox="0 0 1200 720" role="img" aria-labelledby="graphTitle graphDescription">
-          <title id="graphTitle">Longevity evidence graph</title>
-          <desc id="graphDescription">A map connecting longevity topics and biological mechanisms to research, trials, regulatory notices, universities, integrity events, and overlapping evidence.</desc>
-        </svg>
-      </div>
-      <div class="graph-legend" aria-label="Graph legend">
-        <span><i data-kind="topic"></i>Topic</span><span><i data-kind="mechanism"></i>Mechanism</span><span><i data-kind="research"></i>Research</span><span><i data-kind="trial"></i>Trials</span><span><i data-kind="regulatory"></i>Regulatory</span><span><i data-kind="integrity"></i>Integrity</span><span><i data-kind="university"></i>Universities</span>
-      </div>
-      <div id="graphFallback" class="graph-fallback"></div>
+      <p class="evidence-explorer-intro">Each row is one tracked longevity topic. Counts show indexed source relationships—not proof that an intervention works—and a record may belong to more than one topic.</p>
+      <form class="evidence-explorer-controls" id="graphControls" role="search" aria-label="Filter evidence topics">
+        <label><span>Find a topic or mechanism</span><input id="graphSearch" type="search" placeholder="Try senescence, mTOR, sleep…" autocomplete="off" /></label>
+        <label><span>Show topics with</span><select id="graphFocus"><option value="">Any indexed evidence</option><option value="research_count">Research</option><option value="trial_count">Trials</option><option value="university_work_count">University activity</option><option value="regulatory_count">Regulatory notices</option><option value="integrity_count">Integrity notices</option></select></label>
+        <label><span>Order by</span><select id="graphSort"><option value="evidence">Most indexed evidence</option><option value="research_count">Most research</option><option value="trial_count">Most trials</option><option value="university_work_count">Most university activity</option><option value="name">Topic name</option></select></label>
+      </form>
+      <p class="filter-result" id="graphResult" aria-live="polite"></p>
+      <div class="evidence-topic-list" id="graphTopicList"></div>
     </section>
 
     <section class="intel-section" id="entitiesSection" hidden>

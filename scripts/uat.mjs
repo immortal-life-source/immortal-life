@@ -170,8 +170,8 @@ async function runViewport(cdp, profileName, width, height, mobile) {
       ,systemMapLower: Boolean(document.querySelector('.home-explorer .hero-orbit'))
       ,timelineVisible: (() => { const el=document.getElementById('timelineSection'); return el ? !el.hidden : null; })()
       ,timelineEvents: document.querySelectorAll('#evidenceTimeline .timeline-event').length
-      ,graphMechanisms: document.querySelectorAll('#evidenceGraph .graph-node--mechanism').length
-      ,graphUniversities: document.querySelectorAll('#evidenceGraph .graph-node--university').length
+      ,graphTopics: document.querySelectorAll('#graphTopicList .evidence-topic-row').length
+      ,graphMetricLinks: document.querySelectorAll('#graphTopicList .evidence-topic-metric[href]').length
       ,trialWorldMapNodes: document.querySelectorAll('.trial-world-map .trial-map-node').length
       ,recordGuideLabels: [...document.querySelectorAll('.record-meaning dt')].map(el => el.textContent.trim())
       ,portalIntroBottom: (() => { const el=document.querySelector('.reader-mode') || document.querySelector('.intel-hero'); return el ? Math.round(el.getBoundingClientRect().bottom) : null; })()
@@ -215,7 +215,7 @@ async function runViewport(cdp, profileName, width, height, mobile) {
     if ((route === '/resources' || route === '/universities') && state.legacyMapCount) failures.push('obsolete decorative map is still visible');
     if (route === '/quality' && (state.qualityPrivateText || state.qualitySourceDirectory)) failures.push('quality page exposes private analytics or duplicate source directory');
     if (route === '/topics/rapamycin' && (!state.timelineVisible || state.timelineEvents < 1)) failures.push('topic evidence timeline did not render');
-    if (route === '/evidence-graph' && (state.graphMechanisms < 1 || state.graphUniversities < 1)) failures.push(`graph missing layers: ${state.graphMechanisms} mechanisms, ${state.graphUniversities} universities`);
+    if (route === '/evidence-graph' && (state.graphTopics < 10 || state.graphMetricLinks < state.graphTopics)) failures.push(`evidence explorer is incomplete: ${state.graphTopics} topics, ${state.graphMetricLinks} linked metrics`);
     if (route === '/discover/recruiting-trials' && !state.url.endsWith('/trials')) failures.push('legacy recruiting-trials route did not redirect to Trial Radar');
     if (/^\/research\/\d+$/.test(route) && !['What this is','Why it may matter','Evidence','Main limitation','What changed','Where to verify'].every(label => state.recordGuideLabels.includes(label))) failures.push('research record plain-language guide is incomplete');
     if (route === '/research' || route === '/trials') {

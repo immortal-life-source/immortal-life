@@ -211,6 +211,18 @@ test('the visitor experience does not introduce a forum', async () => {
   for (const source of sources) assert.doesNotMatch(source, /\bforum\b/i)
 })
 
+test('evidence explorer uses readable topic rows instead of an unreadable node cloud', async () => {
+  const [template, portal, api] = await Promise.all([
+    read('intelligence-template.html'), read('intelligence.js'), read('supabase/functions/public-intelligence/index.ts'),
+  ])
+  assert.match(template, /Evidence by topic/)
+  assert.match(template, /id="graphTopicList"/)
+  assert.doesNotMatch(template, /id="evidenceGraph"/)
+  assert.match(portal, /evidence-topic-metric/)
+  assert.match(portal, /graphResult/)
+  assert.match(api, /topics: explorerTopics/)
+})
+
 test('the completed living atlas includes daily signals, timelines, plain-language cards, and connected discovery', async () => {
   const [home, main, portalTemplate, portal, publicPages, publicApi, css] = await Promise.all([
     read('index.html'), read('main.js'), read('intelligence-template.html'), read('intelligence.js'),

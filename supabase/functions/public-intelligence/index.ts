@@ -517,7 +517,38 @@ Deno.serve(async (req) => {
       }
 
       for (const pair of overlapsResult.data ?? []) links.push({ source: `topic:${pair.left_slug}`, target: `topic:${pair.right_slug}`, kind: 'overlap', weight: Number(pair.overlap_count ?? 0) })
-      return response(req, { generated_at: new Date().toISOString(), nodes, links, sources: (sourcesResult.data ?? []).map(publicSourceState) })
+      const names = new Map(topics.map((item: any) => [item.slug, item.name]))
+      const related = new Map<string, Array<{ slug: string; name: string; shared_records: number }>>()
+      for (const pair of overlapsResult.data ?? []) {
+        const count = Number(pair.overlap_count ?? 0)
+        const left = related.get(pair.left_slug) ?? []
+        const right = related.get(pair.right_slug) ?? []
+        left.push({ slug: pair.right_slug, name: names.get(pair.right_slug) ?? pair.right_slug, shared_records: count })
+        right.push({ slug: pair.left_slug, name: names.get(pair.left_slug) ?? pair.left_slug, shared_records: count })
+        related.set(pair.left_slug, left)
+        related.set(pair.right_slug, right)
+      }
+      const explorerTopics = topics.map((item: any) => {
+        const researchCount = Number(item.research_count ?? 0)
+        const trialCount = Number(item.trial_count ?? 0)
+        const universityCount = Number(item.university_work_count ?? 0)
+        const regulatoryCount = Number(item.regulatory_count ?? 0)
+        const integrityCount = Number(item.integrity_count ?? 0)
+        return {
+          slug: item.slug,
+          name: item.name,
+          description: item.description,
+          mechanism: TOPIC_MECHANISMS[item.slug] ?? null,
+          research_count: researchCount,
+          trial_count: trialCount,
+          university_work_count: universityCount,
+          regulatory_count: regulatoryCount,
+          integrity_count: integrityCount,
+          evidence_total: researchCount + trialCount + universityCount + regulatoryCount + integrityCount,
+          related_topics: (related.get(item.slug) ?? []).sort((left, right) => right.shared_records - left.shared_records).slice(0, 4),
+        }
+      })
+      return response(req, { generated_at: new Date().toISOString(), topics: explorerTopics, nodes, links, sources: (sourcesResult.data ?? []).map(publicSourceState) })
     }
 
     const [topicsResult, researchResult, trialsResult, sourcesResult, researchCount, trialsCount] = await Promise.all([
