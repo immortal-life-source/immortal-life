@@ -109,8 +109,8 @@ test('public page shells provide search, related journeys and mobile navigation'
 })
 
 test('mobile hamburger and dock navigation are identical on every public shell', async () => {
-  const [home, intelligence, content, privacy] = await Promise.all([
-    read('index.html'), read('intelligence-template.html'), read('content-template.html'), read('privacy.html'),
+  const [home, intelligence, content, privacy, confirmed, unsubscribed] = await Promise.all([
+    read('index.html'), read('intelligence-template.html'), read('content-template.html'), read('privacy.html'), read('confirmed.html'), read('unsubscribed.html'),
   ])
   const menuLinks = (source, id) => {
     const menu = source.match(new RegExp(`<nav[^>]+id="${id}"[\\s\\S]*?<\\/nav>`))?.[0] || ''
@@ -120,6 +120,8 @@ test('mobile hamburger and dock navigation are identical on every public shell',
   assert.deepEqual(menuLinks(home, 'primaryNav'), expected)
   assert.deepEqual(menuLinks(content, 'intelNav'), expected)
   assert.deepEqual(menuLinks(privacy, 'intelNav'), expected)
+  assert.deepEqual(menuLinks(confirmed, 'confirmedMemberNav'), expected)
+  assert.deepEqual(menuLinks(unsubscribed, 'unsubscribedMemberNav'), expected)
   const dock = (source) => source.match(/<nav class="mobile-dock"[\s\S]*?<\/nav>/)?.[0].replace(/\s+/g, ' ')
   assert.equal(dock(home), dock(intelligence))
   assert.equal(dock(content), dock(intelligence))
