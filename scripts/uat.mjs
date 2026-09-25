@@ -296,4 +296,8 @@ try {
   browser.unref();
   await sleep(300);
   try { rmSync(profile, { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }); } catch (_) { /* OS cleanup will remove the disposable profile. */ }
+  // Chrome can leave inherited Windows pipe handles open after its main
+  // process exits. At this point the report and cleanup are complete, so end
+  // the harness with the result it already calculated.
+  process.exit(process.exitCode || 0);
 }
