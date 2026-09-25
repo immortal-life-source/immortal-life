@@ -108,6 +108,7 @@ test('public data views recover from brief Edge Function saturation', async () =
   assert.match(portal, /fetchWithDeadline/)
   assert.match(portal, /immortal-life-public-intelligence-v1/)
   assert.match(portal, /const endpoint = '\/api\/intelligence'/)
+  assert.match(portal, /new URL\(endpoint, window\.location\.origin\)/)
   assert.match(portal, /timeoutMs = 6500/)
   assert.match(proxy, /s-maxage=300/)
   assert.match(proxy, /stale-if-error=604800/)

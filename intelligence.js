@@ -1423,7 +1423,7 @@
   }
 
   async function request(viewName, limit, params = {}) {
-    const url = new URL(endpoint);
+    const url = new URL(endpoint, window.location.origin);
     url.searchParams.set('quality_rules', '20260916b');
     url.searchParams.set('view', viewName);
     url.searchParams.set('limit', String(limit));
