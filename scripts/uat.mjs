@@ -170,6 +170,7 @@ async function runViewport(cdp, profileName, width, height, mobile) {
       ,legacyMapCount: document.querySelectorAll('.resource-map,.university-map').length
       ,qualityPrivateText: /Google impressions|Google visits|Search pages to improve|Weekly briefing delivery/.test(document.body?.innerText || '')
       ,qualitySourceDirectory: (() => { const el=document.getElementById('sourceSection'); return el ? !el.hidden : false; })()
+      ,researchPrimary: (() => { const nav=${navLookupExpression}; if (!nav) return false; const primary=nav.querySelector('.s1-nav-top') || nav; const children=[...primary.children]; const research=children.find(el => el.matches?.('a[href="/research"]')); const more=children.find(el => el.classList?.contains('s1-nav-more-toggle') || el.classList?.contains('intel-nav-more')); return Boolean(research && more && children.indexOf(research) < children.indexOf(more)); })()
     }))()`);
     const recentEvents = cdp.events.slice(eventStart);
     const exceptions = recentEvents.filter((event) => event.method === 'Runtime.exceptionThrown').map((event) => event.params?.exceptionDetails?.text || 'runtime exception');
@@ -184,6 +185,7 @@ async function runViewport(cdp, profileName, width, height, mobile) {
     if (state.overflow > 2) failures.push(`horizontal overflow ${state.overflow}px: ${JSON.stringify({ outside: state.overflowing, internal: state.internalOverflow })}`);
     if (state.brokenImages.length) failures.push(`broken images: ${state.brokenImages.join(', ')}`);
     if (!state.logoLoaded) failures.push('brand mark failed to load');
+    if (!state.researchPrimary) failures.push('Research is not a primary navigation item before More');
     if (mobile && state.menuButtonVisible !== true) failures.push('mobile menu button hidden or missing');
     if (route === '/' && !mobile && state.menuButtonVisible !== false) failures.push('desktop menu button visible');
     if (route === '/' && state.todayCards !== 6) failures.push(`daily briefing has ${state.todayCards} cards instead of 6`);
@@ -202,6 +204,26 @@ async function runViewport(cdp, profileName, width, height, mobile) {
     if (route === '/evidence-graph' && (state.graphMechanisms < 1 || state.graphUniversities < 1)) failures.push(`graph missing layers: ${state.graphMechanisms} mechanisms, ${state.graphUniversities} universities`);
     if (route === '/discover/recruiting-trials' && !state.url.endsWith('/trials')) failures.push('legacy recruiting-trials route did not redirect to Trial Radar');
     if (/^\/research\/\d+$/.test(route) && !['What this is','Why it may matter','Evidence','Main limitation','What changed','Where to verify'].every(label => state.recordGuideLabels.includes(label))) failures.push('research record plain-language guide is incomplete');
+    if (route === '/research' || route === '/trials') {
+      const prefix = route === '/research' ? 'research' : 'trial';
+      const interaction = await evaluate(cdp, `(() => {
+        const controls=document.getElementById('${route === '/research' ? 'researchControls' : 'trialControls'}');
+        const input=document.getElementById('${route === '/research' ? 'researchSearch' : 'trialSearch'}');
+        const result=document.getElementById('${route === '/research' ? 'researchResult' : 'trialResult'}');
+        const list=document.getElementById('${route === '/research' ? 'researchList' : 'trialList'}');
+        const clear=document.getElementById('${route === '/research' ? 'researchClear' : 'trialClear'}');
+        const initial={visible:controls ? !controls.hidden && getComputedStyle(controls).display !== 'none' : false,result:result?.textContent||'',cards:list?.querySelectorAll('.record-card').length||0,topics:document.getElementById('${route === '/research' ? 'researchTopic' : 'trialTopic'}')?.options.length||0};
+        if (input) { input.value='uat-no-match-7f8e9d'; input.dispatchEvent(new Event('input',{bubbles:true})); }
+        const empty={result:result?.textContent||'',message:list?.textContent||'',cards:list?.querySelectorAll('.record-card').length||0};
+        clear?.click();
+        return {initial,empty,cleared:{value:input?.value||'',result:result?.textContent||'',cards:list?.querySelectorAll('.record-card').length||0}};
+      })()`);
+      if (!interaction.initial.visible) failures.push(`${prefix} search controls are hidden`);
+      if (interaction.initial.cards < 1 || interaction.initial.cards > 60) failures.push(`${prefix} initial result renders ${interaction.initial.cards} cards`);
+      if (interaction.initial.topics < 2) failures.push(`${prefix} topic filter has no choices`);
+      if (interaction.empty.cards !== 0 || !/showing 0/i.test(interaction.empty.result)) failures.push(`${prefix} text search did not filter to zero results`);
+      if (interaction.cleared.value || interaction.cleared.cards < 1) failures.push(`${prefix} clear-filters action did not restore results`);
+    }
     failures.push(...exceptions, ...consoleErrors);
     results.push({ profile: profileName, route, resolvedUrl: state.url, failures });
 

@@ -72,7 +72,7 @@ test('desktop homepage keeps navigation compact and motion clear of the headline
 })
 
 test('research and trials use complete searchable filter systems', async () => {
-  const [template, portal, css] = await Promise.all([read('intelligence-template.html'), read('intelligence.js'), read('intelligence.css')])
+  const [template, portal, css, build] = await Promise.all([read('intelligence-template.html'), read('intelligence.js'), read('intelligence.css'), read('build.js')])
   for (const id of ['researchControls', 'researchSearch', 'researchTopic', 'researchEvidence', 'researchAccess', 'researchResult', 'trialControls', 'trialSearch', 'trialTopic', 'trialStatus', 'trialPhase', 'trialCountry', 'trialResult']) assert.match(template, new RegExp(`id="${id}"`))
   assert.match(portal, /request\('research', 500\)/)
   assert.match(portal, /request\('trials', 500\)/)
@@ -81,6 +81,8 @@ test('research and trials use complete searchable filter systems', async () => {
   assert.match(portal, /Showing the newest/)
   assert.match(css, /\.record-controls/)
   assert.match(css, /\.record-controls--trials/)
+  assert.match(build, /filename: 'research\.html',[\s\S]*?PAGE_VIEW: 'research'/)
+  assert.doesNotMatch(build, /filename: 'research\.html',[\s\S]{0,300}?PAGE_VIEW: 'overview'/)
 })
 
 test('public page shells provide search, related journeys and mobile navigation', async () => {

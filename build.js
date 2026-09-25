@@ -123,7 +123,7 @@ const intelligencePages = [
     PAGE_TITLE: 'Longevity Research Intelligence — immortal.life',
     PAGE_DESCRIPTION: 'A plain map of new longevity papers and clinical studies. Every item links to the original source so you can check the details yourself.',
     CANONICAL_URL: `${site}/research`,
-    PAGE_VIEW: 'overview',
+    PAGE_VIEW: 'research',
     TOPIC_SLUG: '',
     PAGE_KICKER: 'Longevity research, updated automatically',
     PAGE_HEADING: 'Follow new longevity research without getting lost.',
