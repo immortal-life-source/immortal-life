@@ -1226,7 +1226,6 @@
       badges.append(
         el('span', resource.integration_status === 'live' ? 'resource-badge resource-badge--live' : 'resource-badge', resource.integration_status === 'live' ? 'Live data feed' : 'Verified official link'),
         el('span', 'resource-badge', resource.access_mode === 'api' ? 'Data interface available' : resourceLabel(resource.access_mode)),
-        el('span', 'resource-badge', resource.reuse_status === 'open' ? 'Reuse allowed' : resource.reuse_status === 'link-only' ? 'Link to source' : 'Source terms apply'),
       );
       const actions = el('div', 'resource-actions');
       if (resource.data_url) { const dataLink = link('section-link', 'Visit data page', resource.data_url); dataLink.target = '_blank'; dataLink.rel = 'noopener noreferrer'; actions.append(dataLink); }

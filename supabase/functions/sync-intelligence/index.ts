@@ -459,7 +459,6 @@ async function syncPubMed(supabase: any, topic: Topic, job: Job): Promise<SyncOu
     const externalId = xmlText(article, 'PMID')
     const title = xmlText(article, 'ArticleTitle')
     if (!externalId || !title) return null
-    const abstractText = xmlTexts(article, 'AbstractText', 20).join(' ') || null
     const publicationTypes = xmlTexts(article, 'PublicationType', 20)
     const meshTerms = xmlTexts(article, 'DescriptorName', 60)
     const keywordTerms = xmlTexts(article, 'Keyword', 30)
@@ -477,7 +476,6 @@ async function syncPubMed(supabase: any, topic: Topic, job: Job): Promise<SyncOu
     const level = classifyEvidence(publicationType, title, 'pubmed')
     const assessment = assessTopicMatch(topic.slug, {
       title,
-      abstract: abstractText,
       controlledTerms,
       studyType: publicationType,
       sourceId: 'pubmed',
@@ -493,7 +491,7 @@ async function syncPubMed(supabase: any, topic: Topic, job: Job): Promise<SyncOu
       published_on: publishedOn,
       doi,
       publication_type: publicationType || null,
-      abstract_text: abstractText,
+      abstract_text: null,
       controlled_terms: controlledTerms,
       evidence_level: level,
       source_url: `https://pubmed.ncbi.nlm.nih.gov/${encodeURIComponent(externalId)}/`,
@@ -586,7 +584,6 @@ async function syncEuropePmc(supabase: any, topic: Topic, job: Job): Promise<Syn
       const status = /(retraction of publication|retracted publication)/i.test(publicationType)
         ? 'retracted'
         : 'published'
-      const abstractText = cleanText(item?.abstractText, 5000) || null
       const meshTerms = Array.isArray(item?.meshHeadingList?.meshHeading)
         ? item.meshHeadingList.meshHeading.flatMap((heading: any) => [heading?.descriptorName, ...(Array.isArray(heading?.qualifierName) ? heading.qualifierName : [])])
         : []
@@ -594,7 +591,6 @@ async function syncEuropePmc(supabase: any, topic: Topic, job: Job): Promise<Syn
       const controlledTerms = uniqueStrings([...meshTerms, ...keywordTerms], 80)
       const assessment = assessTopicMatch(topic.slug, {
         title,
-        abstract: abstractText,
         controlledTerms,
         studyType: publicationType,
         sourceId: 'europe-pmc',
@@ -611,7 +607,7 @@ async function syncEuropePmc(supabase: any, topic: Topic, job: Job): Promise<Syn
         published_on: dateOnly(item?.firstPublicationDate ?? item?.electronicPublicationDate ?? item?.pubYear),
         doi,
         publication_type: publicationType || null,
-        abstract_text: abstractText,
+        abstract_text: null,
         controlled_terms: controlledTerms,
         evidence_level: level,
         source_url: `https://europepmc.org/article/${encodeURIComponent(source)}/${encodeURIComponent(externalId)}`,
@@ -830,7 +826,11 @@ Deno.serve(async (req) => {
       .order('sort_order')
     if (topicsError) throw topicsError
 
-    let sourceQuery = supabase.from('content_sources').select('id').eq('enabled', true).in('id', [...GENERIC_SOURCE_IDS])
+    let sourceQuery = supabase.from('content_sources').select('id')
+      .eq('enabled', true)
+      .eq('automated_ingestion_allowed', true)
+      .eq('public_display_allowed', true)
+      .in('id', [...GENERIC_SOURCE_IDS])
     if (requestedSource !== 'all') sourceQuery = sourceQuery.eq('id', requestedSource)
     const { data: sources, error: sourcesError } = await sourceQuery
     if (sourcesError) throw sourcesError

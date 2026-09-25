@@ -136,6 +136,7 @@ Deno.serve(async (req) => {
       .from('content_sources')
       .select('id,name,kind,homepage_url,update_cadence,last_success_at,consecutive_failures')
       .eq('enabled', true)
+      .eq('public_display_allowed', true)
       .order('name')
 
     if (view === 'quality') {

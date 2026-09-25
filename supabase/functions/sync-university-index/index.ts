@@ -192,12 +192,11 @@ async function processWorksPage(supabase: any, topic: any, state: SyncState): Pr
       const externalId = openAlexId(work?.id, 'W')
       const title = clean(work?.title, 500)
       if (!externalId || !title) return null
-      const abstract = abstractFromInvertedIndex(work?.abstract_inverted_index)
       const controlledTerms = [...new Set([...(work?.topics ?? []), ...(work?.keywords ?? [])].map((item: any) => clean(item?.display_name, 180)).filter(Boolean))]
       const publicationType = clean(work?.type, 120).replace(/_/g, ' ') || null
       const journal = clean(work?.primary_location?.source?.display_name, 240) || null
       const publishedOn = clean(work?.publication_date, 10) || null
-      const assessment = assessTopicMatch(topic.slug, { title, abstract, controlledTerms, studyType: publicationType, sourceId: SOURCE_ID, sourceDate: publishedOn })
+      const assessment = assessTopicMatch(topic.slug, { title, controlledTerms, studyType: publicationType, sourceId: SOURCE_ID, sourceDate: publishedOn })
       assessments.set(externalId, assessment)
       const level = classifyEvidence(publicationType, title, SOURCE_ID)
       const doi = clean(work?.doi, 300).replace(/^https:\/\/doi\.org\//i, '') || null
@@ -205,7 +204,7 @@ async function processWorksPage(supabase: any, topic: any, state: SyncState): Pr
         source_id: SOURCE_ID, external_id: externalId, title,
         authors: clean((work?.authorships ?? []).map((authorship: any) => authorship?.author?.display_name).filter(Boolean).join(', '), 3000) || null,
         journal, published_on: publishedOn, doi, publication_type: publicationType,
-        abstract_text: abstract, controlled_terms: controlledTerms, evidence_level: level,
+        abstract_text: null, controlled_terms: controlledTerms, evidence_level: level,
         source_url: workLink(work), is_open_access: work?.open_access?.is_oa == null ? null : Boolean(work.open_access.is_oa),
         cited_by_count: Math.max(0, Math.trunc(Number(work?.cited_by_count ?? 0))),
         editorial_summary: researchEditorialSummary(level, journal), source_updated_at: work?.updated_date || now,

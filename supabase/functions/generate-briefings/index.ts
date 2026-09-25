@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     const period = mondayPeriod()
     const [{ data: preferences, error: preferencesError }, { data: events, error: eventsError }] = await Promise.all([
       supabase.from('member_briefing_preferences').select('member_id').eq('enabled', true).limit(1000),
-      supabase.from('intelligence_change_events').select('event_type,importance,record_type,record_id,title,source_url,occurred_at,topic_slugs,watch_keys,metadata').neq('event_type', 'quality_state_changed').gte('occurred_at', period.since).lt('occurred_at', period.until).order('occurred_at', { ascending: false }).limit(2000),
+      supabase.from('intelligence_change_events').select('event_type,importance,record_type,record_id,title,source_url,occurred_at,topic_slugs,watch_keys,metadata,content_sources!inner(paid_distribution_allowed)').eq('content_sources.paid_distribution_allowed', true).neq('event_type', 'quality_state_changed').gte('occurred_at', period.since).lt('occurred_at', period.until).order('occurred_at', { ascending: false }).limit(2000),
     ])
     if (preferencesError || eventsError) throw preferencesError ?? eventsError
     let generated = 0
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
       const { data: watches, error: watchesError } = await supabase.from('member_radar_watches').select('watch_type,watch_key,label').eq('member_id', preference.member_id)
       if (watchesError) throw watchesError
       if (!watches?.length) continue
-      const relevant = (events ?? []).filter((event: any) => isMeaningfulEvent(event) && matches(event, watches)).slice(0, 60)
+      const relevant = (events ?? []).filter((event: any) => isMeaningfulEvent(event) && matches(event, watches)).map(({ content_sources: _source, ...event }: any) => event).slice(0, 60)
       const grouped: Record<string, any[]> = { research: [], trials: [], regulatory: [], integrity: [] }
       for (const event of relevant) grouped[event.record_type]?.push({ id: event.record_id, title: event.title, source_url: event.source_url, event_type: event.event_type, importance: event.importance, occurred_at: event.occurred_at, metadata: event.metadata })
       const counts = Object.fromEntries(Object.entries(grouped).map(([kind, rows]) => [kind, rows.length]))
@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
       const { error: insertError } = await supabase.from('member_briefings').upsert({
         member_id: preference.member_id, period_start: period.start, period_end: period.end,
         title: `Personal longevity radar · ${period.start}`, summary,
-        payload: { watches: watches.map((watch: any) => ({ type: watch.watch_type, key: watch.watch_key, label: watch.label })), counts, changes: relevant.slice(0, 20), research: grouped.research.slice(0, 8), trials: grouped.trials.slice(0, 8), regulatory: grouped.regulatory.slice(0, 8), integrity: grouped.integrity.slice(0, 8), medical_notice: 'Research information only. Not medical advice, diagnosis, or treatment guidance.' },
+        payload: { watches: watches.map((watch: any) => ({ type: watch.watch_type, key: watch.watch_key, label: watch.label })), counts, changes: relevant.slice(0, 20), research: grouped.research.slice(0, 8), trials: grouped.trials.slice(0, 8), regulatory: grouped.regulatory.slice(0, 8), integrity: grouped.integrity.slice(0, 8), rights_policy: 'commercial-cleared-sources-only', medical_notice: 'Research information only. Not medical advice, diagnosis, or treatment guidance.' },
         generated_at: new Date().toISOString(),
       }, { onConflict: 'member_id,period_start' })
       if (insertError) throw insertError
