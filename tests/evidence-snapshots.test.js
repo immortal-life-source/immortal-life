@@ -36,6 +36,7 @@ test('evidence snapshots and topic evidence are exposed on public pages', async 
   assert.match(pages, /What the source actually supports/)
   assert.match(portal, /appendEvidenceSnapshot/)
   assert.match(portal, /renderTopicEvidence/)
+  assert.match(api, /Only use an inner relationship when a topic filter needs it/)
 })
 
 test('ISRCTN and DOAJ are explicit, commercially-cleared live feeds', async () => {

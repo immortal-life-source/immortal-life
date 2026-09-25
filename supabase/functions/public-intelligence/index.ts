@@ -302,7 +302,12 @@ Deno.serve(async (req) => {
       const search = publicSearchTerm(url.searchParams.get('q'))
       const evidence = cleanText(url.searchParams.get('evidence') ?? '', 40)
       const access = cleanText(url.searchParams.get('access') ?? '', 12)
-      const topicRelation = 'research_item_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
+      // Only use an inner relationship when a topic filter needs it. An inner
+      // join across every topic relation made the unfiltered global index and
+      // its exact count increasingly expensive as historical coverage grew.
+      const topicRelation = topic
+        ? 'research_item_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
+        : 'research_item_topics(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
       let query = supabase
         .from('research_items')
         .select(`id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,evidence_snapshot,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${topicRelation}`, { count: 'exact' })
@@ -331,7 +336,9 @@ Deno.serve(async (req) => {
       const status = cleanText(url.searchParams.get('status') ?? '', 80)
       const phase = cleanText(url.searchParams.get('phase') ?? '', 80)
       const country = cleanText(url.searchParams.get('country') ?? '', 120)
-      const topicRelation = 'clinical_trial_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
+      const topicRelation = topic
+        ? 'clinical_trial_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
+        : 'clinical_trial_topics(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
       let query = supabase
         .from('clinical_trials')
         .select(`id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,evidence_snapshot,source_url,editorial_summary,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${topicRelation}`, { count: 'exact' })
