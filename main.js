@@ -9,20 +9,12 @@
 (function initMobileNavigation() {
   const toggle = document.querySelector('.mobile-nav-toggle');
   const nav = document.getElementById('primaryNav');
-  const moreToggle = document.querySelector('.s1-nav-more-toggle');
   if (!toggle || !nav) return;
-
-  function setMoreMenu(open) {
-    if (open) nav.setAttribute('data-more-open', 'true');
-    else nav.removeAttribute('data-more-open');
-    moreToggle?.setAttribute('aria-expanded', String(open));
-  }
 
   function closeMenu() {
     toggle.setAttribute('aria-expanded', 'false');
     toggle.setAttribute('aria-label', 'Open navigation');
     nav.removeAttribute('data-open');
-    setMoreMenu(false);
   }
 
   toggle.addEventListener('click', () => {
@@ -35,15 +27,6 @@
 
   nav.addEventListener('click', (event) => {
     if (event.target.closest('a')) closeMenu();
-  });
-
-  moreToggle?.addEventListener('click', (event) => {
-    event.stopPropagation();
-    setMoreMenu(nav.getAttribute('data-more-open') !== 'true');
-  });
-
-  document.addEventListener('click', (event) => {
-    if (window.innerWidth > 768 && nav.hasAttribute('data-more-open') && !nav.contains(event.target)) setMoreMenu(false);
   });
 
   document.addEventListener('keydown', (event) => {

@@ -32,6 +32,10 @@ function response(body: string, type: string, status = 200, cache = 'public, max
   return new Response(body, { status, headers: { 'Content-Type': type, 'Cache-Control': cache, 'X-Content-Type-Options': 'nosniff', 'Access-Control-Allow-Origin': '*' } })
 }
 
+function streamResponse(body: ReadableStream<Uint8Array>, type: string): Response {
+  return new Response(body, { status: 200, headers: { 'Content-Type': type, 'Cache-Control': 'public, max-age=900', 'X-Content-Type-Options': 'nosniff', 'Access-Control-Allow-Origin': '*' } })
+}
+
 function formatDate(value: unknown): string {
   if (!value) return 'Date unavailable'
   const date = new Date(String(value))
@@ -57,7 +61,7 @@ function pageShell(input: { title: string; description: string; canonical: strin
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(input.title)}"><meta name="twitter:description" content="${escapeHtml(input.description)}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,300&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="/intelligence.css?v=20260925-ux-consolidation-a"><link rel="icon" href="/favicon.ico">
 <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}</script></head><body>
-<header class="intel-header"><a class="intel-logo" href="/" aria-label="immortal.life home"><img src="/linkedin-app-logo.png" width="54" height="54" alt="" decoding="async"><span>immortal.life</span></a><button class="intel-nav-toggle" id="intelNavToggle" type="button" aria-expanded="false" aria-controls="intelNav"><span>Menu</span><i aria-hidden="true"></i></button><nav class="intel-nav" id="intelNav" aria-label="Primary navigation"><a href="/changes">Today</a><a href="/topics">Topics</a><a href="/trials">Trials</a><a href="/universities">Universities</a><div class="intel-nav-more"><button class="intel-nav-more-toggle" type="button" aria-expanded="false">More</button><div><form class="intel-nav-search" role="search"><input type="search" aria-label="Search longevity topics" placeholder="Search topics…"><button type="submit">Search</button></form><a href="/discover">Explore</a><a href="/learn">Longevity 101</a><a href="/research">Research</a><a href="/regulatory">Regulatory</a><a href="/resources">Resources</a><a href="/briefings">Briefings</a><a href="/methodology">How it works</a></div></div></nav></header>
+<header class="intel-header"><a class="intel-logo" href="/" aria-label="immortal.life home"><img src="/linkedin-app-logo.png" width="54" height="54" alt="" decoding="async"><span>immortal.life</span></a><button class="intel-nav-toggle" id="intelNavToggle" type="button" aria-expanded="false" aria-controls="intelNav"><span>Menu</span><i aria-hidden="true"></i></button><nav class="intel-nav" id="intelNav" aria-label="Primary navigation"><a href="/changes">Today</a><a href="/topics">Topics</a><a href="/trials">Trials</a><a href="/universities">Universities</a><a href="/research">Research</a><a href="/discover">Explore</a><a href="/learn">Longevity 101</a><a href="/regulatory">Regulatory</a><a href="/resources">Resources</a><a href="/briefings">Briefings</a><a href="/methodology">How it works</a><form class="intel-nav-search" role="search"><input type="search" aria-label="Search longevity topics" placeholder="Search topics…"><button type="submit">Search</button></form></nav></header>
 <main><section class="intel-hero record-hero"><div class="bio-ambient bio-ambient--intel" aria-hidden="true"><div class="bio-dna"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><div class="bio-human"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div class="intel-kicker">${escapeHtml(input.kicker)}</div><h1>${escapeHtml(input.heading)}</h1><p class="intel-lede">${escapeHtml(input.description)}</p></section>${input.body}<nav class="next-journey" aria-label="Related discoveries"><span>${input.journeys?.length ? 'Related discoveries' : 'Continue exploring'}</span>${(input.journeys?.length ? input.journeys : [{ href: '/changes', label: "What's new today" }, { href: '/topics', label: 'Choose a topic' }, { href: '/trials', label: 'Open Trial Radar' }, { href: '/universities', label: 'Compare universities' }]).map((item) => `<a href="${escapeHtml(item.href)}">${escapeHtml(item.label)}</a>`).join('')}</nav></main>
 <footer class="intel-footer"><p><strong>Automated publication.</strong> ${escapeHtml(DISCLOSURE)} Research information only; not medical advice, diagnosis, or treatment guidance.</p><div><a href="/changes">What's new</a><a href="/reports">Reports</a><a href="/data">Data & feeds</a><a href="/methodology">Methodology</a><a href="/automation">Automation disclosure</a><a href="/corrections">Corrections</a><span>© 2026 immortal.life</span></div></footer><nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/topics"><span aria-hidden="true">◇</span>Topics</a><a href="/trials"><span aria-hidden="true">＋</span>Trials</a><a href="/changes"><span aria-hidden="true">↻</span>Updates</a><button type="button" data-mobile-menu-open><span aria-hidden="true">☰</span>Menu</button></nav><script src="/il-config.js"></script><script src="/intelligence.js?v=20260925-ux-consolidation-a"></script><script src="/telemetry.js"></script></body></html>`
 }
@@ -205,6 +209,17 @@ function sitemapUrlset(urls: Array<{ path: string; modified?: string }>): string
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((item) => `<url><loc>${xml(SITE + item.path)}</loc>${item.modified ? `<lastmod>${xml(String(item.modified).slice(0, 10))}</lastmod>` : ''}</url>`).join('')}</urlset>`
 }
 
+async function collectAllRows(fetchPage: (from: number, to: number) => PromiseLike<any>, pageSize = 1000): Promise<any[]> {
+  const rows: any[] = []
+  for (let offset = 0; ; offset += pageSize) {
+    const result = await fetchPage(offset, offset + pageSize - 1)
+    if (result.error) throw result.error
+    const page = result.data ?? []
+    rows.push(...page)
+    if (page.length < pageSize) return rows
+  }
+}
+
 async function sitemap(supabase: any, type = 'index'): Promise<string> {
   const allowed = ['static', 'topics', 'research', 'trials', 'regulatory', 'integrity', 'briefings', 'entities', 'universities']
   if (type === 'index') {
@@ -214,30 +229,28 @@ async function sitemap(supabase: any, type = 'index'): Promise<string> {
   if (type === 'static') {
     return sitemapUrlset(['', '/learn', '/discover', '/changes', '/discover/regulatory-status', '/discover/research-integrity', '/research', '/trials', '/topics', '/universities', '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/resources', '/entities', '/quality', '/reports', '/methodology', '/automation', '/publication-policy', '/corrections', '/data'].map((path) => ({ path })))
   }
-  let result: any
   let urls: Array<{ path: string; modified?: string }> = []
   if (type === 'topics') {
-    result = await supabase.from('intelligence_topics').select('slug,updated_at').eq('enabled', true)
-    urls = (result.data ?? []).map((row: any) => ({ path: `/topics/${row.slug}`, modified: row.updated_at }))
+    const rows = await collectAllRows((from, to) => supabase.from('intelligence_topics').select('slug,updated_at').eq('enabled', true).order('slug').range(from, to))
+    urls = rows.map((row: any) => ({ path: `/topics/${row.slug}`, modified: row.updated_at }))
   } else if (type === 'briefings') {
-    result = await supabase.from('public_briefings').select('slug,updated_at').order('period_start', { ascending: false }).limit(500)
-    urls = (result.data ?? []).map((row: any) => ({ path: `/briefings/${row.slug}`, modified: row.updated_at }))
+    const rows = await collectAllRows((from, to) => supabase.from('public_briefings').select('slug,updated_at').order('period_start', { ascending: false }).range(from, to))
+    urls = rows.map((row: any) => ({ path: `/briefings/${row.slug}`, modified: row.updated_at }))
   } else if (type === 'entities') {
-    result = await supabase.from('intelligence_entities').select('kind,slug,updated_at,record_count,metadata').neq('kind', 'topic').order('updated_at', { ascending: false }).limit(10000)
-    urls = (result.data ?? []).filter((row: any) => Number(row.record_count ?? 0) >= Number(row.metadata?.minimum_records ?? 1)).map((row: any) => ({ path: `/entities/${row.kind}/${row.slug}`, modified: row.updated_at }))
+    const rows = await collectAllRows((from, to) => supabase.from('intelligence_entities').select('kind,slug,updated_at,record_count,metadata').neq('kind', 'topic').order('updated_at', { ascending: false }).order('slug').range(from, to))
+    urls = rows.filter((row: any) => Number(row.record_count ?? 0) >= Number(row.metadata?.minimum_records ?? 1)).map((row: any) => ({ path: `/entities/${row.kind}/${row.slug}`, modified: row.updated_at }))
   } else if (type === 'universities') {
-    result = await supabase.from('university_research_institutions').select('slug,updated_at').eq('is_eligible', true).order('research_index_score', { ascending: false }).limit(10000)
-    urls = (result.data ?? []).map((row: any) => ({ path: `/universities/${row.slug}`, modified: row.updated_at }))
+    const rows = await collectAllRows((from, to) => supabase.from('university_research_institutions').select('slug,updated_at').eq('is_eligible', true).order('research_index_score', { ascending: false }).order('slug').range(from, to))
+    urls = rows.map((row: any) => ({ path: `/universities/${row.slug}`, modified: row.updated_at }))
   } else {
-    const spec: Record<string, { table: string; modified: string; limit: number }> = {
-      research: { table: 'research_items', modified: 'last_seen_at', limit: 20000 }, trials: { table: 'clinical_trials', modified: 'last_seen_at', limit: 20000 },
-      regulatory: { table: 'regulatory_events', modified: 'last_seen_at', limit: 5000 }, integrity: { table: 'research_integrity_events', modified: 'detected_at', limit: 5000 },
+    const spec: Record<string, { table: string; modified: string }> = {
+      research: { table: 'research_items', modified: 'last_seen_at' }, trials: { table: 'clinical_trials', modified: 'last_seen_at' },
+      regulatory: { table: 'regulatory_events', modified: 'last_seen_at' }, integrity: { table: 'research_integrity_events', modified: 'detected_at' },
     }
     const selected = spec[type]
-    result = await supabase.from(selected.table).select(`id,${selected.modified}`).eq('publication_state', 'published').order('id', { ascending: false }).limit(selected.limit)
-    urls = (result.data ?? []).map((row: any) => ({ path: `/${type}/${row.id}`, modified: row[selected.modified] }))
+    const rows = await collectAllRows((from, to) => supabase.from(selected.table).select(`id,${selected.modified}`).eq('publication_state', 'published').order('id', { ascending: false }).range(from, to))
+    urls = rows.map((row: any) => ({ path: `/${type}/${row.id}`, modified: row[selected.modified] }))
   }
-  if (result?.error) throw result.error
   return sitemapUrlset(urls)
 }
 
@@ -383,18 +396,18 @@ async function universityPage(supabase: any, slug: string): Promise<string | nul
   if (error) throw error
   if (!university) return null
   const { data: scopedMetrics, error: scopedError } = await supabase.from('university_research_topic_metrics')
-    .select('topic_slug,works_five_year,works_two_year,representative_work_count,representative_citations,representative_open_access_count,representative_works,intelligence_topics(name,description)')
+    .select('topic_slug,works_all_time,works_five_year,works_two_year,representative_work_count,representative_citations,representative_open_access_count,intelligence_topics(name,description)')
     .eq('openalex_id', university.openalex_id).order('works_five_year', { ascending: false })
   if (scopedError) throw scopedError
   const rows = scopedMetrics ?? []
-  const maxWorks = Math.max(1, ...rows.map((metric: any) => Number(metric.works_five_year ?? 0)))
+  const maxWorks = Math.max(1, ...rows.map((metric: any) => Number(metric.works_all_time ?? 0)))
   const topicRows = rows.map((metric: any) => {
-    const works = Number(metric.works_five_year ?? 0)
+    const works = Number(metric.works_all_time ?? 0)
+    const fiveYear = Number(metric.works_five_year ?? 0)
     const recent = Number(metric.works_two_year ?? 0)
     const topicName = metric.intelligence_topics?.name || metric.topic_slug.replace(/-/g, ' ')
-    const representative = Array.isArray(metric.representative_works) ? metric.representative_works.slice(0, 5) : []
-    const workList = representative.length ? `<ul class="university-work-list">${representative.map((work: any) => `<li><a href="${escapeHtml(work.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(work.title)}</a> <span>${work.publication_year ? `· ${Number(work.publication_year)}` : ''}${work.cited_by_count != null ? ` · ${Number(work.cited_by_count)} OpenAlex citations` : ''}${work.is_open_access ? ' · open access' : ''}</span></li>`).join('')}</ul>` : '<p>No representative work was retained in the current sample.</p>'
-    return `<article class="university-topic-row"><div><h3><a href="/topics/${encodeURIComponent(metric.topic_slug)}">${escapeHtml(topicName)}</a></h3><p>${works} source-matched work links since 2022 · ${recent} since 2025 · ${Number(metric.representative_citations ?? 0)} citations across the representative sample</p>${workList}</div><div class="university-topic-bar" aria-label="Relative activity for ${escapeHtml(topicName)}"><i style="width:${Math.max(3, Math.round(100 * works / maxWorks))}%"></i></div><strong class="utility-value">${works}</strong></article>`
+    const completeWorks = `/api/universities/${encodeURIComponent(slug)}/works?topic=${encodeURIComponent(metric.topic_slug)}`
+    return `<article class="university-topic-row"><div><h3><a href="/topics/${encodeURIComponent(metric.topic_slug)}">${escapeHtml(topicName)}</a></h3><p>${works} source-matched work links across all available history · ${fiveYear} in the rolling five-year window · ${recent} in the rolling two-year window · ${Number(metric.representative_citations ?? 0)} citations across all linked works</p><a class="section-link" href="${completeWorks}">Browse every linked work →</a></div><div class="university-topic-bar" aria-label="Relative all-time activity for ${escapeHtml(topicName)}"><i style="width:${Math.max(3, Math.round(100 * works / maxWorks))}%"></i></div><strong class="utility-value">${works}</strong></article>`
   }).join('')
   const location = [university.city, university.region, university.country_name || university.country_code].filter(Boolean).join(', ') || 'Location unavailable'
   const links = [
@@ -402,8 +415,8 @@ async function universityPage(supabase: any, slug: string): Promise<string | nul
     `<a class="section-link" href="${escapeHtml(university.openalex_url)}" target="_blank" rel="noopener noreferrer">OpenAlex institution record</a>`,
     university.ror_id ? `<a class="section-link" href="${escapeHtml(university.ror_id)}" target="_blank" rel="noopener noreferrer">ROR identity record</a>` : '',
   ].filter(Boolean).join('')
-  const body = `<section class="intel-section"><div class="university-profile-metrics"><div><strong>${Number(university.research_index_score ?? 0).toFixed(1)}</strong><span>Transparent research index score</span></div><div><strong>${Number(university.indexed_works_five_year ?? 0)}</strong><span>Five-year longevity work links</span></div><div><strong>${Number(university.indexed_topic_count ?? 0)}</strong><span>Longevity topics represented</span></div><div><strong>${Number(university.momentum_score ?? 0).toFixed(0)}%</strong><span>Share indexed since 2025</span></div><div><strong>${university.representative_open_access_share == null ? 'N/A' : `${Number(university.representative_open_access_share).toFixed(0)}%`}</strong><span>Open-access representative sample</span></div></div><div class="record-links">${links}</div><p class="quality-intro">${escapeHtml(location)}. This profile is generated from OpenAlex work affiliations resolved against ROR institution identities.</p><section class="university-topic-profile"><div class="section-heading"><div><span class="section-index">Topic profile</span><h2>Where the indexed activity appears</h2></div><a class="section-link" href="/universities">Compare universities</a></div>${topicRows || '<p class="empty-list">Topic metrics will appear after the next automated refresh.</p>'}</section><aside class="automation-notice"><strong>Activity is not quality</strong><p>This index does not rank teaching, clinical care, study quality, safety, effectiveness, or institutional quality. Counts can overlap when several universities appear on one paper. OpenAlex affiliation matching, citations, open-access status, and publication dates can be incomplete or incorrect. Representative works are a source-linked sample, not a review of the institution’s research.</p></aside></section>`
-  const description = `${university.name} longevity research profile: ${university.indexed_works_five_year} source-matched work links across ${university.indexed_topic_count} tracked topics, with transparent methodology and representative sources.`
+  const body = `<section class="intel-section"><div class="university-profile-metrics"><div><strong>${Number(university.research_index_score ?? 0).toFixed(1)}</strong><span>Transparent research index score</span></div><div><strong>${Number(university.indexed_works_all_time ?? 0)}</strong><span>All-time longevity work links</span></div><div><strong>${Number(university.indexed_works_five_year ?? 0)}</strong><span>Rolling five-year work links</span></div><div><strong>${Number(university.indexed_topic_count ?? 0)}</strong><span>Longevity topics represented</span></div><div><strong>${Number(university.momentum_score ?? 0).toFixed(0)}%</strong><span>Share in the rolling two-year window</span></div><div><strong>${university.representative_open_access_share == null ? 'N/A' : `${Number(university.representative_open_access_share).toFixed(0)}%`}</strong><span>Open-access share across linked works</span></div></div><div class="record-links">${links}</div><p class="quality-intro">${escapeHtml(location)}. This profile is generated from all retained OpenAlex work affiliations resolved against ROR institution identities.</p><section class="university-topic-profile"><div class="section-heading"><div><span class="section-index">Topic profile</span><h2>Where the indexed activity appears</h2></div><a class="section-link" href="/universities">Compare universities</a></div>${topicRows || '<p class="empty-list">Topic metrics will appear after the next automated refresh.</p>'}</section><aside class="automation-notice"><strong>Activity is not quality</strong><p>This index does not rank teaching, clinical care, study quality, safety, effectiveness, or institutional quality. Counts can overlap when several universities appear on one paper. OpenAlex affiliation matching, citations, open-access status, and publication dates can be incomplete or incorrect. Every retained work remains source-linked and available through the complete work list.</p></aside></section>`
+  const description = `${university.name} longevity research profile: ${university.indexed_works_all_time ?? 0} source-matched work links across ${university.indexed_topic_count} tracked topics and all available history.`
   return pageShell({ title: `${university.name} longevity research — immortal.life`, description, canonical: `${SITE}/universities/${slug}`, kicker: 'Global University Research Index', heading: university.name, body, socialImage: `${SITE}/social-card/university/${slug}.png`, indexable: Number(university.indexed_works_five_year ?? 0) >= 3 })
 }
 
@@ -521,31 +534,67 @@ function csvCell(value: unknown): string {
 }
 
 async function dataset(supabase: any, kind: string, format: string): Promise<Response | null> {
-  if (kind === 'universities') {
-    const fields = 'openalex_id,slug,name,ror_id,country_code,country_name,continent,region,city,homepage_url,openalex_url,indexed_works_five_year,indexed_works_two_year,indexed_topic_count,representative_citations,representative_open_access_share,activity_score,breadth_score,momentum_score,citation_context_score,research_index_score,ranking_method_version,updated_at'
-    const { data, error } = await supabase.from('university_research_institutions').select(fields).eq('is_eligible', true).order('research_index_score', { ascending: false }).limit(10000)
-    if (error) throw error
-    const records = data ?? []
-    if (format === 'json') return response(JSON.stringify({ generated_at: new Date().toISOString(), kind, count: records.length, records, methodology: 'Activity index derived from OpenAlex/ROR affiliation data; not a rating of institutional or research quality.', automation_disclosure: DISCLOSURE }), 'application/json; charset=utf-8', 200, 'public, max-age=900')
-    const columns = records.length ? Object.keys(records[0]) : fields.split(',')
-    const csv = [columns.map(csvCell).join(','), ...records.map((record: any) => columns.map((column) => csvCell(record[column])).join(','))].join('\r\n')
-    return response(csv, 'text/csv; charset=utf-8', 200, 'public, max-age=900')
-  }
-  const specs: Record<string, { table: string; fields: string }> = {
-    research: { table: 'research_items', fields: 'id,title,published_on,journal,doi,evidence_level,status,relevance_confidence,source_url,last_seen_at' },
-    trials: { table: 'clinical_trials', fields: 'id,external_id,title,overall_status,phases,sponsor,countries,last_update_date,relevance_confidence,source_url' },
-    regulatory: { table: 'regulatory_events', fields: 'id,title,jurisdiction,category,published_at,relevance_confidence,source_url' },
-    integrity: { table: 'research_integrity_events', fields: 'id,title,event_type,announced_on,detected_at,source_url' },
+  const specs: Record<string, { table: string; fields: string; order: string; eligible?: boolean }> = {
+    universities: { table: 'university_research_institutions', fields: 'openalex_id,slug,name,ror_id,country_code,country_name,continent,region,city,homepage_url,openalex_url,indexed_works_all_time,indexed_works_five_year,indexed_works_two_year,indexed_topic_count,representative_citations,representative_open_access_share,activity_score,breadth_score,momentum_score,citation_context_score,research_index_score,ranking_method_version,updated_at', order: 'openalex_id', eligible: true },
+    research: { table: 'research_items', fields: 'id,title,published_on,journal,doi,evidence_level,status,relevance_confidence,source_url,last_seen_at', order: 'id' },
+    trials: { table: 'clinical_trials', fields: 'id,external_id,title,overall_status,phases,sponsor,countries,last_update_date,relevance_confidence,source_url', order: 'id' },
+    regulatory: { table: 'regulatory_events', fields: 'id,title,jurisdiction,category,published_at,relevance_confidence,source_url', order: 'id' },
+    integrity: { table: 'research_integrity_events', fields: 'id,title,event_type,announced_on,detected_at,source_url', order: 'id' },
   }
   const spec = specs[kind]
   if (!spec) return null
-  const { data, error } = await supabase.from(spec.table).select(spec.fields).eq('publication_state', 'published').limit(5000)
+  const columns = spec.fields.split(',')
+  const encoder = new TextEncoder()
+  const pageSize = 1000
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let offset = 0
+      let first = true
+      try {
+        if (format === 'json') controller.enqueue(encoder.encode(`{"generated_at":${JSON.stringify(new Date().toISOString())},"kind":${JSON.stringify(kind)},"automation_disclosure":${JSON.stringify(DISCLOSURE)},"records":[`))
+        else controller.enqueue(encoder.encode(`${columns.map(csvCell).join(',')}\r\n`))
+        while (true) {
+          let query = supabase.from(spec.table).select(spec.fields).order(spec.order).range(offset, offset + pageSize - 1)
+          query = spec.eligible ? query.eq('is_eligible', true) : query.eq('publication_state', 'published')
+          const { data, error } = await query
+          if (error) throw error
+          const records = data ?? []
+          if (!records.length) break
+          if (format === 'json') {
+            const chunk = records.map((record: any) => JSON.stringify(record)).join(',')
+            controller.enqueue(encoder.encode(`${first ? '' : ','}${chunk}`))
+          } else {
+            controller.enqueue(encoder.encode(`${records.map((record: any) => columns.map((column) => csvCell(record[column])).join(',')).join('\r\n')}\r\n`))
+          }
+          first = false
+          offset += records.length
+          if (records.length < pageSize) break
+        }
+        if (format === 'json') controller.enqueue(encoder.encode(`],"methodology":${JSON.stringify(kind === 'universities' ? 'Complete retained OpenAlex/ROR affiliation index; activity is not a rating of institutional or research quality.' : 'All published quality-eligible records; no fixed export ceiling.')}}`))
+        controller.close()
+      } catch (error) {
+        controller.error(error)
+      }
+    },
+  })
+  return streamResponse(stream, format === 'json' ? 'application/json; charset=utf-8' : 'text/csv; charset=utf-8')
+}
+
+async function universityWorks(supabase: any, slug: string, topic: string, offset: number, limit: number): Promise<Response | null> {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || (topic && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(topic))) return null
+  const institution = await supabase.from('university_research_institutions').select('openalex_id,name').eq('slug', slug).eq('is_eligible', true).maybeSingle()
+  if (institution.error) throw institution.error
+  if (!institution.data) return null
+  let query = supabase.from('university_research_work_institutions')
+    .select('university_research_works!inner(openalex_work_id,title,publication_year,publication_date,cited_by_count,is_open_access,doi,source_url,source_name,university_research_work_topics!inner(topic_slug))', { count: 'exact' })
+    .eq('openalex_id', institution.data.openalex_id)
+    .order('openalex_work_id', { ascending: false, referencedTable: 'university_research_works' })
+    .range(offset, offset + limit - 1)
+  if (topic) query = query.eq('university_research_works.university_research_work_topics.topic_slug', topic)
+  const { data, error, count } = await query
   if (error) throw error
-  const records = data ?? []
-  if (format === 'json') return response(JSON.stringify({ generated_at: new Date().toISOString(), kind, count: records.length, records, automation_disclosure: DISCLOSURE }), 'application/json; charset=utf-8', 200, 'public, max-age=900')
-  const columns = records.length ? Object.keys(records[0]) : spec.fields.split(',')
-  const csv = [columns.map(csvCell).join(','), ...records.map((record: any) => columns.map((column) => csvCell(record[column])).join(','))].join('\r\n')
-  return response(csv, 'text/csv; charset=utf-8', 200, 'public, max-age=900')
+  const records = (data ?? []).map((row: any) => row.university_research_works)
+  return response(JSON.stringify({ university: institution.data, topic: topic || null, total_matching: count ?? 0, offset, next_offset: offset + records.length < Number(count ?? 0) ? offset + records.length : null, records, automation_disclosure: DISCLOSURE }), 'application/json; charset=utf-8')
 }
 
 function socialCardSvg(title: string, kicker: string, confidence?: number): string {
@@ -618,6 +667,12 @@ Deno.serve(async (req) => {
     if (mode === 'university') {
       const html = await universityPage(supabase, url.searchParams.get('slug') || '')
       return html ? response(html, 'text/html; charset=utf-8') : response('Not found', 'text/plain', 404, 'no-store')
+    }
+    if (mode === 'university-works') {
+      const parsedOffset = Number.parseInt(url.searchParams.get('offset') || '0', 10)
+      const parsedLimit = Number.parseInt(url.searchParams.get('limit') || '100', 10)
+      const exported = await universityWorks(supabase, url.searchParams.get('slug') || '', url.searchParams.get('topic') || '', Number.isFinite(parsedOffset) ? Math.max(0, parsedOffset) : 0, Number.isFinite(parsedLimit) ? Math.min(500, Math.max(1, parsedLimit)) : 100)
+      return exported ?? response('Not found', 'text/plain', 404, 'no-store')
     }
     if (mode === 'social') {
       const svg = await socialCard(supabase, url.searchParams.get('kind') || '', url.searchParams.get('key') || '')

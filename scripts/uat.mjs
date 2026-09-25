@@ -170,7 +170,7 @@ async function runViewport(cdp, profileName, width, height, mobile) {
       ,legacyMapCount: document.querySelectorAll('.resource-map,.university-map').length
       ,qualityPrivateText: /Google impressions|Google visits|Search pages to improve|Weekly briefing delivery/.test(document.body?.innerText || '')
       ,qualitySourceDirectory: (() => { const el=document.getElementById('sourceSection'); return el ? !el.hidden : false; })()
-      ,researchPrimary: (() => { const nav=${navLookupExpression}; if (!nav) return false; const primary=nav.querySelector('.s1-nav-top') || nav; const children=[...primary.children]; const research=children.find(el => el.matches?.('a[href="/research"]')); const more=children.find(el => el.classList?.contains('s1-nav-more-toggle') || el.classList?.contains('intel-nav-more')); return Boolean(research && more && children.indexOf(research) < children.indexOf(more)); })()
+      ,completePrimaryNav: (() => { const nav=${navLookupExpression}; if (!nav) return false; const expected=['/changes','/topics','/trials','/universities','/research','/discover','/learn','/regulatory','/resources','/briefings','/methodology']; const hrefs=[...nav.querySelectorAll('a')].map(a => a.getAttribute('href')); return expected.every(href => hrefs.includes(href)) && !nav.querySelector('.s1-nav-more-toggle,.intel-nav-more'); })()
     }))()`);
     const recentEvents = cdp.events.slice(eventStart);
     const exceptions = recentEvents.filter((event) => event.method === 'Runtime.exceptionThrown').map((event) => event.params?.exceptionDetails?.text || 'runtime exception');
@@ -185,7 +185,7 @@ async function runViewport(cdp, profileName, width, height, mobile) {
     if (state.overflow > 2) failures.push(`horizontal overflow ${state.overflow}px: ${JSON.stringify({ outside: state.overflowing, internal: state.internalOverflow })}`);
     if (state.brokenImages.length) failures.push(`broken images: ${state.brokenImages.join(', ')}`);
     if (!state.logoLoaded) failures.push('brand mark failed to load');
-    if (!state.researchPrimary) failures.push('Research is not a primary navigation item before More');
+    if (!state.completePrimaryNav) failures.push('complete primary navigation is not exposed without a More dropdown');
     if (mobile && state.menuButtonVisible !== true) failures.push('mobile menu button hidden or missing');
     if (route === '/' && !mobile && state.menuButtonVisible !== false) failures.push('desktop menu button visible');
     if (route === '/' && state.todayCards !== 6) failures.push(`daily briefing has ${state.todayCards} cards instead of 6`);

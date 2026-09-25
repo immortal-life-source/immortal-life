@@ -1,18 +1,19 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { assessTopicMatch, classifyEvidence, duplicateClusterKey, researchEditorialSummary } from '../_shared/intelligence.ts'
 import { isInternalServiceRequest, jsonResponse, serviceRoleKey } from '../_shared/security.ts'
 
 const SOURCE_ID = 'openalex'
-const METHOD_VERSION = 'university-index-2026-09-v1'
-const FIVE_YEAR_START = '2022-01-01'
-const TWO_YEAR_START = '2025-01-01'
+const METHOD_VERSION = 'university-index-complete-2026-09-v2'
 const OPENALEX = 'https://api.openalex.org'
 const OPENALEX_MIN_INTERVAL_MS = 450
+const OPENALEX_PAGE_SIZE = 200
+const RUN_TIME_BUDGET_MS = 105_000
 let openAlexGate = Promise.resolve()
 let lastOpenAlexRequestAt = 0
 
 const CONTINENT_CODES: Record<string, string> = {
   Africa: 'DZ AO BJ BW BF BI CV CM CF TD KM CD CG CI DJ EG GQ ER SZ ET GA GM GH GN GW KE LS LR LY MG MW ML MR MU MA MZ NA NE NG RW ST SN SC SL SO ZA SS SD TZ TG TN UG EH ZM ZW',
-  Asia: 'AF AM AZ BH BD BT BN KH CN CY GE IN ID IR IQ IL JP JO KZ KW KG LA LB MY MV MN MM NP KP OM PK PS PH QA SA SG KR LK SY TW TJ TH TL TR TM AE UZ VN YE HK MO',
+  Asia: 'AF AM AZ BH BD BT BN KH CN CY GE IN ID IR IQ IL JP JO KZ KW KG LA LB MY MV MN MM NP KP PS PH QA SA SG KR LK SY TW TJ TH TL TR TM AE UZ VN YE HK MO',
   Europe: 'AL AD AT BY BE BA BG HR CZ DK EE FI FR DE GR VA HU IS IE IT LV LI LT LU MT MD MC ME NL MK NO PL PT RO RU SM RS SK SI ES SE CH UA GB XK',
   'North America': 'AG BS BB BZ CA CR CU DM DO SV GD GT HT HN JM MX NI PA KN LC VC TT US GL BM PM',
   'South America': 'AR BO BR CL CO EC GY PY PE SR UY VE FK GF',
@@ -21,36 +22,14 @@ const CONTINENT_CODES: Record<string, string> = {
 }
 const COUNTRY_CONTINENT = new Map(Object.entries(CONTINENT_CODES).flatMap(([continent, codes]) => codes.split(' ').map((code) => [code, continent])))
 
-const TOPIC_QUERIES: Record<string, string> = {
-  rapamycin: '(rapamycin OR sirolimus OR everolimus OR rapalog) AND (aging OR ageing OR longevity OR healthspan)',
-  senolytics: '(senolytic OR senomorphic OR "cellular senescence" OR "senescent cell") AND (aging OR ageing OR longevity)',
-  'partial-reprogramming': '("partial reprogramming" OR "epigenetic reprogramming" OR "Yamanaka factors" OR OSKM) AND (aging OR ageing OR rejuvenation)',
-  metformin: 'metformin AND (aging OR ageing OR longevity OR healthspan)',
-  'glp-1-therapies': '("GLP-1" OR semaglutide OR tirzepatide OR liraglutide) AND (aging OR ageing OR longevity OR healthspan OR frailty)',
-  exercise: '(exercise OR "physical activity" OR "cardiorespiratory fitness") AND (aging OR ageing OR longevity OR healthspan OR frailty)',
-  'caloric-restriction': '("caloric restriction" OR "calorie restriction" OR "intermittent fasting" OR "time-restricted eating") AND (aging OR ageing OR longevity OR healthspan)',
-  sleep: '(sleep OR circadian) AND (aging OR ageing OR longevity OR healthspan OR frailty)',
-  'epigenetic-clocks': '("epigenetic clock" OR "DNA methylation age" OR "biological age clock" OR PhenoAge OR GrimAge)',
-  'plasma-exchange': '("plasma exchange" OR plasmapheresis OR "plasma dilution") AND (aging OR ageing OR rejuvenation OR longevity)',
-  'stem-cells': '("stem cell" OR "progenitor cell") AND (aging OR ageing OR longevity OR rejuvenation OR frailty)',
-  'gene-therapy': '("gene therapy" OR "gene transfer" OR "genome editing" OR CRISPR) AND (aging OR ageing OR longevity OR rejuvenation)',
-}
-
-type Group = { key?: string; key_display_name?: string; count?: number }
-type TopicSnapshot = {
-  slug: string
-  query: string
-  fiveYear: Map<string, number>
-  twoYear: Map<string, number>
-  samples: Map<string, Array<Record<string, unknown>>>
-}
+type SyncState = { topic_slug: string; phase: 'all' | 'five' | 'two' | 'works' | 'complete'; cursor: string; pages_processed: number; records_processed: number }
 
 function clean(value: unknown, max = 500): string {
   return String(value ?? '').replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max)
 }
 
-function openAlexId(value: unknown): string {
-  const match = clean(value, 80).match(/(?:^|\/)(I\d+)$/)
+function openAlexId(value: unknown, prefix = 'I'): string {
+  const match = clean(value, 100).match(new RegExp(`(?:^|/)(${prefix}\\d+)$`))
   return match?.[1] ?? ''
 }
 
@@ -60,9 +39,9 @@ function slugify(name: unknown, id: string): string {
   return `${base || 'university'}-${id.toLowerCase()}`
 }
 
-function continentForCountry(code: unknown): string | null {
-  return COUNTRY_CONTINENT.get(clean(code, 2).toUpperCase()) ?? null
-}
+function continentForCountry(code: unknown): string | null { return COUNTRY_CONTINENT.get(clean(code, 2).toUpperCase()) ?? null }
+function yearsAgo(years: number): string { const date = new Date(); date.setUTCFullYear(date.getUTCFullYear() - years); return date.toISOString().slice(0, 10) }
+function openAlexSearchQuery(value: unknown): string { return clean(value, 1200).replace(/\*/g, '').replace(/\s+/g, ' ').trim() }
 
 function constantTimeMatch(left: string, right: string): boolean {
   if (!right || left.length !== right.length) return false
@@ -93,9 +72,9 @@ async function paceOpenAlex(): Promise<void> {
 
 async function openAlex(path: string, params: Record<string, string>, attempts = 5): Promise<any> {
   const url = new URL(path, OPENALEX)
-  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value)
+  for (const [key, value] of Object.entries(params)) if (value) url.searchParams.set(key, value)
   const apiKey = Deno.env.get('OPENALEX_API_KEY')?.trim()
-  const headers: Record<string, string> = { Accept: 'application/json', 'User-Agent': 'immortal.life-university-index/1.0 (research@immortal.life)' }
+  const headers: Record<string, string> = { Accept: 'application/json', 'User-Agent': 'immortal.life-university-index/2.0 (research@immortal.life)' }
   if (apiKey) headers.Authorization = `Bearer ${apiKey}`
   let lastError: Error | null = null
   for (let attempt = 0; attempt < attempts; attempt++) {
@@ -118,152 +97,191 @@ async function openAlex(path: string, params: Record<string, string>, attempts =
   throw lastError ?? new Error('openalex_request_failed')
 }
 
-function groupMap(groups: Group[]): Map<string, number> {
-  const result = new Map<string, number>()
-  for (const group of groups ?? []) {
-    const id = openAlexId(group.key)
-    const count = Math.max(0, Math.trunc(Number(group.count ?? 0)))
-    if (id && count) result.set(id, count)
-  }
-  return result
+async function batches<T>(values: T[], size: number, fn: (batch: T[]) => Promise<void>): Promise<void> {
+  for (let index = 0; index < values.length; index += size) await fn(values.slice(index, index + size))
+}
+
+async function upsertInstitutions(supabase: any, ids: string[]): Promise<Set<string>> {
+  const unique = [...new Set(ids.filter(Boolean))]
+  const eligible = new Set<string>()
+  await batches(unique, 80, async (batch) => {
+    if (!batch.length) return
+    const payload = await openAlex('/institutions', {
+      filter: `openalex:${batch.join('|')}`, per_page: '100',
+      select: 'id,display_name,ror,country_code,type,homepage_url,geo,summary_stats,works_count,cited_by_count,is_super_system,updated_date',
+    })
+    const rows = (payload?.results ?? []).filter((item: any) => item?.type === 'education' && !item?.is_super_system && openAlexId(item?.id) && clean(item?.display_name)).map((item: any) => {
+      const id = openAlexId(item.id); eligible.add(id)
+      return {
+        openalex_id: id, slug: slugify(item.display_name, id), name: clean(item.display_name, 300), ror_id: clean(item.ror, 160) || null,
+        country_code: /^[A-Za-z]{2}$/.test(clean(item.country_code, 2)) ? clean(item.country_code, 2).toUpperCase() : null,
+        country_name: clean(item.geo?.country, 160) || null, continent: continentForCountry(item.country_code), region: clean(item.geo?.region, 160) || null,
+        city: clean(item.geo?.city, 160) || null, latitude: Number.isFinite(Number(item.geo?.latitude)) ? Number(item.geo.latitude) : null,
+        longitude: Number.isFinite(Number(item.geo?.longitude)) ? Number(item.geo.longitude) : null,
+        homepage_url: /^https:\/\//.test(clean(item.homepage_url, 500)) ? clean(item.homepage_url, 500) : null,
+        openalex_url: `https://openalex.org/${id}`, institution_type: 'education', global_works_count: Math.max(0, Math.trunc(Number(item.works_count ?? 0))),
+        global_cited_by_count: Math.max(0, Math.trunc(Number(item.cited_by_count ?? 0))), global_h_index: Math.max(0, Math.trunc(Number(item.summary_stats?.h_index ?? 0))),
+        global_two_year_mean_citedness: Number.isFinite(Number(item.summary_stats?.['2yr_mean_citedness'])) ? Number(item.summary_stats['2yr_mean_citedness']) : null,
+        ranking_method_version: METHOD_VERSION, source_updated_at: item.updated_date || null, last_seen_at: new Date().toISOString(),
+        metadata: { source: 'OpenAlex', affiliation_registry: item.ror ? 'ROR' : null, full_history: true },
+      }
+    })
+    if (rows.length) { const { error } = await supabase.from('university_research_institutions').upsert(rows, { onConflict: 'openalex_id', defaultToNull: false }); if (error) throw error }
+  })
+  return eligible
+}
+
+function nextCursor(payload: any, current: string): string | null {
+  const next = clean(payload?.meta?.next_cursor ?? payload?.meta?.nextCursor, 4000)
+  return next && next !== current ? next : null
+}
+
+async function processGroupPage(supabase: any, topic: any, state: SyncState): Promise<{ next: string | null; count: number }> {
+  const filter = state.phase === 'five' ? `from_publication_date:${yearsAgo(5)}` : state.phase === 'two' ? `from_publication_date:${yearsAgo(2)}` : ''
+  const payload = await openAlex('/works', { search: openAlexSearchQuery(topic.literature_query), filter, group_by: 'authorships.institutions.id', per_page: String(OPENALEX_PAGE_SIZE), cursor: state.cursor || '*' })
+  const groups = Array.isArray(payload?.group_by) ? payload.group_by : []
+  const allowed = await upsertInstitutions(supabase, groups.map((group: any) => openAlexId(group.key)).filter(Boolean))
+  const field = state.phase === 'all' ? 'works_all_time' : state.phase === 'five' ? 'works_five_year' : 'works_two_year'
+  const rows = groups.map((group: any) => ({ id: openAlexId(group.key), count: Math.max(0, Math.trunc(Number(group.count ?? 0))) }))
+    .filter((group: any) => allowed.has(group.id) && group.count > 0)
+    .map((group: any) => ({ openalex_id: group.id, topic_slug: topic.slug, [field]: group.count, source_query: topic.literature_query, last_synced_at: new Date().toISOString() }))
+  if (rows.length) { const { error } = await supabase.from('university_research_topic_metrics').upsert(rows, { onConflict: 'openalex_id,topic_slug', defaultToNull: false }); if (error) throw error }
+  return { next: nextCursor(payload, state.cursor), count: groups.length }
 }
 
 function workLink(work: any): string {
-  const doi = clean(work?.doi, 300)
-  if (doi.startsWith('https://doi.org/')) return doi
-  const id = clean(work?.id, 120)
-  return /^https:\/\/openalex\.org\/W\d+$/.test(id) ? id : 'https://openalex.org/'
+  const doi = clean(work?.doi, 300); if (doi.startsWith('https://doi.org/')) return doi
+  const id = openAlexId(work?.id, 'W'); return id ? `https://openalex.org/${id}` : 'https://openalex.org/'
 }
 
-async function topicSnapshot(slug: string, query: string): Promise<TopicSnapshot> {
-  const common = { search: query, group_by: 'authorships.institutions.id', per_page: '200' }
-  const [five, two, works] = await Promise.all([
-    openAlex('/works', { ...common, filter: `from_publication_date:${FIVE_YEAR_START}` }),
-    openAlex('/works', { ...common, filter: `from_publication_date:${TWO_YEAR_START}` }),
-    openAlex('/works', {
-      search: query,
-      filter: `from_publication_date:${FIVE_YEAR_START}`,
-      sort: 'cited_by_count:desc',
-      per_page: '75',
-      select: 'id,title,publication_year,publication_date,cited_by_count,doi,open_access,authorships,primary_location',
-    }),
-  ])
-  const samples = new Map<string, Array<Record<string, unknown>>>()
-  for (const work of works?.results ?? []) {
-    const institutionIds = new Set<string>()
-    for (const authorship of work?.authorships ?? []) for (const institution of authorship?.institutions ?? []) {
-      const id = openAlexId(institution?.id)
-      if (id) institutionIds.add(id)
-    }
-    const sample = {
-      title: clean(work?.title, 500),
-      publication_year: Number(work?.publication_year ?? 0) || null,
-      publication_date: clean(work?.publication_date, 10) || null,
-      cited_by_count: Math.max(0, Math.trunc(Number(work?.cited_by_count ?? 0))),
-      is_open_access: Boolean(work?.open_access?.is_oa),
-      doi: clean(work?.doi, 300) || null,
-      source_url: workLink(work),
-      source_name: clean(work?.primary_location?.source?.display_name, 200) || null,
-    }
-    if (!sample.title) continue
-    for (const id of institutionIds) {
-      const list = samples.get(id) ?? []
-      if (list.length < 5) list.push(sample)
-      samples.set(id, list)
+function abstractFromInvertedIndex(value: unknown): string | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const positioned: Array<[number, string]> = []
+  for (const [word, positions] of Object.entries(value as Record<string, unknown>)) {
+    if (!Array.isArray(positions)) continue
+    for (const position of positions) if (Number.isSafeInteger(Number(position))) positioned.push([Number(position), word])
+  }
+  return clean(positioned.sort((left, right) => left[0] - right[0]).map((entry) => entry[1]).join(' '), 12_000) || null
+}
+
+async function processWorksPage(supabase: any, topic: any, state: SyncState): Promise<{ next: string | null; count: number }> {
+  const payload = await openAlex('/works', { search: openAlexSearchQuery(topic.literature_query), per_page: String(OPENALEX_PAGE_SIZE), cursor: state.cursor || '*', select: 'id,title,publication_year,publication_date,cited_by_count,doi,open_access,authorships,primary_location,abstract_inverted_index,type,keywords,topics,updated_date' })
+  const works = Array.isArray(payload?.results) ? payload.results : []
+  const institutionIds = [...new Set(works.flatMap((work: any) => (work?.authorships ?? []).flatMap((authorship: any) => (authorship?.institutions ?? []).map((institution: any) => openAlexId(institution?.id))).filter(Boolean)))] as string[]
+  const allowed = await upsertInstitutions(supabase, institutionIds)
+  const workRows = works.map((work: any) => ({ openalex_work_id: openAlexId(work?.id, 'W'), title: clean(work?.title, 500), publication_year: Number(work?.publication_year ?? 0) || null,
+    publication_date: clean(work?.publication_date, 10) || null, cited_by_count: Math.max(0, Math.trunc(Number(work?.cited_by_count ?? 0))), is_open_access: Boolean(work?.open_access?.is_oa),
+    doi: clean(work?.doi, 300) || null, source_url: workLink(work), source_name: clean(work?.primary_location?.source?.display_name, 200) || null, updated_at: new Date().toISOString() })).filter((work: any) => work.openalex_work_id && work.title)
+  if (workRows.length) {
+    let result = await supabase.from('university_research_works').upsert(workRows, { onConflict: 'openalex_work_id', defaultToNull: false }); if (result.error) throw result.error
+    result = await supabase.from('university_research_work_topics').upsert(workRows.map((work: any) => ({ openalex_work_id: work.openalex_work_id, topic_slug: topic.slug })), { onConflict: 'openalex_work_id,topic_slug', ignoreDuplicates: true }); if (result.error) throw result.error
+    const knownWorks = new Set(workRows.map((work: any) => work.openalex_work_id))
+    const links = works.flatMap((work: any) => {
+      const workId = openAlexId(work?.id, 'W'); if (!knownWorks.has(workId)) return []
+      const ids = new Set<string>(); for (const authorship of work?.authorships ?? []) for (const institution of authorship?.institutions ?? []) { const id = openAlexId(institution?.id); if (allowed.has(id)) ids.add(id) }
+      return [...ids].map((openalex_id) => ({ openalex_work_id: workId, openalex_id }))
+    })
+    if (links.length) { const linkResult = await supabase.from('university_research_work_institutions').upsert(links, { onConflict: 'openalex_work_id,openalex_id', ignoreDuplicates: true }); if (linkResult.error) throw linkResult.error }
+
+    // OpenAlex expands the public research corpus beyond the biomedical-only
+    // sources while reusing the same relevance quarantine and deduplication
+    // contracts as PubMed and Europe PMC.
+    const now = new Date().toISOString()
+    const assessments = new Map<string, ReturnType<typeof assessTopicMatch>>()
+    const researchRows = works.map((work: any) => {
+      const externalId = openAlexId(work?.id, 'W')
+      const title = clean(work?.title, 500)
+      if (!externalId || !title) return null
+      const abstract = abstractFromInvertedIndex(work?.abstract_inverted_index)
+      const controlledTerms = [...new Set([...(work?.topics ?? []), ...(work?.keywords ?? [])].map((item: any) => clean(item?.display_name, 180)).filter(Boolean))]
+      const publicationType = clean(work?.type, 120).replace(/_/g, ' ') || null
+      const journal = clean(work?.primary_location?.source?.display_name, 240) || null
+      const publishedOn = clean(work?.publication_date, 10) || null
+      const assessment = assessTopicMatch(topic.slug, { title, abstract, controlledTerms, studyType: publicationType, sourceId: SOURCE_ID, sourceDate: publishedOn })
+      assessments.set(externalId, assessment)
+      const level = classifyEvidence(publicationType, title, SOURCE_ID)
+      const doi = clean(work?.doi, 300).replace(/^https:\/\/doi\.org\//i, '') || null
+      return {
+        source_id: SOURCE_ID, external_id: externalId, title,
+        authors: clean((work?.authorships ?? []).map((authorship: any) => authorship?.author?.display_name).filter(Boolean).join(', '), 3000) || null,
+        journal, published_on: publishedOn, doi, publication_type: publicationType,
+        abstract_text: abstract, controlled_terms: controlledTerms, evidence_level: level,
+        source_url: workLink(work), is_open_access: work?.open_access?.is_oa == null ? null : Boolean(work.open_access.is_oa),
+        cited_by_count: Math.max(0, Math.trunc(Number(work?.cited_by_count ?? 0))),
+        editorial_summary: researchEditorialSummary(level, journal), source_updated_at: work?.updated_date || now,
+        last_seen_at: now, status: 'published', relevance_confidence: assessment.relevanceScore,
+        source_quality_score: assessment.sourceQualityScore, freshness_score: assessment.freshnessScore,
+        publication_state: assessment.publish ? 'published' : 'quarantined', match_explanation: assessment.explanation,
+        quality_checked_at: now, duplicate_cluster_key: duplicateClusterKey(title, doi),
+        metadata: { openalex_id: externalId, source: 'OpenAlex complete works API' },
+      }
+    }).filter(Boolean)
+    if (researchRows.length) {
+      const imported = await supabase.from('research_items').upsert(researchRows, { onConflict: 'source_id,external_id', defaultToNull: false }).select('id,external_id')
+      if (imported.error) throw imported.error
+      const topicLinks = (imported.data ?? []).map((record: any) => {
+        const assessment = assessments.get(record.external_id)
+        return { research_item_id: record.id, topic_slug: topic.slug, matched_by: 'source-query', relevance_score: assessment?.relevanceScore ?? 0, match_reasons: assessment?.reasons ?? [], matched_fields: assessment?.matchedFields ?? [], is_published: Boolean(assessment?.publish), evaluated_at: now }
+      })
+      if (topicLinks.length) {
+        const linked = await supabase.from('research_item_topics').upsert(topicLinks, { onConflict: 'research_item_id,topic_slug', defaultToNull: false }); if (linked.error) throw linked.error
+        const quality = await supabase.rpc('refresh_research_quality', { record_ids: topicLinks.map((link: any) => link.research_item_id) }); if (quality.error) throw quality.error
+      }
     }
   }
-  return { slug, query, fiveYear: groupMap(five?.group_by ?? []), twoYear: groupMap(two?.group_by ?? []), samples }
+  return { next: nextCursor(payload, state.cursor), count: works.length }
 }
 
-async function batches<T, R>(values: T[], size: number, fn: (batch: T[]) => Promise<R[]>): Promise<R[]> {
-  const output: R[] = []
-  for (let index = 0; index < values.length; index += size) output.push(...await fn(values.slice(index, index + size)))
-  return output
+async function prepareState(supabase: any): Promise<SyncState | null> {
+  const topics = await supabase.from('intelligence_topics').select('slug').eq('enabled', true); if (topics.error) throw topics.error
+  if (topics.data?.length) { const seeded = await supabase.from('university_topic_sync_state').upsert(topics.data.map((topic: any) => ({ topic_slug: topic.slug })), { onConflict: 'topic_slug', ignoreDuplicates: true }); if (seeded.error) throw seeded.error }
+  let selected = await supabase.from('university_topic_sync_state').select('topic_slug,phase,cursor,pages_processed,records_processed').neq('phase', 'complete').order('updated_at').limit(1).maybeSingle()
+  if (selected.error) throw selected.error; if (selected.data) return selected.data as SyncState
+  const staleBefore = new Date(Date.now() - 7 * 86400000).toISOString()
+  const completed = await supabase.from('university_topic_sync_state').select('topic_slug').eq('phase', 'complete').lt('completed_at', staleBefore).order('completed_at').limit(1).maybeSingle()
+  if (completed.error) throw completed.error; if (!completed.data) return null
+  // Keep the last complete public snapshot available while its next refresh is
+  // assembled. Source upserts are idempotent, so readers never see an empty
+  // topic merely because a weekly refresh has begun.
+  selected = await supabase.from('university_topic_sync_state').update({ phase: 'all', cursor: '*', pages_processed: 0, records_processed: 0, cycle_started_at: new Date().toISOString(), completed_at: null, last_error: null, updated_at: new Date().toISOString() }).eq('topic_slug', completed.data.topic_slug).select('topic_slug,phase,cursor,pages_processed,records_processed').single()
+  if (selected.error) throw selected.error
+  return selected.data as SyncState
 }
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return jsonResponse(req, { error: 'Method not allowed' }, 405, 'POST')
   const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', serviceRoleKey(), { auth: { persistSession: false, autoRefreshToken: false } })
   if (!(await authorized(req, supabase))) return jsonResponse(req, { error: 'Unauthorized' }, 401, 'POST')
-  const startedAt = new Date().toISOString()
-  await supabase.from('content_sources').update({ last_attempt_at: startedAt, updated_at: startedAt }).eq('id', SOURCE_ID)
+  const runStartedAt = Date.now()
+  const startedAt = new Date().toISOString(); await supabase.from('content_sources').update({ last_attempt_at: startedAt, updated_at: startedAt }).eq('id', SOURCE_ID)
+  let state: SyncState | null = null
   try {
-    const { data: topics, error: topicsError } = await supabase.from('intelligence_topics').select('slug').eq('enabled', true).order('sort_order')
-    if (topicsError) throw topicsError
-    const configured = (topics ?? []).map((topic: any) => ({ slug: String(topic.slug), query: TOPIC_QUERIES[String(topic.slug)] })).filter((topic: any) => topic.query)
-    const snapshots = await batches(configured, 3, async (batch) => await Promise.all(batch.map((topic) => topicSnapshot(topic.slug, topic.query))))
-    const candidateIds = [...new Set(snapshots.flatMap((snapshot) => [...snapshot.fiveYear.keys()]))]
-    const institutions = await batches(candidateIds, 80, async (batch) => {
-      if (!batch.length) return []
-      const payload = await openAlex('/institutions', {
-        filter: `openalex:${batch.join('|')}`,
-        per_page: '100',
-        select: 'id,display_name,ror,country_code,type,homepage_url,geo,summary_stats,works_count,cited_by_count,is_super_system,updated_date',
-      })
-      return payload?.results ?? []
-    })
-    const now = new Date().toISOString()
-    const eligibleInstitutions = institutions.filter((item: any) => item?.type === 'education' && !item?.is_super_system && openAlexId(item?.id) && clean(item?.display_name))
-    const institutionRows = eligibleInstitutions.map((item: any) => {
-      const id = openAlexId(item.id)
-      return {
-        openalex_id: id,
-        slug: slugify(item.display_name, id),
-        name: clean(item.display_name, 300),
-        ror_id: clean(item.ror, 160) || null,
-        country_code: /^[A-Za-z]{2}$/.test(clean(item.country_code, 2)) ? clean(item.country_code, 2).toUpperCase() : null,
-        country_name: clean(item.geo?.country, 160) || null,
-        continent: continentForCountry(item.country_code),
-        region: clean(item.geo?.region, 160) || null,
-        city: clean(item.geo?.city, 160) || null,
-        latitude: Number.isFinite(Number(item.geo?.latitude)) ? Number(item.geo.latitude) : null,
-        longitude: Number.isFinite(Number(item.geo?.longitude)) ? Number(item.geo.longitude) : null,
-        homepage_url: /^https:\/\//.test(clean(item.homepage_url, 500)) ? clean(item.homepage_url, 500) : null,
-        openalex_url: `https://openalex.org/${id}`,
-        institution_type: 'education',
-        global_works_count: Math.max(0, Math.trunc(Number(item.works_count ?? 0))),
-        global_cited_by_count: Math.max(0, Math.trunc(Number(item.cited_by_count ?? 0))),
-        global_h_index: Math.max(0, Math.trunc(Number(item.summary_stats?.h_index ?? 0))),
-        global_two_year_mean_citedness: Number.isFinite(Number(item.summary_stats?.['2yr_mean_citedness'])) ? Number(item.summary_stats['2yr_mean_citedness']) : null,
-        ranking_method_version: METHOD_VERSION,
-        source_updated_at: item.updated_date || null,
-        last_seen_at: now,
-        metadata: { source: 'OpenAlex', affiliation_registry: 'ROR', coverage_window_start: FIVE_YEAR_START },
+    let pagesProcessed = 0
+    let recordsProcessed = 0
+    let completedTopics = 0
+    while (Date.now() - runStartedAt < RUN_TIME_BUDGET_MS) {
+      state = await prepareState(supabase)
+      if (!state) break
+      const topic = await supabase.from('intelligence_topics').select('slug,literature_query').eq('slug', state.topic_slug).eq('enabled', true).single(); if (topic.error) throw topic.error
+      const result = state.phase === 'works' ? await processWorksPage(supabase, topic.data, state) : await processGroupPage(supabase, topic.data, state)
+      const phases: Record<string, SyncState['phase']> = { all: 'five', five: 'two', two: 'works', works: 'complete' }
+      const finished = !result.next; const nextPhase = finished ? phases[state.phase] : state.phase; const now = new Date().toISOString()
+      const update = { phase: nextPhase, cursor: finished ? '*' : result.next, pages_processed: state.pages_processed + 1, records_processed: Number(state.records_processed) + result.count, completed_at: nextPhase === 'complete' ? now : null, last_error: null, updated_at: now }
+      const stateResult = await supabase.from('university_topic_sync_state').update(update).eq('topic_slug', state.topic_slug); if (stateResult.error) throw stateResult.error
+      pagesProcessed += 1
+      recordsProcessed += result.count
+      if (nextPhase === 'complete') {
+        completedTopics += 1
+        const scored = await supabase.rpc('refresh_university_research_scores'); if (scored.error) throw scored.error
       }
-    })
-    if (!institutionRows.length) throw new Error('no_eligible_universities')
-    const allowed = new Set(institutionRows.map((row) => row.openalex_id))
-    const topicRows = snapshots.flatMap((snapshot) => [...snapshot.fiveYear.entries()].filter(([id]) => allowed.has(id)).map(([id, works]) => {
-      const samples = snapshot.samples.get(id) ?? []
-      return {
-        openalex_id: id,
-        topic_slug: snapshot.slug,
-        works_five_year: works,
-        works_two_year: snapshot.twoYear.get(id) ?? 0,
-        representative_work_count: samples.length,
-        representative_citations: samples.reduce((sum, work) => sum + Number(work.cited_by_count ?? 0), 0),
-        representative_open_access_count: samples.filter((work) => work.is_open_access).length,
-        representative_works: samples,
-        source_query: snapshot.query,
-        last_synced_at: now,
-      }
-    }))
-    const { error: institutionsError } = await supabase.from('university_research_institutions').upsert(institutionRows, { onConflict: 'openalex_id', defaultToNull: false })
-    if (institutionsError) throw institutionsError
-    const { error: clearError } = await supabase.from('university_research_topic_metrics').delete().neq('openalex_id', '__none__')
-    if (clearError) throw clearError
-    for (let index = 0; index < topicRows.length; index += 500) {
-      const { error } = await supabase.from('university_research_topic_metrics').upsert(topicRows.slice(index, index + 500), { onConflict: 'openalex_id,topic_slug' })
-      if (error) throw error
+      await supabase.from('content_sources').update({ last_success_at: now, last_error: null, consecutive_failures: 0, updated_at: now }).eq('id', SOURCE_ID)
     }
-    const { error: scoreError } = await supabase.rpc('refresh_university_research_scores')
-    if (scoreError) throw scoreError
-    await supabase.from('content_sources').update({ last_success_at: now, last_error: null, consecutive_failures: 0, updated_at: now }).eq('id', SOURCE_ID)
-    return jsonResponse(req, { ok: true, generated_at: now, topics: snapshots.length, universities: institutionRows.length, university_topic_rows: topicRows.length, method_version: METHOD_VERSION })
+    return jsonResponse(req, { ok: true, pages_processed: pagesProcessed, records_processed: recordsProcessed, completed_topics: completedTopics, runtime_ms: Date.now() - runStartedAt, method_version: METHOD_VERSION })
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 500) : 'university_index_sync_failed'
-    const { data: source } = await supabase.from('content_sources').select('consecutive_failures').eq('id', SOURCE_ID).maybeSingle()
-    await supabase.from('content_sources').update({ last_error: message, consecutive_failures: Number(source?.consecutive_failures ?? 0) + 1, updated_at: new Date().toISOString() }).eq('id', SOURCE_ID)
+    if (state) await supabase.from('university_topic_sync_state').update({ last_error: message, updated_at: new Date().toISOString() }).eq('topic_slug', state.topic_slug)
+    const source = await supabase.from('content_sources').select('consecutive_failures').eq('id', SOURCE_ID).maybeSingle()
+    await supabase.from('content_sources').update({ last_error: message, consecutive_failures: Number(source.data?.consecutive_failures ?? 0) + 1, updated_at: new Date().toISOString() }).eq('id', SOURCE_ID)
     console.error('sync-university-index', message)
     return jsonResponse(req, { error: 'university_index_sync_failed' }, 500, 'POST')
   }

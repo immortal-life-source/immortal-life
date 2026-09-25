@@ -159,6 +159,7 @@
     { "source": "/reports", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=reports" },
     { "source": "/api/subscribe", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/subscribe-briefing" },
     { "source": "/entities/:kind/:slug", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=entity&kind=:kind&slug=:slug" },
+    { "source": "/api/universities/:slug/works", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=university-works&slug=:slug" },
     { "source": "/universities/:slug", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=university&slug=:slug" },
     { "source": "/social-card/:kind/:key.png", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/social-card?kind=:kind&key=:key" },
     { "source": "/social-card/:kind/:key.svg", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=social&kind=:kind&key=:key" },

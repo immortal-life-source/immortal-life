@@ -16,25 +16,8 @@
     if (event.target instanceof Element && event.target.closest('a')) setNavigationOnly(false);
   });
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') { setNavigationOnly(false); if (window.innerWidth > 860) setMoreNavigation(false); }
+    if (event.key === 'Escape') setNavigationOnly(false);
   });
-
-  const moreNavigation = document.querySelector('.intel-nav-more');
-  const moreNavigationToggle = document.querySelector('.intel-nav-more-toggle');
-  function setMoreNavigation(open) {
-    if (!moreNavigation) return;
-    moreNavigation.dataset.open = String(open);
-    moreNavigationToggle?.setAttribute('aria-expanded', String(open));
-  }
-  function syncMoreNavigation() {
-    setMoreNavigation(window.innerWidth <= 860);
-  }
-  moreNavigationToggle?.addEventListener('click', () => setMoreNavigation(moreNavigation?.dataset.open !== 'true'));
-  document.addEventListener('click', (event) => {
-    if (window.innerWidth > 860 && moreNavigation?.dataset.open === 'true' && event.target instanceof Node && !moreNavigation.contains(event.target)) setMoreNavigation(false);
-  });
-  syncMoreNavigation();
-  window.addEventListener('resize', syncMoreNavigation);
 
   document.querySelector('[data-mobile-menu-open]')?.addEventListener('click', () => navToggleOnly?.click());
   const currentPath = location.pathname;
@@ -110,6 +93,7 @@
     researchAccess: document.getElementById('researchAccess'),
     researchClear: document.getElementById('researchClear'),
     researchResult: document.getElementById('researchResult'),
+    researchLoadMore: document.getElementById('researchLoadMore'),
     trialsSection: document.getElementById('trialsSection'),
     trialList: document.getElementById('trialList'),
     trialControls: document.getElementById('trialControls'),
@@ -120,6 +104,7 @@
     trialCountry: document.getElementById('trialCountry'),
     trialClear: document.getElementById('trialClear'),
     trialResult: document.getElementById('trialResult'),
+    trialLoadMore: document.getElementById('trialLoadMore'),
     regulatorySection: document.getElementById('regulatorySection'),
     regulatoryList: document.getElementById('regulatoryList'),
     regulatoryLibrary: document.getElementById('regulatoryLibrary'),
@@ -152,6 +137,7 @@
     universitySort: document.getElementById('universitySort'),
     universityResult: document.getElementById('universityResult'),
     universityList: document.getElementById('universityList'),
+    universityLoadMore: document.getElementById('universityLoadMore'),
     universityCompare: document.getElementById('universityCompare'),
     universityCompareGrid: document.getElementById('universityCompareGrid'),
     clearUniversityCompare: document.getElementById('clearUniversityCompare'),
@@ -419,9 +405,37 @@
     elements.trialsSection.hidden = false;
   }
 
-  const RECORD_PAGE_SIZE = 60;
   let searchableResearch = [];
   let searchableTrials = [];
+  let researchNextOffset = null;
+  let trialNextOffset = null;
+  let researchTotal = 0;
+  let trialTotal = 0;
+  let researchRequestVersion = 0;
+  let trialRequestVersion = 0;
+  let researchSearchTimer = 0;
+  let trialSearchTimer = 0;
+
+  function researchQueryParams(offset = 0) {
+    return {
+      offset,
+      q: String(elements.researchSearch?.value || '').trim(),
+      topic: elements.researchTopic?.value || '',
+      evidence: elements.researchEvidence?.value || '',
+      access: elements.researchAccess?.value || '',
+    };
+  }
+
+  function trialQueryParams(offset = 0) {
+    return {
+      offset,
+      q: String(elements.trialSearch?.value || '').trim(),
+      topic: elements.trialTopic?.value || '',
+      status: elements.trialStatus?.value || '',
+      phase: elements.trialPhase?.value || '',
+      country: elements.trialCountry?.value || '',
+    };
+  }
 
   function replaceFilterOptions(select, firstLabel, entries) {
     if (!select) return;
@@ -457,11 +471,8 @@
       (!evidence || record.evidence_level === evidence) &&
       (!access || (access === 'open' ? record.is_open_access : !record.is_open_access))
     );
-    const visible = filtered.slice(0, RECORD_PAGE_SIZE);
-    drawResearch(visible, 'No research record matches these filters. Try a broader search or clear one of the filters.');
-    if (elements.researchResult) elements.researchResult.textContent = filtered.length > visible.length
-      ? `Showing the newest ${numberFormatter.format(visible.length)} of ${numberFormatter.format(filtered.length)} matching records. Refine the filters to narrow the result.`
-      : `Showing ${numberFormatter.format(filtered.length)} of ${numberFormatter.format(searchableResearch.length)} research records.`;
+    drawResearch(filtered, 'No research record matches these filters. Try a broader search or clear one of the filters.');
+    if (elements.researchResult) elements.researchResult.textContent = `Showing ${numberFormatter.format(filtered.length)} matching records from ${numberFormatter.format(searchableResearch.length)} loaded · ${numberFormatter.format(researchTotal || searchableResearch.length)} available.`;
   }
 
   function setupResearchSearch() {
@@ -472,17 +483,32 @@
       .sort((left, right) => left[1].localeCompare(right[1]));
     replaceFilterOptions(elements.researchEvidence, 'All evidence stages', evidence);
     elements.researchSearch.value = new URLSearchParams(location.search).get('search')?.trim() || '';
-    elements.researchControls.addEventListener('input', filterResearchRecords);
+    elements.researchControls.addEventListener('input', () => {
+      filterResearchRecords();
+      window.clearTimeout(researchSearchTimer);
+      researchSearchTimer = window.setTimeout(() => reloadResearch().catch((error) => console.error('Research search failed:', error)), 300);
+    });
     elements.researchClear.onclick = () => {
       elements.researchSearch.value = '';
       elements.researchTopic.value = '';
       elements.researchEvidence.value = '';
       elements.researchAccess.value = '';
-      filterResearchRecords();
+      reloadResearch().catch((error) => console.error('Research search failed:', error));
       elements.researchSearch.focus();
     };
     elements.researchControls.dataset.ready = 'true';
     elements.researchControls.hidden = false;
+  }
+
+  async function reloadResearch() {
+    const version = ++researchRequestVersion;
+    const data = await request('research', 100, researchQueryParams(0));
+    if (version !== researchRequestVersion) return;
+    searchableResearch = data.research || [];
+    researchNextOffset = data.next_offset;
+    researchTotal = Number(data.total_matching || searchableResearch.length);
+    filterResearchRecords();
+    elements.researchLoadMore.hidden = researchNextOffset == null;
   }
 
   function renderResearch(records) {
@@ -490,6 +516,24 @@
     searchableResearch = records;
     setupResearchSearch();
     filterResearchRecords();
+  }
+
+  async function loadMoreResearch() {
+    if (researchNextOffset == null) return;
+    elements.researchLoadMore.disabled = true;
+    elements.researchLoadMore.textContent = 'Loading…';
+    try {
+      const data = await request('research', 100, researchQueryParams(researchNextOffset));
+      const known = new Set(searchableResearch.map((record) => record.id));
+      searchableResearch.push(...(data.research || []).filter((record) => !known.has(record.id)));
+      researchNextOffset = data.next_offset;
+      researchTotal = Number(data.total_matching || searchableResearch.length);
+      filterResearchRecords();
+      elements.researchLoadMore.hidden = researchNextOffset == null;
+    } finally {
+      elements.researchLoadMore.disabled = false;
+      elements.researchLoadMore.textContent = 'Load more research';
+    }
   }
 
   function trialSearchText(record) {
@@ -509,11 +553,8 @@
       (!phase || (record.phases || []).includes(phase)) &&
       (!country || (record.countries || []).includes(country))
     );
-    const visible = filtered.slice(0, RECORD_PAGE_SIZE);
-    drawTrials(visible, 'No clinical trial matches these filters. Try a broader search or clear one of the filters.');
-    if (elements.trialResult) elements.trialResult.textContent = filtered.length > visible.length
-      ? `Showing the newest ${numberFormatter.format(visible.length)} of ${numberFormatter.format(filtered.length)} matching trials. Refine the filters to narrow the result.`
-      : `Showing ${numberFormatter.format(filtered.length)} of ${numberFormatter.format(searchableTrials.length)} clinical trials.`;
+    drawTrials(filtered, 'No clinical trial matches these filters. Try a broader search or clear one of the filters.');
+    if (elements.trialResult) elements.trialResult.textContent = `Showing ${numberFormatter.format(filtered.length)} matching trials from ${numberFormatter.format(searchableTrials.length)} loaded · ${numberFormatter.format(trialTotal || searchableTrials.length)} available.`;
   }
 
   function setupTrialSearch() {
@@ -523,18 +564,33 @@
     replaceFilterOptions(elements.trialPhase, 'All phases', [...new Set(searchableTrials.flatMap((record) => record.phases || []).filter(Boolean))].sort().map((value) => [value, readableStatus(value)]));
     replaceFilterOptions(elements.trialCountry, 'All countries', [...new Set(searchableTrials.flatMap((record) => record.countries || []).filter(Boolean))].sort((left, right) => left.localeCompare(right)).map((value) => [value, value]));
     elements.trialSearch.value = new URLSearchParams(location.search).get('search')?.trim() || '';
-    elements.trialControls.addEventListener('input', filterTrialRecords);
+    elements.trialControls.addEventListener('input', () => {
+      filterTrialRecords();
+      window.clearTimeout(trialSearchTimer);
+      trialSearchTimer = window.setTimeout(() => reloadTrials().catch((error) => console.error('Trial search failed:', error)), 300);
+    });
     elements.trialClear.onclick = () => {
       elements.trialSearch.value = '';
       elements.trialTopic.value = '';
       elements.trialStatus.value = '';
       elements.trialPhase.value = '';
       elements.trialCountry.value = '';
-      filterTrialRecords();
+      reloadTrials().catch((error) => console.error('Trial search failed:', error));
       elements.trialSearch.focus();
     };
     elements.trialControls.dataset.ready = 'true';
     elements.trialControls.hidden = false;
+  }
+
+  async function reloadTrials() {
+    const version = ++trialRequestVersion;
+    const data = await request('trials', 100, trialQueryParams(0));
+    if (version !== trialRequestVersion) return;
+    searchableTrials = data.trials || [];
+    trialNextOffset = data.next_offset;
+    trialTotal = Number(data.total_matching || searchableTrials.length);
+    filterTrialRecords();
+    elements.trialLoadMore.hidden = trialNextOffset == null;
   }
 
   function renderTrials(records) {
@@ -542,6 +598,24 @@
     searchableTrials = records;
     setupTrialSearch();
     filterTrialRecords();
+  }
+
+  async function loadMoreTrials() {
+    if (trialNextOffset == null) return;
+    elements.trialLoadMore.disabled = true;
+    elements.trialLoadMore.textContent = 'Loading…';
+    try {
+      const data = await request('trials', 100, trialQueryParams(trialNextOffset));
+      const known = new Set(searchableTrials.map((record) => record.id));
+      searchableTrials.push(...(data.trials || []).filter((record) => !known.has(record.id)));
+      trialNextOffset = data.next_offset;
+      trialTotal = Number(data.total_matching || searchableTrials.length);
+      filterTrialRecords();
+      elements.trialLoadMore.hidden = trialNextOffset == null;
+    } finally {
+      elements.trialLoadMore.disabled = false;
+      elements.trialLoadMore.textContent = 'Load more trials';
+    }
   }
 
   function regulatoryGuideTitle(resource) {
@@ -816,6 +890,8 @@
   }
 
   let universityRows = [];
+  let universityNextOffset = null;
+  let universityTotal = 0;
   let universityControlsReady = false;
   const comparedUniversities = new Map();
 
@@ -898,6 +974,7 @@
       const metrics = el('dl');
       [
         ['Index score', Number(university.research_index_score || 0).toFixed(1)],
+        ['All-time work links', numberFormatter.format(Number(university.indexed_works_all_time || 0))],
         ['Five-year work links', numberFormatter.format(Number(university.indexed_works_five_year || 0))],
         ['Topics', numberFormatter.format(Number(university.indexed_topic_count || 0))],
         ['Recent momentum', percentage(university.momentum_score)],
@@ -929,6 +1006,7 @@
         : topicNames.length ? `Strongest indexed activity: ${topicNames.join(', ')}.` : `${numberFormatter.format(Number(university.indexed_topic_count || 0))} longevity topics represented.`));
       const signals = el('div', 'university-signals');
       signals.append(
+        el('span', '', `${numberFormatter.format(Number(university.indexed_works_all_time || 0))} all-time work links`),
         el('span', '', `${numberFormatter.format(Number(university.indexed_works_five_year || 0))} five-year work links`),
         el('span', '', `${numberFormatter.format(Number(university.indexed_topic_count || 0))} topics`),
         el('span', '', `${percentage(university.momentum_score)} momentum`),
@@ -940,29 +1018,35 @@
       const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = comparedUniversities.has(university.openalex_id);
       checkbox.setAttribute('aria-label', `Compare ${university.name}`);
       checkbox.onchange = () => {
+        const previousCount = comparedUniversities.size;
         if (checkbox.checked) {
           if (comparedUniversities.size >= 3) { checkbox.checked = false; return; }
           comparedUniversities.set(university.openalex_id, university);
         } else comparedUniversities.delete(university.openalex_id);
         renderUniversityComparison();
+        if (checkbox.checked && previousCount >= 1) requestAnimationFrame(() => {
+          const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+          elements.universityCompare.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
+        });
       };
       compare.append(checkbox, el('span', '', 'Compare'));
       item.append(rank, main, score, compare); elements.universityList.append(item);
     });
     elements.universityResult.textContent = activeTopic
       ? `Showing ${numberFormatter.format(visible.length)} universities with source-matched ${activeTopicName} activity, ranked by that topic’s indexed work links.`
-      : `Showing ${numberFormatter.format(visible.length)} of ${numberFormatter.format(universityRows.length)} returned universities. Up to 500 are returned for each filter combination.`;
+      : `Showing ${numberFormatter.format(visible.length)} matching universities from ${numberFormatter.format(universityRows.length)} loaded · ${numberFormatter.format(universityTotal || universityRows.length)} available.`;
     if (elements.universityHeading) elements.universityHeading.textContent = activeTopic ? `Universities researching ${activeTopicName}.` : 'Universities active in longevity research.';
     if (elements.universityIntro) elements.universityIntro.textContent = activeTopic
       ? `This is a topic-specific view. Every university below has source-matched ${activeTopicName} research in the index; the ranking uses that topic’s five-year activity, not the general university list.`
-      : 'Explore universities through several lenses instead of relying on a single unexplained league table. The index counts source-matched scholarly works, recent activity, breadth across longevity topics, and citation context from representative works.';
+      : 'Explore universities through several lenses instead of relying on a single unexplained league table. The index retains all source-matched scholarly works and measures rolling activity, breadth across every longevity topic, recent momentum, and citation context across the complete linked corpus.';
     renderUniversityRegions(visible);
   }
 
-  async function fetchUniversityIndex() {
+  async function fetchUniversityIndex(append = false) {
     elements.universityResult.textContent = 'Updating the university view…';
     const url = new URL(endpoint);
-    url.searchParams.set('view', 'universities'); url.searchParams.set('limit', '500');
+    url.searchParams.set('view', 'universities'); url.searchParams.set('limit', '100');
+    url.searchParams.set('offset', String(append ? universityNextOffset || 0 : 0));
     if (elements.universityTopic?.value) url.searchParams.set('topic', elements.universityTopic.value);
     if (elements.universityCountry?.value) url.searchParams.set('country', elements.universityCountry.value);
     if (elements.universityContinent?.value) url.searchParams.set('continent', elements.universityContinent.value);
@@ -970,7 +1054,14 @@
     const response = await fetch(url, { headers: window.ilFnHeaders() });
     if (!response.ok) throw new Error(`University index request failed with ${response.status}`);
     const data = await response.json();
-    universityRows = Array.isArray(data.universities) ? data.universities : [];
+    const incoming = Array.isArray(data.universities) ? data.universities : [];
+    if (append) {
+      const known = new Set(universityRows.map((university) => university.openalex_id));
+      universityRows.push(...incoming.filter((university) => !known.has(university.openalex_id)));
+    } else universityRows = incoming;
+    universityNextOffset = data.next_offset;
+    universityTotal = Number(data.total_matching || universityRows.length);
+    elements.universityLoadMore.hidden = universityNextOffset == null;
     renderUniversityStats(data.coverage || {});
     if (!universityControlsReady) {
       (data.topics || []).forEach((topic) => elements.universityTopic.append(new Option(topic.name, topic.slug)));
@@ -984,9 +1075,15 @@
           else nextUrl.searchParams.delete('topic');
           history.replaceState({}, '', nextUrl);
         }
-        fetchUniversityIndex().catch(showUniversityError);
+        fetchUniversityIndex(false).catch(showUniversityError);
       }));
       elements.clearUniversityCompare.onclick = () => { comparedUniversities.clear(); renderUniversityComparison(); renderUniversityRows(); };
+      elements.universityLoadMore.onclick = async () => {
+        if (universityNextOffset == null) return;
+        elements.universityLoadMore.disabled = true;
+        try { await fetchUniversityIndex(true); } catch (error) { showUniversityError(error); }
+        finally { elements.universityLoadMore.disabled = false; }
+      };
       universityControlsReady = true;
       const requestedTopic = new URLSearchParams(location.search).get('topic');
       if (requestedTopic && [...elements.universityTopic.options].some((option) => option.value === requestedTopic)) {
@@ -1197,11 +1294,14 @@
     elements.qualitySection.hidden = false;
   }
 
-  async function request(viewName, limit) {
+  async function request(viewName, limit, params = {}) {
     const url = new URL(endpoint);
     url.searchParams.set('quality_rules', '20260916b');
     url.searchParams.set('view', viewName);
     url.searchParams.set('limit', String(limit));
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value));
+    });
     if (viewName === 'resources') url.searchParams.set('directory_contract', 'global-195-v2');
     if (topicSlug) url.searchParams.set('topic', topicSlug);
     const res = await fetch(url, { headers: window.ilFnHeaders() });
@@ -1221,12 +1321,20 @@
         renderTrials(data.trials || []);
         renderSources(data.sources || [], true);
       } else if (view === 'research') {
-        const data = await request('research', 500);
+        const data = await request('research', 100, { q: new URLSearchParams(location.search).get('search')?.trim() || '' });
+        researchNextOffset = data.next_offset;
+        researchTotal = Number(data.total_matching || data.research?.length || 0);
         renderResearch(data.research || []);
+        elements.researchLoadMore.hidden = researchNextOffset == null;
+        elements.researchLoadMore.onclick = () => loadMoreResearch().catch((error) => console.error('Research page request failed:', error));
         renderSources(data.sources || [], false);
       } else if (view === 'trials') {
-        const data = await request('trials', 500);
+        const data = await request('trials', 100, { q: new URLSearchParams(location.search).get('search')?.trim() || '' });
+        trialNextOffset = data.next_offset;
+        trialTotal = Number(data.total_matching || data.trials?.length || 0);
         renderTrials(data.trials || []);
+        elements.trialLoadMore.hidden = trialNextOffset == null;
+        elements.trialLoadMore.onclick = () => loadMoreTrials().catch((error) => console.error('Trial page request failed:', error));
         renderSources(data.sources || [], false);
       } else if (view === 'topics') {
         const data = await request('topics', 100);

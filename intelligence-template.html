@@ -29,7 +29,7 @@
     <button class="intel-nav-toggle" id="intelNavToggle" type="button" aria-expanded="false" aria-controls="intelNav">
       <span>Menu</span><i aria-hidden="true"></i>
     </button>
-    <nav class="intel-nav" id="intelNav" aria-label="Primary navigation"><a href="/changes">Today</a><a href="/topics" data-nav="topics">Topics</a><a href="/trials" data-nav="trials">Trials</a><a href="/universities" data-nav="universities">Universities</a><a href="/research" data-nav="research">Research</a><div class="intel-nav-more"><button class="intel-nav-more-toggle" type="button" aria-expanded="false">More</button><div><form class="intel-nav-search" role="search"><input type="search" aria-label="Search longevity topics" placeholder="Search topics…" /><button type="submit">Search</button></form><a href="/discover">Explore</a><a href="/learn">Longevity 101</a><a href="/regulatory" data-nav="regulatory">Regulatory</a><a href="/resources" data-nav="resources">Resources</a><a href="/briefings">Briefings</a><a href="/methodology">How it works</a></div></div></nav>
+    <nav class="intel-nav" id="intelNav" aria-label="Primary navigation"><a href="/changes">Today</a><a href="/topics" data-nav="topics">Topics</a><a href="/trials" data-nav="trials">Trials</a><a href="/universities" data-nav="universities">Universities</a><a href="/research" data-nav="research">Research</a><a href="/discover">Explore</a><a href="/learn">Longevity 101</a><a href="/regulatory" data-nav="regulatory">Regulatory</a><a href="/resources" data-nav="resources">Resources</a><a href="/briefings">Briefings</a><a href="/methodology">How it works</a><form class="intel-nav-search" role="search"><input type="search" aria-label="Search longevity topics" placeholder="Search topics…" /><button type="submit">Search</button></form></nav>
   </header>
 
   <main>
@@ -96,6 +96,7 @@
       </form>
       <p class="filter-result" id="researchResult" aria-live="polite"></p>
       <div class="record-list" id="researchList"></div>
+      <button class="section-link record-load-more" id="researchLoadMore" type="button" hidden>Load more research</button>
     </section>
 
     <section class="intel-section" id="trialsSection" hidden>
@@ -113,6 +114,7 @@
       </form>
       <p class="filter-result" id="trialResult" aria-live="polite"></p>
       <div class="record-list" id="trialList"></div>
+      <button class="section-link record-load-more" id="trialLoadMore" type="button" hidden>Load more trials</button>
     </section>
 
     <section class="intel-section" id="regulatorySection" hidden>
@@ -179,6 +181,7 @@
         <div class="university-compare-grid" id="universityCompareGrid"></div>
       </section>
       <ol class="university-ranking" id="universityList"></ol>
+      <button class="section-link record-load-more" id="universityLoadMore" type="button" hidden>Load more universities</button>
       <aside class="automation-notice"><strong>What this ranking does—and does not—mean</strong><p>The index measures publication activity within the configured longevity topics. It does not rank teaching, clinical care, study quality, safety, effectiveness, or the value of an institution. OpenAlex affiliation matching can miss or misassign organizations, and highly collaborative works can be credited to several universities. Select any university to inspect its topic and source details.</p></aside>
     </section>
 

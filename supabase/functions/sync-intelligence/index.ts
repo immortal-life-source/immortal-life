@@ -27,10 +27,20 @@ type Job = {
   topic_slug: string | null
   job_key: string
   attempts: number
+  sync_mode: 'incremental' | 'history'
+  cursor_state: Record<string, unknown>
+  pages_processed: number
+  items_seen: number
+  items_written: number
+  window_start: string
 }
 
 const SIX_HOURS_MS = 6 * 60 * 60 * 1000
-const MAX_JOBS_PER_RUN = 45
+const RUN_TIME_BUDGET_MS = 118_000
+const PUBMED_PAGE_SIZE = 200
+const EUROPE_PMC_PAGE_SIZE = 1000
+const CLINICAL_TRIALS_PAGE_SIZE = 1000
+const HISTORY_START = '1800-01-01'
 const USER_AGENT = 'immortal.life-intelligence/1.0 (contact: research@immortal.life)'
 
 const REGULATORY_FEEDS = {
@@ -44,7 +54,17 @@ const REGULATORY_FEEDS = {
 
 type RegulatorySourceId = keyof typeof REGULATORY_FEEDS
 const TOPIC_SOURCE_IDS = new Set(['europe-pmc', 'pubmed', 'clinicaltrials-gov'])
+const GENERIC_SOURCE_IDS = new Set([...TOPIC_SOURCE_IDS, 'crossref', ...Object.keys(REGULATORY_FEEDS)])
+const HISTORY_SOURCE_IDS = new Set([...TOPIC_SOURCE_IDS, 'crossref'])
 let lastNcbiRequestAt = 0
+
+type SyncOutcome = {
+  seen: number
+  written: number
+  done: boolean
+  cursorState?: Record<string, unknown>
+  totalAvailable?: number | null
+}
 
 function constantTimeSecretMatch(supplied: string, expected: string): boolean {
   if (!expected || supplied.length !== expected.length) return false
@@ -215,19 +235,30 @@ const TOPIC_KEYWORDS: Record<string, RegExp> = {
   'regenerative-medicine': /\b(regenerative medicine|tissue engineering|organoid|biomaterial)\b/i,
 }
 
-async function syncCrossref(supabase: any): Promise<{ seen: number; written: number }> {
-  const from = new Date(Date.now() - 45 * 86400000).toISOString().slice(0, 10)
+async function allResearchDois(supabase: any): Promise<any[]> {
+  const rows: any[] = []
+  const pageSize = 1000
+  for (let offset = 0; ; offset += pageSize) {
+    const result = await supabase.from('research_items').select('id,doi,title,publication_state').not('doi', 'is', null).order('id').range(offset, offset + pageSize - 1)
+    if (result.error) throw result.error
+    rows.push(...(result.data ?? []))
+    if ((result.data ?? []).length < pageSize) return rows
+  }
+}
+
+async function syncCrossref(supabase: any, job: Job): Promise<SyncOutcome> {
+  const from = job.sync_mode === 'history' ? HISTORY_START : new Date(Date.now() - 45 * 86400000).toISOString().slice(0, 10)
   const url = new URL('https://api.crossref.org/works')
   url.searchParams.set('filter', `update-type:retraction,from-update-date:${from}`)
-  url.searchParams.set('rows', '200')
+  url.searchParams.set('rows', '1000')
   url.searchParams.set('sort', 'updated')
   url.searchParams.set('order', 'desc')
   url.searchParams.set('mailto', 'research@immortal.life')
+  url.searchParams.set('cursor', typeof job.cursor_state?.cursor === 'string' && job.cursor_state.cursor ? String(job.cursor_state.cursor) : '*')
   const payload = await fetchJson(url)
   const notices = Array.isArray(payload?.message?.items) ? payload.message.items : []
-  const { data: localItems, error: localError } = await supabase.from('research_items').select('id,doi,title,publication_state').not('doi', 'is', null)
-  if (localError) throw localError
-  const localByDoi = new Map((localItems ?? []).map((item: any) => [String(item.doi).toLowerCase(), item]))
+  const localItems = await allResearchDois(supabase)
+  const localByDoi = new Map(localItems.map((item: any) => [String(item.doi).toLowerCase(), item]))
   const events: any[] = []
   for (const notice of notices) {
     const relations = Array.isArray(notice?.['update-to']) ? notice['update-to'] : []
@@ -262,7 +293,10 @@ async function syncCrossref(supabase: any): Promise<{ seen: number; written: num
     if (error) throw error
   }
   await supabase.from('research_items').update({ integrity_checked_at: new Date().toISOString() }).not('doi', 'is', null)
-  return { seen: notices.length, written: events.length }
+  const currentCursor = typeof job.cursor_state?.cursor === 'string' ? String(job.cursor_state.cursor) : '*'
+  const cursor = cleanText(payload?.message?.['next-cursor'], 8000)
+  const done = notices.length === 0 || !cursor || cursor === currentCursor
+  return { seen: notices.length, written: events.length, done, cursorState: done ? {} : { cursor }, totalAvailable: Number(payload?.message?.['total-results'] ?? 0) || null }
 }
 
 async function syncRegulatoryFeed(supabase: any, sourceId: RegulatorySourceId): Promise<{ seen: number; written: number }> {
@@ -270,7 +304,7 @@ async function syncRegulatoryFeed(supabase: any, sourceId: RegulatorySourceId): 
   const xml = await fetchText(new URL(source.url))
   const blocks = xml.match(/<item\b[\s\S]*?<\/item>/gi) ?? xml.match(/<entry\b[\s\S]*?<\/entry>/gi) ?? []
   const records: any[] = []
-  for (const block of blocks.slice(0, 50)) {
+  for (const block of blocks) {
     const title = xmlText(block, 'title')
     let link = xmlText(block, 'link')
     if (!link) link = block.match(/<link[^>]+href=["']([^"']+)["']/i)?.[1] ?? ''
@@ -323,6 +357,39 @@ function sourceDateWindow(days: number): { from: string; to: string } {
   return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) }
 }
 
+type DateRange = { from: string; to: string }
+
+function splitDateRange(range: DateRange): [DateRange, DateRange] | null {
+  const from = new Date(`${range.from}T00:00:00Z`)
+  const to = new Date(`${range.to}T00:00:00Z`)
+  if (!Number.isFinite(from.getTime()) || !Number.isFinite(to.getTime()) || from >= to) return null
+  const middle = new Date(from.getTime() + Math.floor((to.getTime() - from.getTime()) / 2))
+  const laterFrom = new Date(middle.getTime() + 86400000)
+  return [
+    { from: range.from, to: middle.toISOString().slice(0, 10) },
+    { from: laterFrom.toISOString().slice(0, 10), to: range.to },
+  ]
+}
+
+function initialPubMedState(job: Job): { ranges: DateRange[]; current: DateRange | null; offset: number } {
+  const existing = job.cursor_state ?? {}
+  const ranges = Array.isArray(existing.ranges)
+    ? existing.ranges.filter((range: any) => /^\d{4}-\d{2}-\d{2}$/.test(range?.from) && /^\d{4}-\d{2}-\d{2}$/.test(range?.to))
+    : []
+  const current = existing.current && typeof existing.current === 'object'
+    ? existing.current as DateRange
+    : null
+  const offset = Math.max(0, Math.trunc(Number(existing.offset ?? 0)))
+  if (current || ranges.length) return { ranges, current, offset }
+  const to = job.sync_mode === 'history'
+    ? new Date().toISOString().slice(0, 10)
+    : new Date(new Date(job.window_start).getTime() + SIX_HOURS_MS).toISOString().slice(0, 10)
+  const from = job.sync_mode === 'history'
+    ? HISTORY_START
+    : new Date(new Date(job.window_start).getTime() - 14 * 86400000).toISOString().slice(0, 10)
+  return { ranges: [{ from, to }], current: null, offset: 0 }
+}
+
 function pubmedPublicationDate(block: string): string | null {
   const articleDate = block.match(/<ArticleDate[^>]*>([\s\S]*?)<\/ArticleDate>/i)?.[1]
   const pubDate = articleDate || block.match(/<PubDate[^>]*>([\s\S]*?)<\/PubDate>/i)?.[1] || ''
@@ -340,13 +407,18 @@ function pubmedPublicationDate(block: string): string | null {
   return dateOnly(`${year}-${month}-${/^\d{1,2}$/.test(dayValue) ? dayValue.padStart(2, '0') : '01'}`)
 }
 
-async function syncPubMed(supabase: any, topic: Topic): Promise<{ seen: number; written: number }> {
+async function syncPubMed(supabase: any, topic: Topic, job: Job): Promise<SyncOutcome> {
+  const state = initialPubMedState(job)
+  const range = state.current ?? state.ranges.pop()
+  if (!range) return { seen: 0, written: 0, done: true, cursorState: {} }
   const searchUrl = new URL('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi')
   searchUrl.searchParams.set('db', 'pubmed')
   searchUrl.searchParams.set('term', topic.literature_query)
-  searchUrl.searchParams.set('datetype', 'pdat')
-  searchUrl.searchParams.set('reldate', '90')
-  searchUrl.searchParams.set('retmax', '50')
+  searchUrl.searchParams.set('datetype', job.sync_mode === 'history' ? 'pdat' : 'edat')
+  searchUrl.searchParams.set('mindate', range.from.replaceAll('-', '/'))
+  searchUrl.searchParams.set('maxdate', range.to.replaceAll('-', '/'))
+  searchUrl.searchParams.set('retstart', String(state.offset))
+  searchUrl.searchParams.set('retmax', String(PUBMED_PAGE_SIZE))
   searchUrl.searchParams.set('sort', 'pub_date')
   searchUrl.searchParams.set('retmode', 'json')
   searchUrl.searchParams.set('tool', 'immortal_life')
@@ -356,8 +428,19 @@ async function syncPubMed(supabase: any, topic: Topic): Promise<{ seen: number; 
 
   await throttleNcbi()
   const searchPayload = await fetchJson(searchUrl)
-  const ids = uniqueStrings(searchPayload?.esearchresult?.idlist, 50)
-  if (!ids.length) return { seen: 0, written: 0 }
+  const total = Math.max(0, Math.trunc(Number(searchPayload?.esearchresult?.count ?? 0)))
+  if (total > 9999 && state.offset === 0) {
+    const split = splitDateRange(range)
+    if (!split) throw new Error(`PubMed result partition exceeds 9,999 records for ${range.from}`)
+    // Stack order makes the newer half run first while preserving the older half.
+    state.ranges.push(split[0], split[1])
+    return { seen: 0, written: 0, done: false, cursorState: { ranges: state.ranges, current: null, offset: 0 }, totalAvailable: total }
+  }
+  const ids = uniqueStrings(searchPayload?.esearchresult?.idlist, PUBMED_PAGE_SIZE)
+  if (!ids.length) {
+    const done = state.ranges.length === 0
+    return { seen: 0, written: 0, done, cursorState: done ? {} : { ranges: state.ranges, current: null, offset: 0 }, totalAvailable: total }
+  }
 
   const fetchUrl = new URL('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi')
   fetchUrl.searchParams.set('db', 'pubmed')
@@ -431,7 +514,12 @@ async function syncPubMed(supabase: any, topic: Topic): Promise<{ seen: number; 
     }
   }).filter(Boolean)
 
-  if (!records.length) return { seen: articles.length, written: 0 }
+  if (!records.length) {
+    const nextOffset = state.offset + ids.length
+    const rangeDone = nextOffset >= total
+    const done = rangeDone && state.ranges.length === 0
+    return { seen: articles.length, written: 0, done, cursorState: done ? {} : { ranges: state.ranges, current: rangeDone ? null : range, offset: rangeDone ? 0 : nextOffset }, totalAvailable: total }
+  }
   const { data, error } = await supabase
     .from('research_items')
     .upsert(records, { onConflict: 'source_id,external_id', defaultToNull: false })
@@ -457,16 +545,30 @@ async function syncPubMed(supabase: any, topic: Topic): Promise<{ seen: number; 
     const { error: qualityError } = await supabase.rpc('refresh_research_quality', { record_ids: topicLinks.map((link) => link.research_item_id) })
     if (qualityError) throw qualityError
   }
-  return { seen: articles.length, written: records.length }
+  const nextOffset = state.offset + ids.length
+  const rangeDone = nextOffset >= total
+  const done = rangeDone && state.ranges.length === 0
+  return {
+    seen: articles.length,
+    written: records.length,
+    done,
+    cursorState: done ? {} : { ranges: state.ranges, current: rangeDone ? null : range, offset: rangeDone ? 0 : nextOffset },
+    totalAvailable: total,
+  }
 }
 
-async function syncEuropePmc(supabase: any, topic: Topic): Promise<{ seen: number; written: number }> {
-  const { from, to } = sourceDateWindow(90)
+async function syncEuropePmc(supabase: any, topic: Topic, job: Job): Promise<SyncOutcome> {
+  const cursor = typeof job.cursor_state?.cursor === 'string' ? String(job.cursor_state.cursor) : '*'
   const url = new URL('https://www.ebi.ac.uk/europepmc/webservices/rest/search')
-  url.searchParams.set('query', `(${topic.literature_query}) AND FIRST_PDATE:[${from} TO ${to}] sort_date:y`)
+  const incrementalWindow = sourceDateWindow(31)
+  const query = job.sync_mode === 'history'
+    ? `(${topic.literature_query}) sort_date:y`
+    : `(${topic.literature_query}) AND (FIRST_PDATE:[${incrementalWindow.from} TO ${incrementalWindow.to}] OR FIRST_INDEX_DATE:[${incrementalWindow.from} TO ${incrementalWindow.to}]) sort_date:y`
+  url.searchParams.set('query', query)
   url.searchParams.set('format', 'json')
   url.searchParams.set('resultType', 'core')
-  url.searchParams.set('pageSize', '50')
+  url.searchParams.set('pageSize', String(EUROPE_PMC_PAGE_SIZE))
+  url.searchParams.set('cursorMark', cursor)
 
   const payload = await fetchJson(url)
   const results = Array.isArray(payload?.resultList?.result) ? payload.resultList.result : []
@@ -540,7 +642,10 @@ async function syncEuropePmc(supabase: any, topic: Topic): Promise<{ seen: numbe
     })
     .filter(Boolean)
 
-  if (!records.length) return { seen: 0, written: 0 }
+  const nextCursor = cleanText(payload?.nextCursorMark, 2000)
+  const total = Math.max(0, Math.trunc(Number(payload?.hitCount ?? 0)))
+  const done = results.length === 0 || !nextCursor || nextCursor === cursor
+  if (!records.length) return { seen: results.length, written: 0, done, cursorState: done ? {} : { cursor: nextCursor }, totalAvailable: total }
   const { data, error } = await supabase
     .from('research_items')
     .upsert(records, { onConflict: 'source_id,external_id', defaultToNull: false })
@@ -568,19 +673,22 @@ async function syncEuropePmc(supabase: any, topic: Topic): Promise<{ seen: numbe
     const { error: qualityError } = await supabase.rpc('refresh_research_quality', { record_ids: topicLinks.map((link) => link.research_item_id) })
     if (qualityError) throw qualityError
   }
-  return { seen: results.length, written: records.length }
+  return { seen: results.length, written: records.length, done, cursorState: done ? {} : { cursor: nextCursor }, totalAvailable: total }
 }
 
 function trialDate(value: any): string | null {
   return dateOnly(value?.date ?? value)
 }
 
-async function syncClinicalTrials(supabase: any, topic: Topic): Promise<{ seen: number; written: number }> {
+async function syncClinicalTrials(supabase: any, topic: Topic, job: Job): Promise<SyncOutcome> {
   const url = new URL('https://clinicaltrials.gov/api/v2/studies')
   url.searchParams.set('query.term', topic.trials_query)
   url.searchParams.set('format', 'json')
-  url.searchParams.set('pageSize', '50')
+  url.searchParams.set('pageSize', String(CLINICAL_TRIALS_PAGE_SIZE))
   url.searchParams.set('sort', 'LastUpdatePostDate:desc')
+  if (typeof job.cursor_state?.pageToken === 'string' && job.cursor_state.pageToken) {
+    url.searchParams.set('pageToken', String(job.cursor_state.pageToken))
+  }
 
   const payload = await fetchJson(url)
   const studies = Array.isArray(payload?.studies) ? payload.studies : []
@@ -652,7 +760,13 @@ async function syncClinicalTrials(supabase: any, topic: Topic): Promise<{ seen: 
     })
     .filter(Boolean)
 
-  if (!records.length) return { seen: 0, written: 0 }
+  const nextPageToken = cleanText(payload?.nextPageToken, 4000)
+  const total = Number.isFinite(Number(payload?.totalCount)) ? Math.max(0, Math.trunc(Number(payload.totalCount))) : null
+  const incrementalFloor = new Date(Date.now() - 31 * 86400000).toISOString().slice(0, 10)
+  const oldestUpdate = records.map((record: any) => record?.last_update_date).filter(Boolean).sort()[0] ?? null
+  const reachedIncrementalFloor = job.sync_mode === 'incremental' && oldestUpdate && oldestUpdate < incrementalFloor
+  const done = !nextPageToken || studies.length === 0 || Boolean(reachedIncrementalFloor)
+  if (!records.length) return { seen: studies.length, written: 0, done, cursorState: done ? {} : { pageToken: nextPageToken }, totalAvailable: total }
   const { data, error } = await supabase
     .from('clinical_trials')
     .upsert(records, { onConflict: 'source_id,external_id', defaultToNull: false })
@@ -680,7 +794,7 @@ async function syncClinicalTrials(supabase: any, topic: Topic): Promise<{ seen: 
     const { error: qualityError } = await supabase.rpc('refresh_trial_quality', { record_ids: topicLinks.map((link) => link.clinical_trial_id) })
     if (qualityError) throw qualityError
   }
-  return { seen: studies.length, written: records.length }
+  return { seen: studies.length, written: records.length, done, cursorState: done ? {} : { pageToken: nextPageToken }, totalAvailable: total }
 }
 
 Deno.serve(async (req) => {
@@ -689,6 +803,7 @@ Deno.serve(async (req) => {
   const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', serviceRoleKey(), {
     auth: { persistSession: false, autoRefreshToken: false },
   })
+  const runStartedAt = Date.now()
   if (!(await isAuthorized(req, supabase))) return jsonResponse(req, { error: 'Unauthorized' }, 401, 'POST')
   let requestedSource = 'all'
   let triggerKind = 'schedule'
@@ -715,7 +830,7 @@ Deno.serve(async (req) => {
       .order('sort_order')
     if (topicsError) throw topicsError
 
-    let sourceQuery = supabase.from('content_sources').select('id').eq('enabled', true)
+    let sourceQuery = supabase.from('content_sources').select('id').eq('enabled', true).in('id', [...GENERIC_SOURCE_IDS])
     if (requestedSource !== 'all') sourceQuery = sourceQuery.eq('id', requestedSource)
     const { data: sources, error: sourcesError } = await sourceQuery
     if (sourcesError) throw sourcesError
@@ -724,13 +839,27 @@ Deno.serve(async (req) => {
     const slot = new Date(Math.floor(Date.now() / SIX_HOURS_MS) * SIX_HOURS_MS).toISOString()
     const queued = sources.flatMap((source: { id: string }) => {
       if (TOPIC_SOURCE_IDS.has(source.id)) {
-        return (topics ?? []).map((topic: Topic) => ({ source_id: source.id, topic_slug: topic.slug, job_key: topic.slug, window_start: slot }))
+        return (topics ?? []).map((topic: Topic) => ({ source_id: source.id, topic_slug: topic.slug, job_key: `${topic.slug}:incremental`, window_start: slot, sync_mode: 'incremental' }))
       }
-      return [{ source_id: source.id, topic_slug: null, job_key: source.id === 'crossref' ? 'retractions' : 'official-feed', window_start: slot }]
+      return [{ source_id: source.id, topic_slug: null, job_key: `${source.id === 'crossref' ? 'retractions' : 'official-feed'}:incremental`, window_start: slot, sync_mode: 'incremental' }]
     })
+    const historical = sources.filter((source: { id: string }) => HISTORY_SOURCE_IDS.has(source.id)).flatMap((source: { id: string }) =>
+      source.id === 'crossref' ? [{
+        source_id: source.id,
+        topic_slug: null,
+        job_key: 'retractions:history',
+        window_start: '1800-01-01T00:00:00.000Z',
+        sync_mode: 'history',
+      }] : (topics ?? []).map((topic: Topic) => ({
+        source_id: source.id,
+        topic_slug: topic.slug,
+        job_key: `${topic.slug}:history`,
+        window_start: '1800-01-01T00:00:00.000Z',
+        sync_mode: 'history',
+      })))
     const { error: queueError } = await supabase
       .from('ingestion_jobs')
-      .upsert(queued, { onConflict: 'source_id,job_key,window_start', ignoreDuplicates: true })
+      .upsert([...queued, ...historical], { onConflict: 'source_id,job_key,window_start', ignoreDuplicates: true })
     if (queueError) throw queueError
 
     const abandonedBefore = new Date(Date.now() - 45 * 60 * 1000).toISOString()
@@ -740,30 +869,36 @@ Deno.serve(async (req) => {
       .eq('status', 'running')
       .lt('locked_at', abandonedBefore)
 
-    const { data: jobs, error: jobsError } = await supabase
-      .from('ingestion_jobs')
-      .select('id,source_id,topic_slug,job_key,attempts')
-      .in('status', ['pending', 'retry'])
-      .lte('available_at', new Date().toISOString())
-      .order('created_at')
-      .limit(MAX_JOBS_PER_RUN)
-    if (jobsError) throw jobsError
-
     const topicBySlug = new Map((topics ?? []).map((topic: Topic) => [topic.slug, topic]))
     let seen = 0
     let written = 0
     let errors = 0
+    let processed = 0
     const errorSources = new Set<string>()
     const successfulSources = new Set<string>()
 
-    for (const job of (jobs ?? []) as Job[]) {
+    while (Date.now() - runStartedAt < RUN_TIME_BUDGET_MS) {
+      const { data: jobs, error: jobsError } = await supabase
+        .from('ingestion_jobs')
+        .select('id,source_id,topic_slug,job_key,attempts,sync_mode,cursor_state,pages_processed,items_seen,items_written,window_start')
+        .in('status', ['pending', 'retry'])
+        .lte('available_at', new Date().toISOString())
+        .order('updated_at')
+        .order('created_at')
+        .limit(1)
+      if (jobsError) throw jobsError
+      if (!jobs?.length) break
+      const job = jobs[0] as Job
       const topic = job.topic_slug ? topicBySlug.get(job.topic_slug) : null
-      if (TOPIC_SOURCE_IDS.has(job.source_id) && !topic) continue
+      if (TOPIC_SOURCE_IDS.has(job.source_id) && !topic) {
+        await supabase.from('ingestion_jobs').update({ status: 'dead', last_error: 'Enabled topic no longer exists', updated_at: new Date().toISOString() }).eq('id', job.id)
+        continue
+      }
       const attempt = job.attempts + 1
       const lockedAt = new Date().toISOString()
       const { data: locked } = await supabase
         .from('ingestion_jobs')
-        .update({ status: 'running', attempts: attempt, locked_at: lockedAt, updated_at: lockedAt })
+        .update({ status: 'running', locked_at: lockedAt, updated_at: lockedAt })
         .eq('id', job.id)
         .in('status', ['pending', 'retry'])
         .select('id')
@@ -772,31 +907,35 @@ Deno.serve(async (req) => {
 
       await supabase.from('content_sources').update({ last_attempt_at: lockedAt }).eq('id', job.source_id)
       try {
-        let outcome: { seen: number; written: number }
-        if (job.source_id === 'europe-pmc') outcome = await syncEuropePmc(supabase, topic as Topic)
-        else if (job.source_id === 'pubmed') outcome = await syncPubMed(supabase, topic as Topic)
-        else if (job.source_id === 'clinicaltrials-gov') outcome = await syncClinicalTrials(supabase, topic as Topic)
-        else if (job.source_id === 'crossref') outcome = await syncCrossref(supabase)
-        else if (job.source_id in REGULATORY_FEEDS) outcome = await syncRegulatoryFeed(supabase, job.source_id as RegulatorySourceId)
+        let outcome: SyncOutcome
+        if (job.source_id === 'europe-pmc') outcome = await syncEuropePmc(supabase, topic as Topic, job)
+        else if (job.source_id === 'pubmed') outcome = await syncPubMed(supabase, topic as Topic, job)
+        else if (job.source_id === 'clinicaltrials-gov') outcome = await syncClinicalTrials(supabase, topic as Topic, job)
+        else if (job.source_id === 'crossref') outcome = await syncCrossref(supabase, job)
+        else if (job.source_id in REGULATORY_FEEDS) outcome = { ...await syncRegulatoryFeed(supabase, job.source_id as RegulatorySourceId), done: true }
         else throw new Error(`Unsupported source ${job.source_id}`)
         seen += outcome.seen
         written += outcome.written
+        processed += 1
         successfulSources.add(job.source_id)
         const completedAt = new Date().toISOString()
         await supabase.from('ingestion_jobs').update({
-          status: 'succeeded',
-          completed_at: completedAt,
-          items_seen: outcome.seen,
-          items_written: outcome.written,
+          status: outcome.done ? 'succeeded' : 'pending',
+          completed_at: outcome.done ? completedAt : null,
+          available_at: outcome.done ? completedAt : new Date(Date.now() + 1000).toISOString(),
+          cursor_state: outcome.cursorState ?? {},
+          pages_processed: Number(job.pages_processed ?? 0) + 1,
+          total_available: outcome.totalAvailable ?? null,
+          items_seen: Number(job.items_seen ?? 0) + outcome.seen,
+          items_written: Number(job.items_written ?? 0) + outcome.written,
+          attempts: 0,
           locked_at: null,
           last_error: null,
           updated_at: completedAt,
         }).eq('id', job.id)
-        await supabase.from('content_sources').update({
-          last_success_at: completedAt,
-          updated_at: completedAt,
-        }).eq('id', job.source_id)
+        if (outcome.done) await supabase.from('content_sources').update({ last_success_at: completedAt, updated_at: completedAt }).eq('id', job.source_id)
       } catch (error) {
+        processed += 1
         errors += 1
         errorSources.add(job.source_id)
         const message = cleanText(error instanceof Error ? error.message : String(error), 500)
@@ -804,6 +943,7 @@ Deno.serve(async (req) => {
         const retryDelayMs = Math.min(6 * 60 * 60 * 1000, 15 * 60 * 1000 * 2 ** Math.max(0, attempt - 1))
         await supabase.from('ingestion_jobs').update({
           status: isDead ? 'dead' : 'retry',
+          attempts: attempt,
           available_at: new Date(Date.now() + retryDelayMs).toISOString(),
           locked_at: null,
           last_error: message,
@@ -834,7 +974,6 @@ Deno.serve(async (req) => {
     const { error: entityRefreshError } = await supabase.rpc('refresh_intelligence_entities')
     if (entityRefreshError) throw entityRefreshError
 
-    const processed = (jobs ?? []).length
     const finalStatus = errors === 0 ? 'succeeded' : errors < processed ? 'partial' : 'failed'
     await supabase.from('ingestion_runs').update({
       completed_at: new Date().toISOString(),

@@ -34,14 +34,6 @@ function publicRecords(rows: any[] | null, field: string): any[] {
   return (rows ?? []).map((record: any) => ({ ...record, [field]: publicRelations(record, field) })).filter((record: any) => record[field].length > 0)
 }
 
-function publicLinkRows(rows: any[] | null): any[] {
-  return (rows ?? []).filter((row: any) => {
-    if (!STRICT_TITLE_CONTEXT_TOPICS.has(row?.topic_slug)) return true
-    const fields = Array.isArray(row?.matched_fields) ? row.matched_fields : []
-    return fields.includes('title') && fields.includes('title context')
-  })
-}
-
 function response(req: Request, body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -52,6 +44,10 @@ function response(req: Request, body: unknown, status = 200): Response {
       'X-Content-Type-Options': 'nosniff',
     },
   })
+}
+
+function publicSearchTerm(value: string | null): string {
+  return cleanText(value ?? '', 160).replace(/[,%().:*]/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
 function publicSourceState(source: any): Record<string, unknown> {
@@ -103,6 +99,19 @@ function publicResourceState(resource: any, ingestionSource?: any): Record<strin
   }
 }
 
+async function allUniversityLocations(supabase: any): Promise<any[]> {
+  const rows: any[] = []
+  const pageSize = 1000
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase.from('university_research_institutions')
+      .select('country_code,country_name,continent').eq('is_eligible', true)
+      .order('openalex_id').range(offset, offset + pageSize - 1)
+    if (error) throw error
+    rows.push(...(data ?? []))
+    if ((data ?? []).length < pageSize) return rows
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req, PUBLIC_METHODS) })
   if (req.method !== 'GET') return response(req, { error: 'Method not allowed' }, 405)
@@ -115,6 +124,8 @@ Deno.serve(async (req) => {
   const topic = cleanText(url.searchParams.get('topic') ?? '', 80)
   const parsedLimit = Number.parseInt(url.searchParams.get('limit') ?? '24', 10)
   const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 500) : 24
+  const parsedOffset = Number.parseInt(url.searchParams.get('offset') ?? '0', 10)
+  const offset = Number.isFinite(parsedOffset) ? Math.max(parsedOffset, 0) : 0
 
   if (topic && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(topic)) {
     return response(req, { error: 'Invalid topic' }, 400)
@@ -205,12 +216,12 @@ Deno.serve(async (req) => {
       const sort = cleanText(url.searchParams.get('sort') ?? 'index', 20)
       const universityLimit = Math.min(Math.max(parsedLimit || 100, 1), 500)
       const relation = topic
-        ? 'university_research_topic_metrics!inner(topic_slug,works_five_year,works_two_year,representative_citations,representative_open_access_count,representative_work_count)'
-        : 'university_research_topic_metrics(topic_slug,works_five_year,works_two_year,representative_citations,representative_open_access_count,representative_work_count)'
+        ? 'university_research_topic_metrics!inner(topic_slug,works_all_time,works_five_year,works_two_year,representative_citations,representative_open_access_count,representative_work_count)'
+        : 'university_research_topic_metrics(topic_slug,works_all_time,works_five_year,works_two_year,representative_citations,representative_open_access_count,representative_work_count)'
       let query = supabase.from('university_research_institutions')
-        .select(`openalex_id,slug,name,ror_id,country_code,country_name,continent,region,city,latitude,longitude,homepage_url,openalex_url,indexed_works_five_year,indexed_works_two_year,indexed_topic_count,representative_citations,representative_open_access_share,activity_score,breadth_score,momentum_score,citation_context_score,research_index_score,ranking_method_version,updated_at,${relation}`, { count: 'exact' })
+        .select(`openalex_id,slug,name,ror_id,country_code,country_name,continent,region,city,latitude,longitude,homepage_url,openalex_url,indexed_works_all_time,indexed_works_five_year,indexed_works_two_year,indexed_topic_count,representative_citations,representative_open_access_share,activity_score,breadth_score,momentum_score,citation_context_score,research_index_score,ranking_method_version,updated_at,${relation}`, { count: 'exact' })
         .eq('is_eligible', true)
-        .limit(universityLimit)
+        .range(offset, offset + universityLimit - 1)
       if (topic) query = query.eq('university_research_topic_metrics.topic_slug', topic)
       if (/^[A-Z]{2}$/.test(country)) query = query.eq('country_code', country)
       if (continent) query = query.eq('continent', continent)
@@ -223,10 +234,10 @@ Deno.serve(async (req) => {
         query,
         supabase.rpc('get_university_index_coverage'),
         supabase.from('intelligence_topics').select('slug,name,sort_order').eq('enabled', true).order('sort_order'),
-        supabase.from('university_research_institutions').select('country_code,country_name,continent').eq('is_eligible', true).order('country_name').limit(5000),
+        allUniversityLocations(supabase),
         sourcesPromise,
       ])
-      for (const result of [coverage, topicsResult, countriesResult]) if (result.error) throw result.error
+      for (const result of [coverage, topicsResult]) if (result.error) throw result.error
       if (error) throw error
       if (sourcesError) throw sourcesError
       const universities = data ?? []
@@ -238,7 +249,7 @@ Deno.serve(async (req) => {
           || String(left.name).localeCompare(String(right.name))
       })
       const countryMap = new Map<string, { code: string; name: string; continent: string; universities: number }>()
-      for (const row of countriesResult.data ?? []) {
+      for (const row of countriesResult ?? []) {
         if (!row.country_code) continue
         const current = countryMap.get(row.country_code) ?? { code: row.country_code, name: row.country_name || row.country_code, continent: row.continent || 'Unspecified', universities: 0 }
         current.universities += 1
@@ -247,6 +258,8 @@ Deno.serve(async (req) => {
       return response(req, {
         generated_at: new Date().toISOString(),
         total_matching: count ?? 0,
+        offset,
+        next_offset: offset + universities.length < Number(count ?? 0) ? offset + universities.length : null,
         coverage: coverage.data ?? {},
         filters: { topic: topic || null, country: country || null, continent: continent || null, sort },
         topics: topicsResult.data ?? [],
@@ -254,10 +267,10 @@ Deno.serve(async (req) => {
         universities,
         methodology: {
           label: 'Global University Research Index',
-          source: 'OpenAlex affiliations resolved to ROR institutions',
-          window: 'Works published from 2022 onward; recent momentum uses 2025 onward',
-          score: '50% indexed activity, 20% topic breadth, 15% recent momentum, 15% citation context from representative works',
-          limitations: 'The score measures activity in the configured longevity topics. It does not rate teaching, clinical care, study quality, safety, effectiveness, or institutional quality. Affiliation matching and citation data can be incomplete or incorrect.',
+          source: 'OpenAlex institutions and affiliations; ROR identifiers are shown where available',
+          window: 'All available publication history is retained; activity and momentum use rolling five-year and two-year windows',
+          score: '50% unique-work activity, 20% coverage across every enabled topic, 15% recent momentum, 15% citation context across all linked works',
+          limitations: 'The score measures activity in configured longevity topics. It does not rate teaching, clinical care, study quality, safety, effectiveness, or institutional quality. OpenAlex affiliation and citation data can be incomplete or incorrect.',
         },
         sources: (sources ?? []).filter((source: any) => source.id === 'openalex').map(publicSourceState),
       })
@@ -274,37 +287,54 @@ Deno.serve(async (req) => {
     }
 
     if (view === 'research') {
+      const search = publicSearchTerm(url.searchParams.get('q'))
+      const evidence = cleanText(url.searchParams.get('evidence') ?? '', 40)
+      const access = cleanText(url.searchParams.get('access') ?? '', 12)
       const topicRelation = 'research_item_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
       let query = supabase
         .from('research_items')
-        .select(`id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,${topicRelation}`)
+        .select(`id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,${topicRelation}`, { count: 'exact' })
         .eq('publication_state', 'published')
         .eq('research_item_topics.is_published', true)
         .order('published_on', { ascending: false, nullsFirst: false })
         .order('id', { ascending: false })
-        .limit(limit)
+        .range(offset, offset + limit - 1)
       if (topic) query = query.eq('research_item_topics.topic_slug', topic).eq('research_item_topics.is_published', true)
-      const [{ data, error }, { data: sources, error: sourcesError }] = await Promise.all([query, sourcesPromise])
+      if (search) query = query.or(`title.ilike.%${search}%,authors.ilike.%${search}%,journal.ilike.%${search}%,doi.ilike.%${search}%`)
+      if (evidence) query = query.eq('evidence_level', evidence)
+      if (access === 'open') query = query.eq('is_open_access', true)
+      else if (access === 'restricted') query = query.eq('is_open_access', false)
+      const [{ data, error, count }, { data: sources, error: sourcesError }] = await Promise.all([query, sourcesPromise])
       if (error) throw error
       if (sourcesError) throw sourcesError
-      return response(req, { research: publicRecords(data, 'research_item_topics'), sources: (sources ?? []).map(publicSourceState) })
+      const research = publicRecords(data, 'research_item_topics')
+      return response(req, { research, total_matching: count ?? 0, offset, next_offset: offset + (data?.length ?? 0) < Number(count ?? 0) ? offset + (data?.length ?? 0) : null, sources: (sources ?? []).map(publicSourceState) })
     }
 
     if (view === 'trials') {
+      const search = publicSearchTerm(url.searchParams.get('q'))
+      const status = cleanText(url.searchParams.get('status') ?? '', 80)
+      const phase = cleanText(url.searchParams.get('phase') ?? '', 80)
+      const country = cleanText(url.searchParams.get('country') ?? '', 120)
       const topicRelation = 'clinical_trial_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
       let query = supabase
         .from('clinical_trials')
-        .select(`id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,source_url,editorial_summary,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,${topicRelation}`)
+        .select(`id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,source_url,editorial_summary,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,${topicRelation}`, { count: 'exact' })
         .eq('publication_state', 'published')
         .eq('clinical_trial_topics.is_published', true)
         .order('last_update_date', { ascending: false, nullsFirst: false })
         .order('id', { ascending: false })
-        .limit(limit)
+        .range(offset, offset + limit - 1)
       if (topic) query = query.eq('clinical_trial_topics.topic_slug', topic).eq('clinical_trial_topics.is_published', true)
-      const [{ data, error }, { data: sources, error: sourcesError }] = await Promise.all([query, sourcesPromise])
+      if (search) query = query.or(`title.ilike.%${search}%,sponsor.ilike.%${search}%,external_id.ilike.%${search}%`)
+      if (status) query = query.eq('overall_status', status)
+      if (phase) query = query.contains('phases', [phase])
+      if (country) query = query.contains('countries', [country])
+      const [{ data, error, count }, { data: sources, error: sourcesError }] = await Promise.all([query, sourcesPromise])
       if (error) throw error
       if (sourcesError) throw sourcesError
-      return response(req, { trials: publicRecords(data, 'clinical_trial_topics'), sources: (sources ?? []).map(publicSourceState) })
+      const trials = publicRecords(data, 'clinical_trial_topics')
+      return response(req, { trials, total_matching: count ?? 0, offset, next_offset: offset + (data?.length ?? 0) < Number(count ?? 0) ? offset + (data?.length ?? 0) : null, sources: (sources ?? []).map(publicSourceState) })
     }
 
     if (view === 'integrity') {
@@ -384,68 +414,33 @@ Deno.serve(async (req) => {
     }
 
     if (view === 'graph') {
-      const [topicsResult, researchLinks, trialLinks, regulatoryResult, integrityResult, universityLinks, sourcesResult] = await Promise.all([
-        supabase.rpc('get_intelligence_topic_counts'),
-        supabase.from('research_item_topics').select('research_item_id,topic_slug,matched_fields,research_items!inner(publication_state)').eq('is_published', true).eq('research_items.publication_state', 'published').limit(5000),
-        supabase.from('clinical_trial_topics').select('clinical_trial_id,topic_slug,matched_fields,clinical_trials!inner(publication_state)').eq('is_published', true).eq('clinical_trials.publication_state', 'published').limit(5000),
-        supabase.from('regulatory_events').select('matched_topics').eq('publication_state', 'published').limit(1000),
-        supabase.from('research_integrity_events').select('research_items(research_item_topics(topic_slug,is_published))').eq('publication_state', 'published').limit(1000),
-        supabase.from('university_research_topic_metrics').select('topic_slug,works_five_year').gt('works_five_year', 0).limit(5000),
+      const [topicsResult, overlapsResult, sourcesResult] = await Promise.all([
+        supabase.rpc('get_intelligence_graph_counts'),
+        supabase.rpc('get_intelligence_topic_overlap_counts'),
         sourcesPromise,
       ])
-      for (const result of [topicsResult, researchLinks, trialLinks, regulatoryResult, integrityResult, universityLinks, sourcesResult]) if (result.error) throw result.error
+      for (const result of [topicsResult, overlapsResult, sourcesResult]) if (result.error) throw result.error
       const topics = topicsResult.data ?? []
-      const visibleResearchLinks = publicLinkRows(researchLinks.data)
-      const visibleTrialLinks = publicLinkRows(trialLinks.data)
-      const researchTopicCounts = new Map<string, number>()
-      const trialTopicCounts = new Map<string, number>()
-      const universityTopicCounts = new Map<string, number>()
-      for (const row of visibleResearchLinks) researchTopicCounts.set(row.topic_slug, (researchTopicCounts.get(row.topic_slug) ?? 0) + 1)
-      for (const row of visibleTrialLinks) trialTopicCounts.set(row.topic_slug, (trialTopicCounts.get(row.topic_slug) ?? 0) + 1)
-      for (const row of universityLinks.data ?? []) universityTopicCounts.set(row.topic_slug, (universityTopicCounts.get(row.topic_slug) ?? 0) + Number(row.works_five_year ?? 0))
-      const nodes = topics.map((item: any) => ({ id: `topic:${item.slug}`, slug: item.slug, label: item.name, kind: 'topic', weight: (researchTopicCounts.get(item.slug) ?? 0) + (trialTopicCounts.get(item.slug) ?? 0) }))
+      const nodes = topics.map((item: any) => ({ id: `topic:${item.slug}`, slug: item.slug, label: item.name, kind: 'topic', weight: Number(item.research_count ?? 0) + Number(item.trial_count ?? 0) }))
       nodes.push(
-        { id: 'layer:research', label: 'Research', kind: 'evidence', weight: visibleResearchLinks.length },
-        { id: 'layer:trials', label: 'Trials', kind: 'evidence', weight: visibleTrialLinks.length },
-        { id: 'layer:regulatory', label: 'Regulatory', kind: 'evidence', weight: regulatoryResult.data?.length ?? 0 },
-        { id: 'layer:integrity', label: 'Integrity', kind: 'evidence', weight: integrityResult.data?.length ?? 0 },
-        { id: 'layer:universities', label: 'Universities', kind: 'university', weight: universityLinks.data?.length ?? 0 },
+        { id: 'layer:research', label: 'Research', kind: 'evidence', weight: topics.reduce((sum: number, item: any) => sum + Number(item.research_count ?? 0), 0) },
+        { id: 'layer:trials', label: 'Trials', kind: 'evidence', weight: topics.reduce((sum: number, item: any) => sum + Number(item.trial_count ?? 0), 0) },
+        { id: 'layer:regulatory', label: 'Regulatory', kind: 'evidence', weight: topics.reduce((sum: number, item: any) => sum + Number(item.regulatory_count ?? 0), 0) },
+        { id: 'layer:integrity', label: 'Integrity', kind: 'evidence', weight: topics.reduce((sum: number, item: any) => sum + Number(item.integrity_count ?? 0), 0) },
+        { id: 'layer:universities', label: 'Universities', kind: 'university', weight: topics.reduce((sum: number, item: any) => sum + Number(item.university_work_count ?? 0), 0) },
       )
       for (const [slug, label] of Object.entries(TOPIC_MECHANISMS)) nodes.push({ id: `mechanism:${slug}`, label, kind: 'mechanism', weight: 1, slug })
       const links: Array<{ source: string; target: string; kind: string; weight: number }> = []
       for (const item of topics) {
-        links.push({ source: `topic:${item.slug}`, target: 'layer:research', kind: 'research', weight: researchTopicCounts.get(item.slug) ?? 0 })
-        links.push({ source: `topic:${item.slug}`, target: 'layer:trials', kind: 'trial', weight: trialTopicCounts.get(item.slug) ?? 0 })
-        links.push({ source: `topic:${item.slug}`, target: 'layer:universities', kind: 'university', weight: universityTopicCounts.get(item.slug) ?? 0 })
+        links.push({ source: `topic:${item.slug}`, target: 'layer:research', kind: 'research', weight: Number(item.research_count ?? 0) })
+        links.push({ source: `topic:${item.slug}`, target: 'layer:trials', kind: 'trial', weight: Number(item.trial_count ?? 0) })
+        links.push({ source: `topic:${item.slug}`, target: 'layer:universities', kind: 'university', weight: Number(item.university_work_count ?? 0) })
+        links.push({ source: `topic:${item.slug}`, target: 'layer:regulatory', kind: 'regulatory', weight: Number(item.regulatory_count ?? 0) })
+        links.push({ source: `topic:${item.slug}`, target: 'layer:integrity', kind: 'integrity', weight: Number(item.integrity_count ?? 0) })
         if (TOPIC_MECHANISMS[item.slug]) links.push({ source: `topic:${item.slug}`, target: `mechanism:${item.slug}`, kind: 'mechanism', weight: 1 })
       }
-      const regulatoryCounts = new Map<string, number>()
-      for (const item of regulatoryResult.data ?? []) for (const slug of item.matched_topics ?? []) regulatoryCounts.set(slug, (regulatoryCounts.get(slug) ?? 0) + 1)
-      for (const [slug, weight] of regulatoryCounts) links.push({ source: `topic:${slug}`, target: 'layer:regulatory', kind: 'regulatory', weight })
-      const integrityCounts = new Map<string, number>()
-      for (const item of integrityResult.data ?? []) {
-        const relations = item.research_items?.research_item_topics ?? []
-        for (const relation of relations) if (relation.is_published) integrityCounts.set(relation.topic_slug, (integrityCounts.get(relation.topic_slug) ?? 0) + 1)
-      }
-      for (const [slug, weight] of integrityCounts) links.push({ source: `topic:${slug}`, target: 'layer:integrity', kind: 'integrity', weight })
 
-      const memberships = new Map<string, Set<string>>()
-      for (const row of [...visibleResearchLinks.map((item: any) => ({ key: `r:${item.research_item_id}`, topic: item.topic_slug })), ...visibleTrialLinks.map((item: any) => ({ key: `t:${item.clinical_trial_id}`, topic: item.topic_slug }))]) {
-        if (!memberships.has(row.key)) memberships.set(row.key, new Set())
-        memberships.get(row.key)?.add(row.topic)
-      }
-      const pairs = new Map<string, number>()
-      for (const topicSet of memberships.values()) {
-        const values = [...topicSet].sort()
-        for (let left = 0; left < values.length; left++) for (let right = left + 1; right < values.length; right++) {
-          const key = `${values[left]}|${values[right]}`
-          pairs.set(key, (pairs.get(key) ?? 0) + 1)
-        }
-      }
-      for (const [pair, weight] of [...pairs].filter(([, count]) => count >= 2).sort((a, b) => b[1] - a[1]).slice(0, 30)) {
-        const [left, right] = pair.split('|')
-        links.push({ source: `topic:${left}`, target: `topic:${right}`, kind: 'overlap', weight })
-      }
+      for (const pair of overlapsResult.data ?? []) links.push({ source: `topic:${pair.left_slug}`, target: `topic:${pair.right_slug}`, kind: 'overlap', weight: Number(pair.overlap_count ?? 0) })
       return response(req, { generated_at: new Date().toISOString(), nodes, links, sources: (sourcesResult.data ?? []).map(publicSourceState) })
     }
 
