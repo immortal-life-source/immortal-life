@@ -60,6 +60,7 @@ type RegulatorySourceId = keyof typeof REGULATORY_FEEDS
 const TOPIC_SOURCE_IDS = new Set(['europe-pmc', 'pubmed', 'doaj', 'clinicaltrials-gov', 'isrctn'])
 const GENERIC_SOURCE_IDS = new Set([...TOPIC_SOURCE_IDS, 'crossref', ...Object.keys(REGULATORY_FEEDS)])
 const HISTORY_SOURCE_IDS = new Set([...TOPIC_SOURCE_IDS, 'crossref'])
+const DEDICATED_SOURCE_IDS = new Set(['doaj', 'isrctn'])
 let lastNcbiRequestAt = 0
 
 type SyncOutcome = {
@@ -1070,11 +1071,14 @@ Deno.serve(async (req) => {
       .order('sort_order')
     if (topicsError) throw topicsError
 
+    const eligibleSourceIds = requestedSource === 'all'
+      ? [...GENERIC_SOURCE_IDS].filter((sourceId) => !DEDICATED_SOURCE_IDS.has(sourceId))
+      : [...GENERIC_SOURCE_IDS]
     let sourceQuery = supabase.from('content_sources').select('id')
       .eq('enabled', true)
       .eq('automated_ingestion_allowed', true)
       .eq('public_display_allowed', true)
-      .in('id', [...GENERIC_SOURCE_IDS])
+      .in('id', eligibleSourceIds)
     if (requestedSource !== 'all') sourceQuery = sourceQuery.eq('id', requestedSource)
     const { data: sources, error: sourcesError } = await sourceQuery
     if (sourcesError) throw sourcesError

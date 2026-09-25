@@ -24,13 +24,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,200;0,300;1,200;1,300&family=Instrument+Sans:ital,wght@0,300;0,400;1,300;1,400&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,200;0,300;1,200;1,300&family=Instrument+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap"
     rel="stylesheet"
   />
 
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
 
-  <link rel="stylesheet" href="/style.css?v=20260925-ux-consolidation-a" />
+  <link rel="stylesheet" href="/style.css?v=20260925-light-search-a" />
 </head>
 
 <body>
@@ -128,57 +128,6 @@
         <div id="heroDiscoveriesList" class="hero-discoveries-list" aria-live="polite"><p>Checking the newest source-linked records…</p></div>
       </aside>
 
-      <!-- The interactive system map lives lower on the page so the opening message stays calm and readable. -->
-      <template id="systemMapTemplate">
-      <nav class="hero-orbit" aria-label="Explore longevity intelligence">
-        <div class="hero-orbit-visual" aria-hidden="true">
-          <span class="hero-orbit-ring hero-orbit-ring--outer"></span>
-          <span class="hero-orbit-ring hero-orbit-ring--middle"></span>
-          <span class="hero-orbit-ring hero-orbit-ring--inner"></span>
-          <span class="hero-orbit-axis hero-orbit-axis--one"></span>
-          <span class="hero-orbit-axis hero-orbit-axis--two"></span>
-        </div>
-
-        <a class="hero-orbit-core" href="/research" aria-label="Open the longevity research intelligence portal">
-          <span>Live system</span>
-          <img class="hero-orbit-logo" src="/linkedin-app-logo.png" width="72" height="72" alt="" aria-hidden="true" decoding="async" />
-          <small>Evidence intelligence</small>
-        </a>
-
-        <div class="hero-orbit-rotator">
-          <div class="hero-orbit-node" style="--node-angle: -90deg; --node-angle-inverse: 90deg; --node-pulse-delay: 0s;">
-            <a class="hero-orbit-node-link" href="/trials" aria-label="Open Trial Radar">
-              <span class="hero-orbit-node-copy"><small>01</small><strong>Trial<br>Radar</strong></span>
-            </a>
-          </div>
-          <div class="hero-orbit-node" style="--node-angle: -30deg; --node-angle-inverse: 30deg; --node-pulse-delay: -0.8s;">
-            <a class="hero-orbit-node-link" href="/topics" aria-label="Open Topics">
-              <span class="hero-orbit-node-copy"><small>02</small><strong>Topics</strong></span>
-            </a>
-          </div>
-          <div class="hero-orbit-node" style="--node-angle: 30deg; --node-angle-inverse: -30deg; --node-pulse-delay: -1.6s;">
-            <a class="hero-orbit-node-link" href="/regulatory" aria-label="Open Regulatory Watch">
-              <span class="hero-orbit-node-copy"><small>03</small><strong>Regulatory</strong></span>
-            </a>
-          </div>
-          <div class="hero-orbit-node" style="--node-angle: 90deg; --node-angle-inverse: -90deg; --node-pulse-delay: -2.4s;">
-            <a class="hero-orbit-node-link" href="/evidence-graph" aria-label="Open Evidence Explorer">
-              <span class="hero-orbit-node-copy"><small>04</small><strong>Evidence<br>Graph</strong></span>
-            </a>
-          </div>
-          <div class="hero-orbit-node" style="--node-angle: 150deg; --node-angle-inverse: -150deg; --node-pulse-delay: -3.2s;">
-            <a class="hero-orbit-node-link" href="/universities" aria-label="Open Universities index">
-              <span class="hero-orbit-node-copy"><small>05</small><strong>Universities</strong></span>
-            </a>
-          </div>
-          <div class="hero-orbit-node" style="--node-angle: 210deg; --node-angle-inverse: -210deg; --node-pulse-delay: -4s;">
-            <a class="hero-orbit-node-link" href="/resources" aria-label="Open Data Sources">
-              <span class="hero-orbit-node-copy"><small>06</small><strong>Data<br>Sources</strong></span>
-            </a>
-          </div>
-        </div>
-      </nav>
-      </template>
     </div>
 
     <!-- Hero footer -->
@@ -218,7 +167,6 @@
         <a href="/topics/rapamycin" data-tone="teal">Rapamycin</a><a href="/topics/senolytics" data-tone="violet">Senolytics</a><a href="/topics/epigenetic-clocks" data-tone="blue">Epigenetic clocks</a><a href="/topics/exercise" data-tone="green">Exercise</a><a href="/topics/stem-cells" data-tone="coral">Stem cells</a><a href="/topics/caloric-restriction" data-tone="gold">Caloric restriction</a>
       </nav>
       <div class="explorer-story reveal"><span>One topic, four views</span><ol><li><b>Understand</b><small>A plain-language topic guide</small></li><li><b>Check evidence</b><small>Human, preclinical and synthesis records</small></li><li><b>Find trials</b><small>Status, phase, locations and registry source</small></li><li><b>Watch change</b><small>New records, corrections and regulatory signals</small></li></ol></div>
-      <div class="explorer-system-map" id="explorerSystemMap" aria-label="Interactive longevity system map"></div>
     </div>
     <div class="explorer-connections" aria-label="Ways to follow a longevity idea">
       <a href="/topics"><span>Topics</span><strong>Choose an intervention</strong><small>Rapamycin, senolytics, exercise and more</small></a>
@@ -231,93 +179,6 @@
   <section class="home-global" aria-labelledby="globalTitle">
     <div class="home-global-copy reveal"><span>Global pulse</span><h2 id="globalTitle">See where longevity research is moving.</h2><p>Explore university activity, recruiting trials and official sources around the world. The map is a discovery tool—not a ranking of scientific quality or medical care.</p><div class="home-global-actions"><a href="/universities">University research map</a><a href="/trials">Open Trial Radar</a><a href="/resources">Official source atlas</a></div></div>
     <div class="home-world" aria-hidden="true"><span class="world-orbit world-orbit--one"></span><span class="world-orbit world-orbit--two"></span><i style="--x:18%;--y:38%;--tone:var(--violet)"></i><i style="--x:44%;--y:29%;--tone:var(--teal)"></i><i style="--x:62%;--y:44%;--tone:var(--gold)"></i><i style="--x:78%;--y:31%;--tone:var(--coral)"></i><i style="--x:71%;--y:69%;--tone:var(--success)"></i><i style="--x:33%;--y:68%;--tone:var(--blue)"></i></div>
-  </section>
-
-  <!-- ══════════════════════════════════════════
-       SECTION 4 — EMAIL CAPTURE
-  ══════════════════════════════════════════ -->
-  <section class="s4" aria-label="Join the list">
-    <div class="s4-glow" aria-hidden="true"></div>
-
-    <div class="s4-left reveal">
-      <div class="s4-eyebrow">Weekly longevity briefing</div>
-      <h2 class="s4-headline">
-        Keep up<br>
-        <em>without</em><br>
-        the noise.
-      </h2>
-      <p class="s4-body">
-        Receive one source-linked summary of meaningful research, trial,
-        regulatory and integrity changes each week. Automatically generated;
-        no noise and no promotional feed.
-      </p>
-    </div>
-
-    <div class="form-wrapper reveal reveal-d2">
-
-      <!-- ── Form state ── -->
-      <div id="formState">
-        <div class="form-label-top">Your email address</div>
-
-        <input
-          type="email"
-          class="email-input"
-          id="emailInput"
-          name="email"
-          placeholder="you@domain.com"
-          autocomplete="email"
-          aria-label="Email address"
-          aria-required="true"
-          aria-describedby="formError"
-        />
-        <div id="formError" class="field-error" role="alert" aria-live="polite"></div>
-
-        <div class="consent-row">
-          <input
-            type="checkbox"
-            class="consent-checkbox"
-            id="consentCheck"
-            name="consent"
-            aria-required="true"
-          />
-          <label for="consentCheck" class="consent-text">
-            I agree to receive communications from immortal.life and confirm
-            I have read the
-            <button
-              type="button"
-              class="privacy-link"
-              aria-haspopup="dialog"
-            >Privacy Policy</button>.
-            I understand I can unsubscribe at any time.
-          </label>
-        </div>
-
-        <button
-          type="button"
-          class="submit-btn"
-          id="submitBtn"
-        >
-          Send me the weekly briefing
-        </button>
-
-        <p class="form-small">
-          Your email is processed for the communications you request.
-          We do not sell your data or use it for third-party advertising.
-          Unsubscribe in one click.
-        </p>
-      </div>
-
-      <!-- ── Success state ── -->
-      <div class="success-state" id="successState" tabindex="-1" aria-live="polite" aria-atomic="true">
-        <div class="success-mark" aria-hidden="true">◇</div>
-        <div class="success-hl">You're on the list.</div>
-        <div class="success-body">
-          A confirmation is on its way to your inbox.<br><br>
-          Your first source-linked weekly briefing will arrive after confirmation.
-        </div>
-      </div>
-
-    </div>
   </section>
 
   </main>

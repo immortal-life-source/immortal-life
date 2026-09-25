@@ -77,9 +77,9 @@ function clearEmailError() {
   formError.textContent = '';
 }
 
-emailInput.addEventListener('input', clearEmailError);
+emailInput?.addEventListener('input', clearEmailError);
 
-emailInput.addEventListener('keydown', (e) => {
+emailInput?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') handleSubmit();
 });
 
@@ -495,10 +495,6 @@ window.handleSubmit = handleSubmit;
   }
 
   const optionalJson = (url, options) => fetch(url, options).then((response) => response.ok ? response.json() : null).catch(() => null);
-  const systemMap = document.getElementById('systemMapTemplate');
-  const mapTarget = document.getElementById('explorerSystemMap');
-  if (systemMap && mapTarget) mapTarget.append(systemMap.content.cloneNode(true));
-
   const feedPromise = optionalJson('/feed.json');
   const changesPromise = optionalJson('/changes/feed.json');
   const trialPromise = optionalJson(`${window.IL_FN_BASE}/public-intelligence?view=trials&limit=1`, { headers: window.ilFnHeaders() });

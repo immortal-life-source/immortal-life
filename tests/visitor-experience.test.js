@@ -228,7 +228,8 @@ test('the completed living atlas includes daily signals, timelines, plain-langua
     read('index.html'), read('main.js'), read('intelligence-template.html'), read('intelligence.js'),
     read('supabase/functions/public-pages/index.ts'), read('supabase/functions/public-intelligence/index.ts'), read('intelligence.css'),
   ])
-  assert.match(home, /systemMapTemplate/)
+  assert.doesNotMatch(home, /systemMapTemplate/)
+  assert.doesNotMatch(home, /Weekly longevity briefing/)
   assert.match(home, /Mechanisms/)
   assert.match(main, /candidates\.slice\(0, 6\)/)
   assert.match(main, /University momentum/)

@@ -799,3 +799,197 @@ body[data-view="research"] .intel-hero { box-shadow:inset 0 -3px 0 var(--teal); 
   .mobile-dock { position:fixed; display:grid; grid-template-columns:repeat(5,1fr); left:0; right:0; bottom:0; z-index:9000; min-height:66px; padding-bottom:env(safe-area-inset-bottom,0px); border-top:1px solid var(--border-strong); background:rgba(7,7,6,.96); backdrop-filter:blur(18px); }
   .mobile-dock a,.mobile-dock button { min-width:0; min-height:66px; padding:7px 2px 5px; border:0; background:transparent; color:rgba(237,233,224,.58); text-decoration:none; font:400 8px var(--sans); letter-spacing:.07em; text-transform:uppercase; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; }.mobile-dock span { color:var(--gold); font-size:17px; line-height:1; }.mobile-dock a[aria-current="page"] { color:var(--text); background:rgba(184,149,90,.07); }
 }
+
+/* ============================================================
+   LIGHT PORTAL VISUAL SYSTEM — 2026-09
+   Visual redesign only; all data, content and controls are preserved.
+   ============================================================ */
+:root {
+  --bg: #fffafd;
+  --surface: #ffffff;
+  --surface-raised: #fff5f9;
+  --gold: #dd477d;
+  --text: #281f26;
+  --muted: #746770;
+  --border: rgba(77, 40, 60, .10);
+  --border-strong: rgba(77, 40, 60, .18);
+  --success: #a64f76;
+  --warning: #ed874f;
+  --danger: #cf4f62;
+  --teal: #c83f76;
+  --violet: #af4f8a;
+  --coral: #ef8050;
+  --blue: #d9588b;
+  --serif: 'Instrument Sans', system-ui, sans-serif;
+}
+
+html { background: var(--bg); color-scheme: light; }
+body { background: var(--bg); color: var(--text); font-weight: 400; }
+
+.intel-header {
+  min-height: 72px;
+  background: rgba(255, 255, 255, .96);
+  border-color: var(--border);
+  backdrop-filter: blur(16px);
+}
+.intel-logo { color: #2d242b; font-weight: 500; letter-spacing: -.01em; }
+.intel-logo img { width: 48px; height: 48px; filter: none; }
+.intel-nav { gap: 2px clamp(10px, 1vw, 18px); }
+.intel-nav a {
+  color: #3e343b;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.intel-nav a:hover,
+.intel-nav a[aria-current='page'] { color: var(--gold); }
+.intel-nav-toggle { border-color: var(--border-strong); border-radius: 999px; color: #3e343b; background: #fff; }
+
+.bio-ambient { display: none; }
+.intel-hero {
+  min-height: 178px;
+  padding-top: 34px;
+  padding-bottom: 34px;
+  background: linear-gradient(110deg, #fff 0%, #fff8fb 70%, #fff3f1 100%);
+  box-shadow: none !important;
+}
+.intel-kicker,
+.section-index { color: var(--gold); font-weight: 500; }
+.intel-hero h1,
+.section-heading h2,
+.record-card h3,
+.topic-card h3,
+.resource-card h3,
+.quality-card strong,
+.entity-card h3,
+.record-hero h1,
+.record-meaning h2,
+.learning-quiz > h3 { font-family: var(--sans); letter-spacing: -.035em; }
+.intel-hero h1 { font-weight: 500; line-height: 1.08; }
+
+.intel-stats { gap: 12px; padding: 22px clamp(22px, 5vw, 72px); border: 0; }
+.intel-stats > a {
+  padding: clamp(24px, 3vw, 38px);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 30px rgba(91, 44, 67, .05);
+}
+.intel-stats > a:hover,
+.intel-stats > a:focus-visible { background: #fff8fb; outline-color: var(--gold); }
+.intel-stats strong { color: var(--gold); font-family: var(--sans); font-weight: 500; }
+
+.intel-section { padding-top: clamp(44px, 6vw, 78px); padding-bottom: clamp(44px, 6vw, 78px); }
+.topic-grid,
+.resource-grid,
+.briefing-list,
+.quality-grid,
+.utility-grid,
+.report-metrics,
+.reader-guide,
+.resource-pathways,
+.resource-region-grid,
+.university-region-grid { gap: 12px; border: 0; }
+.topic-card,
+.resource-card,
+.quality-card,
+.utility-card,
+.briefing-card,
+.reader-guide article,
+.resource-pathways button,
+.resource-region-card,
+.university-region-card,
+.entity-card,
+.university-card,
+.evidence-topic-row,
+.learning-quiz,
+.record-meaning,
+.trial-country-map,
+.resource-regions,
+.university-regions {
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 30px rgba(91, 44, 67, .045);
+}
+.record-list { border-color: var(--border-strong); }
+.record-card { padding: 28px 20px; border-color: var(--border); border-radius: 14px; }
+.record-card:hover { background: #fff7fa; }
+
+.topic-tools,
+.record-controls,
+.resource-controls,
+.regulatory-controls,
+.graph-controls,
+.university-controls,
+.resource-country-coverage {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+}
+input,
+select,
+textarea,
+.topic-tools input,
+.record-controls input,
+.record-controls select,
+.resource-controls input,
+.resource-controls select,
+.intel-nav-search input {
+  border-color: var(--border-strong) !important;
+  border-radius: 999px !important;
+  background: #fff !important;
+  color: var(--text) !important;
+}
+button,
+.section-link,
+.record-filter-clear { border-radius: 999px; }
+.intel-nav-search button {
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #dd477d, #ec685f);
+  color: #fff;
+}
+.resource-pathways button:hover,
+.resource-pathways button:focus-visible,
+.resource-pathways button[aria-pressed='true'],
+.resource-region-card:hover,
+.resource-region-card:focus-visible,
+.university-region-card:hover,
+.university-region-card:focus-visible { background: #fff5f9; }
+.resource-pathways button[aria-pressed='true'] { box-shadow: inset 0 -3px 0 var(--gold); }
+.resource-country-regions button,
+.resource-badge,
+.evidence-chip,
+.topic-tag { border-radius: 999px; background: #fff; }
+.trial-world-map { background: #fff8fb; }
+.trial-country-bubbles a { background: #fff; }
+.intel-footer { background: #fff6f9; border-top: 1px solid var(--border); }
+.mobile-dock { background: rgba(255, 250, 253, .97) !important; border-color: var(--border-strong) !important; }
+.mobile-dock a,
+.mobile-dock button { color: #766a72 !important; }
+.mobile-dock a[aria-current='page'] { color: var(--gold) !important; background: rgba(221, 71, 125, .08) !important; }
+
+@media (max-width: 860px) {
+  .intel-header { min-height: 68px; padding: 0 18px; }
+  .intel-logo img { width: 44px; height: 44px; }
+  .intel-nav {
+    top: calc(100% + 10px);
+    left: 16px;
+    right: 16px;
+    padding: 18px;
+    border: 1px solid var(--border-strong);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, .99);
+    box-shadow: 0 18px 48px rgba(74, 34, 55, .14);
+  }
+  .intel-nav a { min-height: 42px; border-color: var(--border) !important; border-radius: 999px; background: #fff; }
+  .intel-hero { min-height: 0; padding: 26px 22px; }
+  .intel-hero h1 { font-size: clamp(28px, 8vw, 40px); }
+  .intel-stats { padding: 18px 22px; }
+  .topic-grid,
+  .resource-grid,
+  .quality-grid { gap: 10px; }
+}

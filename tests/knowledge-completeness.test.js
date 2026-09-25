@@ -22,6 +22,21 @@ test('research and trial ingestion has resumable all-history streams without a t
   assert.match(migration, /'retractions:history'/)
 })
 
+test('uncapped historical ingestion is paced below the database IO baseline', async () => {
+  const [worker, migration] = await Promise.all([
+    read('supabase/functions/sync-intelligence/index.ts'),
+    read('supabase/migrations/20260925001700_protect_database_io_budget.sql'),
+  ])
+  assert.match(worker, /DEDICATED_SOURCE_IDS/)
+  assert.match(worker, /filter\(\(sourceId\) => !DEDICATED_SOURCE_IDS\.has\(sourceId\)\)/)
+  assert.match(migration, /immortal-life-intelligence-sync', '17 \*\/6/)
+  assert.match(migration, /immortal-life-doaj-sync', '7 \*/)
+  assert.match(migration, /immortal-life-isrctn-sync', '27 \*\/2/)
+  assert.match(migration, /immortal-life-university-index', '47 \*\/2/)
+  assert.match(migration, /cron\.unschedule\(existing_job_id\)/)
+  assert.doesNotMatch(migration, /delete from|truncate/i)
+})
+
 test('public browsing, graph totals, sitemaps and downloads traverse the complete retained corpus', async () => {
   const [api, pages, portal, graphMigration] = await Promise.all([
     read('supabase/functions/public-intelligence/index.ts'),
