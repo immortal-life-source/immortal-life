@@ -1119,14 +1119,17 @@ Deno.serve(async (req) => {
     const successfulSources = new Set<string>()
 
     while (Date.now() - runStartedAt < RUN_TIME_BUDGET_MS) {
-      const { data: jobs, error: jobsError } = await supabase
+      let jobsQuery = supabase
         .from('ingestion_jobs')
         .select('id,source_id,topic_slug,job_key,attempts,sync_mode,cursor_state,pages_processed,items_seen,items_written,window_start')
         .in('status', ['pending', 'retry'])
         .lte('available_at', new Date().toISOString())
+        .order('sync_mode', { ascending: false })
         .order('updated_at')
         .order('created_at')
         .limit(1)
+      if (requestedSource !== 'all') jobsQuery = jobsQuery.eq('source_id', requestedSource)
+      const { data: jobs, error: jobsError } = await jobsQuery
       if (jobsError) throw jobsError
       if (!jobs?.length) break
       const job = jobs[0] as Job
@@ -1176,7 +1179,15 @@ Deno.serve(async (req) => {
           last_error: null,
           updated_at: completedAt,
         }).eq('id', job.id)
-        if (outcome.done) await supabase.from('content_sources').update({ last_success_at: completedAt, updated_at: completedAt }).eq('id', job.source_id)
+        // A source is live once a real upstream page succeeds. Historical jobs
+        // can span many pages, so waiting for the entire stream to finish would
+        // incorrectly leave a healthy integration labelled as pending.
+        await supabase.from('content_sources').update({
+          last_success_at: completedAt,
+          last_error: null,
+          consecutive_failures: 0,
+          updated_at: completedAt,
+        }).eq('id', job.source_id)
       } catch (error) {
         processed += 1
         errors += 1
