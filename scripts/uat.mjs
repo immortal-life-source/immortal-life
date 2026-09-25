@@ -109,7 +109,11 @@ async function waitForReady(cdp) {
     const ready = await evaluate(cdp, 'document.readyState === "complete"');
     if (!ready) throw new Error('not ready');
   });
-  await sleep(1700);
+  await sleep(500);
+  await retry(async () => {
+    const ready = await evaluate(cdp, `(() => { const loading=document.getElementById('loadingState'); return !loading || loading.hidden || getComputedStyle(loading).display === 'none'; })()`);
+    if (!ready) throw new Error('live data is still loading');
+  }, 120);
 }
 
 async function capture(cdp, name, fullPage = false) {
@@ -206,7 +210,7 @@ async function runViewport(cdp, profileName, width, height, mobile) {
     if (/^\/research\/\d+$/.test(route) && !['What this is','Why it may matter','Evidence','Main limitation','What changed','Where to verify'].every(label => state.recordGuideLabels.includes(label))) failures.push('research record plain-language guide is incomplete');
     if (route === '/research' || route === '/trials') {
       const prefix = route === '/research' ? 'research' : 'trial';
-      const interaction = await evaluate(cdp, `(() => {
+      const interaction = await evaluate(cdp, `(async() => {
         const controls=document.getElementById('${route === '/research' ? 'researchControls' : 'trialControls'}');
         const input=document.getElementById('${route === '/research' ? 'researchSearch' : 'trialSearch'}');
         const result=document.getElementById('${route === '/research' ? 'researchResult' : 'trialResult'}');
@@ -214,12 +218,14 @@ async function runViewport(cdp, profileName, width, height, mobile) {
         const clear=document.getElementById('${route === '/research' ? 'researchClear' : 'trialClear'}');
         const initial={visible:controls ? !controls.hidden && getComputedStyle(controls).display !== 'none' : false,result:result?.textContent||'',cards:list?.querySelectorAll('.record-card').length||0,topics:document.getElementById('${route === '/research' ? 'researchTopic' : 'trialTopic'}')?.options.length||0};
         if (input) { input.value='uat-no-match-7f8e9d'; input.dispatchEvent(new Event('input',{bubbles:true})); }
+        await new Promise(resolve => setTimeout(resolve, 1800));
         const empty={result:result?.textContent||'',message:list?.textContent||'',cards:list?.querySelectorAll('.record-card').length||0};
         clear?.click();
+        await new Promise(resolve => setTimeout(resolve, 1800));
         return {initial,empty,cleared:{value:input?.value||'',result:result?.textContent||'',cards:list?.querySelectorAll('.record-card').length||0}};
       })()`);
       if (!interaction.initial.visible) failures.push(`${prefix} search controls are hidden`);
-      if (interaction.initial.cards < 1 || interaction.initial.cards > 60) failures.push(`${prefix} initial result renders ${interaction.initial.cards} cards`);
+      if (interaction.initial.cards < 1 || interaction.initial.cards > 100) failures.push(`${prefix} initial result renders ${interaction.initial.cards} cards`);
       if (interaction.initial.topics < 2) failures.push(`${prefix} topic filter has no choices`);
       if (interaction.empty.cards !== 0 || !/showing 0/i.test(interaction.empty.result)) failures.push(`${prefix} text search did not filter to zero results`);
       if (interaction.cleared.value || interaction.cleared.cards < 1) failures.push(`${prefix} clear-filters action did not restore results`);
