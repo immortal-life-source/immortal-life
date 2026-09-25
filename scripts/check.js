@@ -94,6 +94,7 @@ const requiredFiles = [
   'supabase/migrations/20260925001100_fast_public_evidence_indexes.sql',
   'supabase/migrations/20260925001200_shorten_ingestion_slices.sql',
   'supabase/migrations/20260925001300_set_based_topic_counts.sql',
+  'supabase/migrations/20260925001400_live_topic_count_cache.sql',
   'supabase/audits/membership-integrity.sql',
   'intelligence-template.html',
   'content-template.html',

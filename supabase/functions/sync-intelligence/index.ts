@@ -1228,8 +1228,13 @@ Deno.serve(async (req) => {
       }).eq('id', sourceId)
     }
 
-    const { error: entityRefreshError } = await supabase.rpc('refresh_intelligence_entities')
-    if (entityRefreshError) throw entityRefreshError
+    // Full entity rebuilding is intentionally excluded from scheduled ingest.
+    // It has its own low-frequency database job; running it after every short
+    // source slice caused reader-facing queries to compete with maintenance.
+    if (triggerKind !== 'schedule') {
+      const { error: entityRefreshError } = await supabase.rpc('refresh_intelligence_entities')
+      if (entityRefreshError) throw entityRefreshError
+    }
 
     const finalStatus = errors === 0 ? 'succeeded' : errors < processed ? 'partial' : 'failed'
     await supabase.from('ingestion_runs').update({
