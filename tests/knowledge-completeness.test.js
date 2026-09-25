@@ -56,4 +56,8 @@ test('public browsing, graph totals, sitemaps and downloads traverse the complet
   const qualityCache = await read('supabase/migrations/20260925001500_cache_public_quality_telemetry.sql')
   assert.match(qualityCache, /intelligence_quality_telemetry_cache/)
   assert.match(qualityCache, /immortal-life-quality-telemetry-refresh/)
+  const graphCache = await read('supabase/migrations/20260925001600_cache_complete_evidence_graph.sql')
+  assert.match(graphCache, /intelligence_graph_cache/)
+  assert.match(graphCache, /refresh_intelligence_graph_cache/)
+  assert.match(graphCache, /jsonb_to_recordset\(cache\.overlap_rows\)/)
 })
