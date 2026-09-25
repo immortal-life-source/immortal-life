@@ -104,7 +104,7 @@ test('research and trials use complete searchable filter systems', async () => {
 })
 
 test('public data views recover from brief Edge Function saturation', async () => {
-  const [portal, proxy] = await Promise.all([read('intelligence.js'), read('api/intelligence.js')])
+  const [portal, proxy, vercel] = await Promise.all([read('intelligence.js'), read('api/intelligence.js'), read('vercel.json')])
   assert.match(portal, /fetchWithDeadline/)
   assert.match(portal, /immortal-life-public-intelligence-v1/)
   assert.match(portal, /const endpoint = '\/api\/intelligence'/)
@@ -112,6 +112,8 @@ test('public data views recover from brief Edge Function saturation', async () =
   assert.match(proxy, /s-maxage=300/)
   assert.match(proxy, /stale-if-error=604800/)
   assert.match(proxy, /sourceFallback/)
+  assert.match(vercel, /topics-directory\.json\|resources-directory\.json/)
+  assert.match(vercel, /s-maxage=86400, stale-while-revalidate=604800/)
 })
 
 test('public page shells provide search, related journeys and mobile navigation', async () => {
