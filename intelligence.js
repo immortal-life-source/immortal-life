@@ -241,14 +241,19 @@
       ['Intervention', snapshot.intervention],
       ['Result', snapshot.reported_outcome || 'No reusable finding-level result available'],
     ].forEach(([label, value]) => {
-      const row = el('div'); row.append(el('dt', '', label), el('dd', '', display(value))); grid.append(row);
+      const shown = label === 'Stage' ? readableStatus(value) : display(value);
+      const row = el('div'); row.append(el('dt', '', label), el('dd', '', shown)); grid.append(row);
     });
     section.append(grid, el('p', 'evidence-snapshot-limit', snapshot.main_limitation || 'Read the linked source for methods, findings, and limitations.'));
     container.append(section);
   }
 
   function readableStatus(value) {
-    return String(value || 'Status not supplied').replace(/_/g, ' ').toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase());
+    return String(value || 'Status not supplied')
+      .replace(/_/g, ' ')
+      .replace(/\bphase\s*([1-4])\b/gi, 'Phase $1')
+      .toLowerCase()
+      .replace(/^\w/, (letter) => letter.toUpperCase());
   }
 
   function renderTopics(topics, compact) {
@@ -364,9 +369,9 @@
   function trialLadder(phases) {
     const ladder = el('div', 'evidence-ladder evidence-ladder--trial');
     ladder.setAttribute('aria-label', 'Clinical trial phase');
-    const value = (Array.isArray(phases) ? phases.join(' ') : String(phases || '')).toLowerCase();
-    const current = value.includes('phase 4') ? 3 : value.includes('phase 3') ? 2 : value.includes('phase 2') ? 1 : 0;
-    ['Early phase', 'Phase 2', 'Phase 3', 'Phase 4'].forEach((label, index) => ladder.append(el('span', index === current ? 'is-current' : index < current ? 'is-passed' : '', label)));
+    const value = (Array.isArray(phases) ? phases.join(' ') : String(phases || '')).toUpperCase().replace(/[^A-Z0-9]+/g, '');
+    const current = value.includes('PHASE4') ? 3 : value.includes('PHASE3') ? 2 : value.includes('PHASE2') ? 1 : value.includes('PHASE1') ? 0 : -1;
+    ['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4'].forEach((label, index) => ladder.append(el('span', index === current ? 'is-current' : current >= 0 && index < current ? 'is-passed' : '', label)));
     return ladder;
   }
 

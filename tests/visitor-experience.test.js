@@ -167,6 +167,8 @@ test('learning and evidence features remain connected without the retired dashbo
   assert.match(build, /learning-quiz/)
   assert.match(portal, /evidenceLadder/)
   assert.match(portal, /trialLadder/)
+  assert.match(portal, /includes\('PHASE3'\) \? 2/)
+  assert.match(portal, /\['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4'\]/)
   assert.match(portal, /il_recent_topics/)
   assert.doesNotMatch(build, /'dashboard\.html'|'join\.html'/)
   assert.match(routes, /"source": "\/dashboard", "destination": "\/topics"/)

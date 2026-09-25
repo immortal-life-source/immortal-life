@@ -43,6 +43,17 @@ function formatDate(value: unknown): string {
   return Number.isNaN(date.getTime()) ? 'Date unavailable' : new Intl.DateTimeFormat('en', { dateStyle: 'long', timeZone: 'UTC' }).format(date)
 }
 
+function readableLabel(value: unknown): string {
+  return String(value ?? '')
+    .replace(/_/g, ' ')
+    .replace(/\bphase\s*([1-4])\b/gi, 'Phase $1')
+    .replace(/^\w/, (letter) => letter.toUpperCase())
+}
+
+function readablePhases(phases: unknown): string {
+  return Array.isArray(phases) && phases.length ? phases.map(readableLabel).join(', ') : 'Phase not reported'
+}
+
 function pageShell(input: { title: string; description: string; canonical: string; kicker: string; heading: string; body: string; type?: string; date?: string; socialImage?: string; indexable?: boolean; journeys?: Array<{ href: string; label: string }> }): string {
   const schema = {
     '@context': 'https://schema.org',
@@ -121,7 +132,7 @@ function evidenceSnapshotHtml(snapshot: any): string {
     ['Outcomes measured', snapshot.outcomes_measured],
     ['Reported result', snapshot.reported_outcome || 'No reusable finding-level result is available in this record.'],
   ]
-  return `<section class="evidence-snapshot" aria-labelledby="evidenceSnapshotTitle"><span class="section-index">Evidence snapshot</span><h2 id="evidenceSnapshotTitle">What the source actually supports</h2><dl>${fields.map(([name, field]) => `<div><dt>${escapeHtml(name)}</dt><dd>${escapeHtml(value(field))}</dd></div>`).join('')}</dl><div class="evidence-snapshot-notes"><p><strong>Main limitation</strong>${escapeHtml(value(snapshot.main_limitation))}</p><p><strong>Safety and approval</strong>${escapeHtml(value(snapshot.safety_context))} ${escapeHtml(value(snapshot.regulatory_context))}</p><p><strong>Source support</strong>${escapeHtml(value(snapshot.source_support))}</p></div></section>`
+  return `<section class="evidence-snapshot" aria-labelledby="evidenceSnapshotTitle"><span class="section-index">Evidence snapshot</span><h2 id="evidenceSnapshotTitle">What the source actually supports</h2><dl>${fields.map(([name, field]) => `<div><dt>${escapeHtml(name)}</dt><dd>${escapeHtml(name === 'Evidence stage' ? readableLabel(value(field)) : value(field))}</dd></div>`).join('')}</dl><div class="evidence-snapshot-notes"><p><strong>Main limitation</strong>${escapeHtml(value(snapshot.main_limitation))}</p><p><strong>Safety and approval</strong>${escapeHtml(value(snapshot.safety_context))} ${escapeHtml(value(snapshot.regulatory_context))}</p><p><strong>Source support</strong>${escapeHtml(value(snapshot.source_support))}</p></div></section>`
 }
 
 function evidenceLadderHtml(level: unknown): string {
@@ -140,10 +151,10 @@ function evidenceLadderHtml(level: unknown): string {
 }
 
 function trialLadderHtml(phases: unknown): string {
-  const value = (Array.isArray(phases) ? phases.join(' ') : String(phases || '')).toLowerCase()
-  const stages = ['Early phase', 'Phase 2', 'Phase 3', 'Phase 4']
-  let active = value.includes('phase 4') ? 3 : value.includes('phase 3') ? 2 : value.includes('phase 2') ? 1 : value ? 0 : -1
-  return `<div class="record-ladder-intro"><strong>Trial stage · ${escapeHtml(Array.isArray(phases) && phases.length ? phases.join(', ') : 'Phase not reported')}</strong><span>A trial phase describes development stage; it does not establish a positive result.</span></div><div class="evidence-ladder evidence-ladder--trial" aria-label="Trial stage">${stages.map((stage, index) => `<span${index === active ? ' class="is-current"' : index < active ? ' class="is-passed"' : ''}>${stage}</span>`).join('')}</div>`
+  const value = (Array.isArray(phases) ? phases.join(' ') : String(phases || '')).toUpperCase().replace(/[^A-Z0-9]+/g, '')
+  const stages = ['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4']
+  const active = value.includes('PHASE4') ? 3 : value.includes('PHASE3') ? 2 : value.includes('PHASE2') ? 1 : value.includes('PHASE1') ? 0 : -1
+  return `<div class="record-ladder-intro"><strong>Trial stage · ${escapeHtml(readablePhases(phases))}</strong><span>A trial phase describes development stage; it does not establish a positive result.</span></div><div class="evidence-ladder evidence-ladder--trial" aria-label="Trial stage">${stages.map((stage, index) => `<span${index === active ? ' class="is-current"' : index < active ? ' class="is-passed"' : ''}>${stage}</span>`).join('')}</div>`
 }
 
 function citation(record: any, kind: string, format: string): Response {
@@ -186,10 +197,10 @@ function renderRecord(kind: string, record: any): string {
   } else if (kind === 'trials') {
     if (!record.evidence_snapshot || !Object.keys(record.evidence_snapshot).length) record.evidence_snapshot = trialEvidenceSnapshot(record)
     topics = relationTopics(record, 'clinical_trial_topics'); date = record.last_update_date
-    rows = [['Registry ID', record.external_id], ['Last registry update', formatDate(record.last_update_date)], ['Status', record.overall_status], ['Phase', (record.phases || []).join(', ')], ['Sponsor', record.sponsor], ['Enrollment', record.enrollment], ['Countries', (record.countries || []).join(', ')], ['Match confidence', `${record.relevance_confidence}%`], ['Source feed', record.content_sources?.name]]
+    rows = [['Registry ID', record.external_id], ['Last registry update', formatDate(record.last_update_date)], ['Status', record.overall_status], ['Phase', readablePhases(record.phases)], ['Sponsor', record.sponsor], ['Enrollment', record.enrollment], ['Countries', (record.countries || []).join(', ')], ['Match confidence', `${record.relevance_confidence}%`], ['Source feed', record.content_sources?.name]]
     kicker = 'Clinical trial registry record'
     extra = evidenceSnapshotHtml(record.evidence_snapshot) + trialLadderHtml(record.phases) + '<p class="record-caveat">Registration and recruitment status do not establish safety, efficacy, or regulatory approval.</p>' + qualityDisclosure(record, 'clinical_trial_topics')
-    guide = [['What this is', 'A clinical study registration, not a result or recommendation.'], ['Why it may matter', `The registry currently reports ${String(record.overall_status || 'an unknown status').replace(/_/g, ' ')}.`], ['Evidence', `Registered ${Array.isArray(record.phases) && record.phases.length ? record.phases.join(', ') : 'phase not supplied'} study.`], ['Main limitation', 'Registration does not prove that the intervention works, is safe, or is available to you.'], ['What changed', `Registry metadata was last updated ${formatDate(record.last_update_date)}.`], ['Where to verify', 'Open the primary registry below for eligibility, locations, contacts, and current status.']]
+    guide = [['What this is', 'A clinical study registration, not a result or recommendation.'], ['Why it may matter', `The registry currently reports ${String(record.overall_status || 'an unknown status').replace(/_/g, ' ')}.`], ['Evidence', `Registered ${readablePhases(record.phases).toLowerCase()} study.`], ['Main limitation', 'Registration does not prove that the intervention works, is safe, or is available to you.'], ['What changed', `Registry metadata was last updated ${formatDate(record.last_update_date)}.`], ['Where to verify', 'Open the primary registry below for eligibility, locations, contacts, and current status.']]
   } else if (kind === 'regulatory') {
     topics = record.matched_topics || []; date = record.published_at
     rows = [['Jurisdiction', record.jurisdiction], ['Category', record.category], ['Published', formatDate(record.published_at)], ['Match confidence', `${record.relevance_confidence}%`], ['Official feed', record.content_sources?.name]]

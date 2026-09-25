@@ -413,7 +413,9 @@ export function trialEvidenceSnapshot(record: Record<string, any>): EvidenceSnap
   return {
     version: 1,
     status: 'structured',
-    evidence_stage: Array.isArray(record.phases) && record.phases.length ? record.phases.join(', ') : 'Phase not reported',
+    evidence_stage: Array.isArray(record.phases) && record.phases.length
+      ? record.phases.map((phase: unknown) => cleanText(phase, 80).replace(/_/g, ' ').replace(/\bphase\s*([1-4])\b/gi, 'Phase $1')).join(', ')
+      : 'Phase not reported',
     study_design: cleanText(metadata.design_description, 240) || cleanText(record.study_type, 120) || null,
     subject_scope: 'Human clinical study registration',
     participants: Number.isSafeInteger(Number(record.enrollment)) && Number(record.enrollment) >= 0 ? Number(record.enrollment) : null,
