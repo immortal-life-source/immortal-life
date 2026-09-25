@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { buildResourceDirectory } = require('./scripts/resource-directory.js');
 
 const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
 const site = 'https://www.immortal.life';
@@ -143,6 +144,11 @@ fs.writeFileSync(path.join(outputDir, 'topics-directory.json'), JSON.stringify({
   topic_count: intelligenceTopics.length,
   domain_count: intelligenceTopicDomains.length,
 }, null, 2));
+
+// The official-source directory is maintained in migrations, so it can also be
+// rendered as a CDN asset. Visitors never need a live database read to browse
+// jurisdictions, source scope, or official links.
+fs.writeFileSync(path.join(outputDir, 'resources-directory.json'), JSON.stringify(buildResourceDirectory(__dirname), null, 2));
 
 const intelligencePages = [
   {

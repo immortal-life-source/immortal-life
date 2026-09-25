@@ -63,7 +63,7 @@
 
   const view = body.dataset.view || 'overview';
   const topicSlug = body.dataset.topic || '';
-  const endpoint = `${window.IL_FN_BASE}/public-intelligence`;
+  const endpoint = '/api/intelligence';
   const dateFormatter = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric' });
   const numberFormatter = new Intl.NumberFormat('en');
 
@@ -350,7 +350,7 @@
 
       const main = el('div', 'record-main');
       const heading = el('h3');
-      heading.append(link('record-title-link', record.title, `/research/${encodeURIComponent(record.id)}`));
+      heading.append(link('record-title-link', record.title, record.source_fallback ? record.source_url : `/research/${encodeURIComponent(record.id)}`));
       main.append(heading);
       const researchSummary = `${evidenceLabel(record.evidence_level, record.status)}${record.journal ? ` from ${record.journal}` : ''}. Open the original record for the study details, methods, and limitations.`;
       appendReaderCopy(main, {
@@ -429,7 +429,7 @@
 
       const main = el('div', 'record-main');
       const heading = el('h3');
-      heading.append(link('record-title-link', record.title, `/trials/${encodeURIComponent(record.id)}`));
+      heading.append(link('record-title-link', record.title, record.source_fallback ? record.source_url : `/trials/${encodeURIComponent(record.id)}`));
       main.append(heading);
       const phases = Array.isArray(record.phases) && record.phases.length ? record.phases.map(readableStatus).join(', ') : 'Phase not supplied';
       appendReaderCopy(main, {
@@ -799,7 +799,7 @@
   }
 
   function renderGraph(data) {
-    const topics = Array.isArray(data.topics) ? data.topics.filter((topic) => Number(topic.evidence_total || 0) > 0) : [];
+    const topics = Array.isArray(data.topics) ? data.topics.filter((topic) => data.fallback || Number(topic.evidence_total || 0) > 0) : [];
     const metricDefinitions = [
       ['research_count', 'Research', '/research'], ['trial_count', 'Trials', '/trials'],
       ['university_work_count', 'University works', '/universities'], ['regulatory_count', 'Regulatory', '/regulatory'],
@@ -842,7 +842,9 @@
         elements.graphTopicList.append(row);
       });
       if (!visible.length) elements.graphTopicList.append(el('p', 'empty-list', 'No topic matches these filters. Try a broader search.'));
-      elements.graphResult.textContent = `Showing ${numberFormatter.format(visible.length)} of ${numberFormatter.format(topics.length)} topics with indexed evidence.`;
+      elements.graphResult.textContent = data.fallback
+        ? `Showing ${numberFormatter.format(visible.length)} of ${numberFormatter.format(topics.length)} monitored topics while live evidence counts refresh.`
+        : `Showing ${numberFormatter.format(visible.length)} of ${numberFormatter.format(topics.length)} topics with indexed evidence.`;
     };
     if (!elements.graphControls.dataset.ready) {
       elements.graphControls.addEventListener('input', draw);
@@ -1088,7 +1090,7 @@
       const main = el('div', 'university-main');
       const location = [university.city, university.country_name || university.country_code].filter(Boolean).join(', ') || 'Location unavailable';
       main.append(el('span', 'section-index', location));
-      const heading = el('h3'); heading.append(link('', university.name, `/universities/${encodeURIComponent(university.slug)}`)); main.append(heading);
+      const heading = el('h3'); heading.append(link('', university.name, university.source_fallback ? university.openalex_url : `/universities/${encodeURIComponent(university.slug)}`)); main.append(heading);
       const topicMetrics = Array.isArray(university.university_research_topic_metrics) ? university.university_research_topic_metrics : [];
       const topicNames = topicMetrics.sort((left, right) => Number(right.works_five_year || 0) - Number(left.works_five_year || 0)).slice(0, 4).map((metric) => metric.topic_slug.replaceAll('-', ' '));
       const activeMetric = activeTopic ? topicMetrics.find((metric) => metric.topic_slug === activeTopic) : null;
@@ -1381,6 +1383,45 @@
     elements.qualitySection.hidden = false;
   }
 
+  const publicCacheName = 'immortal-life-public-intelligence-v1';
+  const publicCacheMaxAgeMs = 24 * 60 * 60 * 1000;
+
+  async function readCachedRequest(url) {
+    if (!('caches' in window)) return null;
+    try {
+      const cached = await caches.open(publicCacheName).then((cache) => cache.match(url.toString()));
+      if (!cached) return null;
+      const cachedAt = Number(cached.headers.get('x-immortal-cached-at') || 0);
+      if (!cachedAt || Date.now() - cachedAt > publicCacheMaxAgeMs) return null;
+      return cached.json();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function writeCachedRequest(url, data) {
+    if (!('caches' in window)) return;
+    try {
+      const response = new Response(JSON.stringify(data), {
+        headers: {
+          'content-type': 'application/json',
+          'x-immortal-cached-at': String(Date.now()),
+        },
+      });
+      await caches.open(publicCacheName).then((cache) => cache.put(url.toString(), response));
+    } catch (_) { /* A private browser may disable Cache Storage. */ }
+  }
+
+  async function fetchWithDeadline(url, timeoutMs = 6500) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(url, { headers: window.ilFnHeaders(), signal: controller.signal });
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
   async function request(viewName, limit, params = {}) {
     const url = new URL(endpoint);
     url.searchParams.set('quality_rules', '20260916b');
@@ -1391,19 +1432,15 @@
     });
     if (viewName === 'resources') url.searchParams.set('directory_contract', 'global-195-v2');
     if (topicSlug) url.searchParams.set('topic', topicSlug);
-    const transientStatuses = new Set([500, 502, 503, 504]);
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      let res;
-      try {
-        res = await fetch(url, { headers: window.ilFnHeaders() });
-      } catch (error) {
-        if (attempt === 2) throw error;
-      }
-      if (res?.ok) return res.json();
-      if (res && (!transientStatuses.has(res.status) || attempt === 2)) throw new Error(`Feed request failed with ${res.status}`);
-      await new Promise((resolve) => window.setTimeout(resolve, 300 * (attempt + 1)));
+    const cached = await readCachedRequest(url);
+    if (cached) return cached;
+    const res = await fetchWithDeadline(url);
+    if (res.ok) {
+      const data = await res.json();
+      await writeCachedRequest(url, data);
+      return data;
     }
-    throw new Error('Feed request failed');
+    throw new Error(`Feed request failed with ${res.status}`);
   }
 
   async function load() {
@@ -1451,8 +1488,17 @@
         renderTimeline(dossier.timeline || {});
         renderTopicEvidence({ evidence: dossier.evidence || {} });
       } else if (view === 'regulatory') {
-        const data = await request('regulatory', 80, { topic: new URLSearchParams(location.search).get('topic')?.trim() || '' });
-        renderRegulatory(data.regulatory || [], data.regulatory_guides || [], data.regulatory_coverage || {});
+        const [data, directoryResponse] = await Promise.all([
+          request('regulatory', 80, { topic: new URLSearchParams(location.search).get('topic')?.trim() || '' }),
+          fetch('/resources-directory.json', { headers: { Accept: 'application/json' } }),
+        ]);
+        const directory = directoryResponse.ok ? await directoryResponse.json() : null;
+        const officialGuides = (directory?.resources || []).filter((resource) => resource.resource_type === 'regulator');
+        renderRegulatory(data.regulatory || [], officialGuides.length ? officialGuides : (data.regulatory_guides || []), officialGuides.length ? {
+          authorities: officialGuides.length,
+          jurisdictions: new Set(officialGuides.map((resource) => resource.jurisdiction_code).filter(Boolean)).size,
+          regions: new Set(officialGuides.map((resource) => resource.region).filter(Boolean)).size,
+        } : (data.regulatory_coverage || {}));
         renderSources(data.sources || [], false);
       } else if (view === 'integrity') {
         const data = await request('integrity', 80, { topic: new URLSearchParams(location.search).get('topic')?.trim() || '' });
@@ -1460,6 +1506,13 @@
         renderSources(data.sources || [], false);
       } else if (view === 'graph') {
         const data = await request('graph', 100);
+        if (!(data.topics || []).length) {
+          const directoryResponse = await fetch('/topics-directory.json', { headers: { Accept: 'application/json' } });
+          if (directoryResponse.ok) {
+            const directory = await directoryResponse.json();
+            data.topics = (directory.topics || []).map((topic) => ({ ...topic, evidence_total: 0 }));
+          }
+        }
         renderGraph(data);
         renderSources(data.sources || [], false);
       } else if (view === 'entities') {
@@ -1469,7 +1522,9 @@
       } else if (view === 'universities') {
         await fetchUniversityIndex();
       } else if (view === 'resources') {
-        const data = await request('resources', 500);
+        const response = await fetch('/resources-directory.json', { headers: { Accept: 'application/json' } });
+        if (!response.ok) throw new Error(`Resource directory failed with ${response.status}`);
+        const data = await response.json();
         renderResources(data);
       } else if (view === 'quality') {
         const data = await request('quality', 100);

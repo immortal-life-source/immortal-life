@@ -104,10 +104,14 @@ test('research and trials use complete searchable filter systems', async () => {
 })
 
 test('public data views recover from brief Edge Function saturation', async () => {
-  const portal = await read('intelligence.js')
-  assert.match(portal, /new Set\(\[500, 502, 503, 504\]\)/)
-  assert.match(portal, /for \(let attempt = 0; attempt < 3; attempt \+= 1\)/)
-  assert.match(portal, /300 \* \(attempt \+ 1\)/)
+  const [portal, proxy] = await Promise.all([read('intelligence.js'), read('api/intelligence.js')])
+  assert.match(portal, /fetchWithDeadline/)
+  assert.match(portal, /immortal-life-public-intelligence-v1/)
+  assert.match(portal, /const endpoint = '\/api\/intelligence'/)
+  assert.match(portal, /timeoutMs = 6500/)
+  assert.match(proxy, /s-maxage=300/)
+  assert.match(proxy, /stale-if-error=604800/)
+  assert.match(proxy, /sourceFallback/)
 })
 
 test('public page shells provide search, related journeys and mobile navigation', async () => {

@@ -7,7 +7,7 @@ const METHOD_VERSION = 'university-index-complete-2026-09-v2'
 const OPENALEX = 'https://api.openalex.org'
 const OPENALEX_MIN_INTERVAL_MS = 450
 const OPENALEX_PAGE_SIZE = 200
-const RUN_TIME_BUDGET_MS = 105_000
+const RUN_TIME_BUDGET_MS = 20_000
 let openAlexGate = Promise.resolve()
 let lastOpenAlexRequestAt = 0
 
@@ -252,6 +252,10 @@ async function prepareState(supabase: any): Promise<SyncState | null> {
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return jsonResponse(req, { error: 'Method not allowed' }, 405, 'POST')
+  const requestBody = await req.clone().json().catch(() => ({}))
+  if (requestBody?.trigger === 'schedule' && Deno.env.get('SCHEDULED_INGESTION_PAUSED') === 'true') {
+    return jsonResponse(req, { ok: true, status: 'maintenance_pause' }, 202, 'POST')
+  }
   const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', serviceRoleKey(), { auth: { persistSession: false, autoRefreshToken: false } })
   if (!(await authorized(req, supabase))) return jsonResponse(req, { error: 'Unauthorized' }, 401, 'POST')
   const runStartedAt = Date.now()

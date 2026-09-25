@@ -147,6 +147,7 @@ test('global source directory covers all 195 sovereign states without inventing 
   assert.match(api, /Math\.min\(Math\.max\(parsedLimit, 1\), 500\)/);
   assert.match(api, /by_region_jurisdictions/);
   assert.match(api, /country_directory: countryDirectory/);
-  assert.match(portal, /request\('resources', 500\)/);
+  assert.match(portal, /fetch\('\/resources-directory\.json'/);
+  assert.doesNotMatch(portal, /request\('resources', 500\)/);
   assert.match(portal, /Worldwide country coverage/);
 });

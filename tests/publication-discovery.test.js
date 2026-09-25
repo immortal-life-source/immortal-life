@@ -70,7 +70,7 @@ test('public intelligence UI explains empty states and reports quality zeros acc
   const script = read('intelligence.js');
   const template = read('intelligence-template.html');
   assert.match(script, /countParts\.join\(' · '\) \|\| \(topic\.directory_only \? 'Open evidence guide' : 'Index building'\)/);
-  assert.match(script, /topics\.filter\(\(topic\) => Number\(topic\.evidence_total \|\| 0\) > 0\)/);
+  assert.match(script, /data\.fallback \|\| Number\(topic\.evidence_total \|\| 0\) > 0/);
   assert.match(script, /typeof value === 'number' \? numberFormatter\.format\(value\)/);
   assert.doesNotMatch(template, /id="(?:research|trial|topic)Count">0</);
 });

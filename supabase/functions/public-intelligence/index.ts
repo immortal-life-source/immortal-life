@@ -99,19 +99,6 @@ function publicResourceState(resource: any, ingestionSource?: any): Record<strin
   }
 }
 
-async function allUniversityLocations(supabase: any): Promise<any[]> {
-  const rows: any[] = []
-  const pageSize = 1000
-  for (let offset = 0; ; offset += pageSize) {
-    const { data, error } = await supabase.from('university_research_institutions')
-      .select('country_code,country_name,continent').eq('is_eligible', true)
-      .order('openalex_id').range(offset, offset + pageSize - 1)
-    if (error) throw error
-    rows.push(...(data ?? []))
-    if ((data ?? []).length < pageSize) return rows
-  }
-}
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req, PUBLIC_METHODS) })
   if (req.method !== 'GET') return response(req, { error: 'Method not allowed' }, 405)
@@ -217,10 +204,10 @@ Deno.serve(async (req) => {
       const sort = cleanText(url.searchParams.get('sort') ?? 'index', 20)
       const universityLimit = Math.min(Math.max(parsedLimit || 100, 1), 500)
       const relation = topic
-        ? 'university_research_topic_metrics!inner(topic_slug,works_all_time,works_five_year,works_two_year,representative_citations,representative_open_access_count,representative_work_count)'
-        : 'university_research_topic_metrics(topic_slug,works_all_time,works_five_year,works_two_year,representative_citations,representative_open_access_count,representative_work_count)'
+        ? ',university_research_topic_metrics!inner(topic_slug,works_all_time,works_five_year,works_two_year,representative_citations,representative_open_access_count,representative_work_count)'
+        : ''
       let query = supabase.from('university_research_institutions')
-        .select(`openalex_id,slug,name,ror_id,country_code,country_name,continent,region,city,latitude,longitude,homepage_url,openalex_url,indexed_works_all_time,indexed_works_five_year,indexed_works_two_year,indexed_topic_count,representative_citations,representative_open_access_share,activity_score,breadth_score,momentum_score,citation_context_score,research_index_score,ranking_method_version,updated_at,${relation}`, { count: 'exact' })
+        .select(`openalex_id,slug,name,ror_id,country_code,country_name,continent,region,city,latitude,longitude,homepage_url,openalex_url,indexed_works_all_time,indexed_works_five_year,indexed_works_two_year,indexed_topic_count,representative_citations,representative_open_access_share,activity_score,breadth_score,momentum_score,citation_context_score,research_index_score,ranking_method_version,updated_at${relation}`, { count: 'planned' })
         .eq('is_eligible', true)
         .range(offset, offset + universityLimit - 1)
       if (topic) query = query.eq('university_research_topic_metrics.topic_slug', topic)
@@ -231,11 +218,10 @@ Deno.serve(async (req) => {
       else if (sort === 'breadth') query = query.order('indexed_topic_count', { ascending: false }).order('indexed_works_five_year', { ascending: false })
       else if (sort === 'open-access') query = query.order('representative_open_access_share', { ascending: false, nullsFirst: false }).order('indexed_works_five_year', { ascending: false })
       else query = query.order('research_index_score', { ascending: false }).order('indexed_works_five_year', { ascending: false })
-      const [{ data, error, count }, coverage, topicsResult, countriesResult, { data: sources, error: sourcesError }] = await Promise.all([
+      const [{ data, error, count }, coverage, topicsResult, { data: sources, error: sourcesError }] = await Promise.all([
         query,
         supabase.rpc('get_university_index_coverage'),
         supabase.from('intelligence_topics').select('slug,name,sort_order,domain_slug,domain_name,domain_sort').eq('enabled', true).order('sort_order'),
-        allUniversityLocations(supabase),
         sourcesPromise,
       ])
       for (const result of [coverage, topicsResult]) if (result.error) throw result.error
@@ -249,13 +235,7 @@ Deno.serve(async (req) => {
           || Number(rightMetric?.works_two_year ?? 0) - Number(leftMetric?.works_two_year ?? 0)
           || String(left.name).localeCompare(String(right.name))
       })
-      const countryMap = new Map<string, { code: string; name: string; continent: string; universities: number }>()
-      for (const row of countriesResult ?? []) {
-        if (!row.country_code) continue
-        const current = countryMap.get(row.country_code) ?? { code: row.country_code, name: row.country_name || row.country_code, continent: row.continent || 'Unspecified', universities: 0 }
-        current.universities += 1
-        countryMap.set(row.country_code, current)
-      }
+      const countryDirectory = Array.isArray(coverage.data?.country_directory) ? coverage.data.country_directory : []
       return response(req, {
         generated_at: new Date().toISOString(),
         total_matching: count ?? 0,
@@ -264,7 +244,7 @@ Deno.serve(async (req) => {
         coverage: coverage.data ?? {},
         filters: { topic: topic || null, country: country || null, continent: continent || null, sort },
         topics: topicsResult.data ?? [],
-        countries: [...countryMap.values()].sort((left, right) => left.name.localeCompare(right.name)),
+        countries: countryDirectory,
         universities,
         methodology: {
           label: 'Global University Research Index',

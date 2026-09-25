@@ -57,7 +57,7 @@ type Job = {
 }
 
 const SIX_HOURS_MS = 6 * 60 * 60 * 1000
-const RUN_TIME_BUDGET_MS = 55_000
+const RUN_TIME_BUDGET_MS = 15_000
 const PUBMED_PAGE_SIZE = 200
 const EUROPE_PMC_PAGE_SIZE = 1000
 const CLINICAL_TRIALS_PAGE_SIZE = 1000
@@ -1057,6 +1057,11 @@ async function syncClinicalTrials(supabase: any, topic: Topic, job: Job): Promis
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return jsonResponse(req, { error: 'Method not allowed' }, 405, 'POST')
 
+  const requestBody = await req.clone().json().catch(() => ({}))
+  if (requestBody?.trigger === 'schedule' && Deno.env.get('SCHEDULED_INGESTION_PAUSED') === 'true') {
+    return jsonResponse(req, { ok: true, status: 'maintenance_pause' }, 202, 'POST')
+  }
+
   const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', serviceRoleKey(), {
     auth: { persistSession: false, autoRefreshToken: false },
   })
@@ -1065,7 +1070,7 @@ Deno.serve(async (req) => {
   let requestedSource = 'all'
   let triggerKind = 'schedule'
   try {
-    const body = await req.json().catch(() => ({}))
+    const body = requestBody
     if (typeof body?.source === 'string') requestedSource = body.source
     if (['schedule', 'manual', 'recovery'].includes(body?.trigger)) triggerKind = body.trigger
   } catch {
@@ -1080,7 +1085,7 @@ Deno.serve(async (req) => {
   if (runError) return jsonResponse(req, { error: 'Unable to create ingestion run' }, 500, 'POST')
   // Source-scoped workers deliberately yield well before the platform timeout.
   // This leaves Edge capacity available for the reader-facing public API.
-  const runTimeBudgetMs = requestedSource === 'all' ? RUN_TIME_BUDGET_MS : 25_000
+  const runTimeBudgetMs = requestedSource === 'all' ? RUN_TIME_BUDGET_MS : 10_000
 
   try {
     const { data: topics, error: topicsError } = await supabase
