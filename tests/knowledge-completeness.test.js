@@ -53,4 +53,7 @@ test('public browsing, graph totals, sitemaps and downloads traverse the complet
   assert.match(liveCounts, /intelligence_topic_counts_cache/)
   assert.match(liveCounts, /research_topic_count_cache after insert or update or delete/)
   assert.match(liveCounts, /immortal-life-topic-count-reconcile/)
+  const qualityCache = await read('supabase/migrations/20260925001500_cache_public_quality_telemetry.sql')
+  assert.match(qualityCache, /intelligence_quality_telemetry_cache/)
+  assert.match(qualityCache, /immortal-life-quality-telemetry-refresh/)
 })
