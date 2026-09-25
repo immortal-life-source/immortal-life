@@ -872,14 +872,14 @@
   function renderResourceStats(coverage) {
     elements.resourceStats.replaceChildren();
     [
-      ['Official resources listed', coverage?.total || 0, 'all'],
-      ['Countries covered', coverage?.countries || 0, 'countries'],
-      ['Coverage regions', coverage?.regions || 0, 'regions'],
-      ['Links checked successfully', coverage?.healthy || 0, 'healthy'],
-    ].forEach(([label, value, action]) => {
+      ['Official resources listed', coverage?.total || 0, 'all', 'View resources →'],
+      ['Countries covered', coverage?.countries || 0, 'countries', 'View countries →'],
+      ['Coverage regions', coverage?.regions || 0, 'regions', 'View regions →'],
+      ['Links checked successfully', coverage?.healthy || 0, 'healthy', 'View checked links →'],
+    ].forEach(([label, value, action, callToAction]) => {
       const card = el('button', 'atlas-stat atlas-stat--action'); card.type = 'button';
       card.setAttribute('aria-label', `${numberFormatter.format(Number(value))} ${label}. Show what this represents.`);
-      card.append(el('strong', '', numberFormatter.format(Number(value))), el('span', '', label), el('small', '', 'View records →'));
+      card.append(el('strong', '', numberFormatter.format(Number(value))), el('span', '', label), el('small', '', callToAction));
       card.onclick = () => {
         elements.resourceSearch.value = '';
         elements.resourceRegion.value = '';

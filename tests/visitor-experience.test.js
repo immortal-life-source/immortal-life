@@ -166,6 +166,8 @@ test('resource summary reports complete reader-facing coverage, not the internal
   ])
   assert.match(portal, /Countries covered/)
   assert.match(portal, /Coverage regions/)
+  assert.match(portal, /View countries →/)
+  assert.match(portal, /View regions →/)
   assert.doesNotMatch(portal.match(/function renderResourceStats[\s\S]*?\n  \}/)?.[0] || '', /Updated automatically|live_integrations/)
   assert.match(api, /countries: \(countryDirectory \?\? \[\]\)\.length/)
   assert.match(api, /regions: Object\.keys\(countBy\('region'\)\)\.length/)
