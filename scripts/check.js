@@ -87,6 +87,8 @@ const requiredFiles = [
   'supabase/migrations/20260925000400_source_usage_rights.sql',
   'supabase/migrations/20260925000500_verify_rights_and_rebuild_briefings.sql',
   'supabase/migrations/20260925000600_clinicaltrials_terms_label.sql',
+  'supabase/migrations/20260925000700_evidence_snapshots_and_global_live_sources.sql',
+  'supabase/migrations/20260925000800_prioritize_evidence_snapshot_backfill.sql',
   'supabase/audits/membership-integrity.sql',
   'intelligence-template.html',
   'content-template.html',

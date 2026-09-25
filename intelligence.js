@@ -227,6 +227,26 @@
     details.append(list); container.append(details);
   }
 
+  function appendEvidenceSnapshot(container, snapshot) {
+    if (!snapshot || typeof snapshot !== 'object' || !snapshot.evidence_stage) return;
+    const section = el('section', 'evidence-snapshot evidence-snapshot--compact');
+    section.append(el('span', 'section-index', 'Evidence snapshot'), el('h4', '', 'What the source actually supports'));
+    const grid = el('dl', 'evidence-snapshot-grid');
+    const display = (value, fallback = 'Not reported') => Array.isArray(value) ? (value.filter(Boolean).join('; ') || fallback) : value == null || value === '' ? fallback : String(value);
+    [
+      ['Stage', snapshot.evidence_stage],
+      ['Design', snapshot.study_design],
+      ['Population', snapshot.population || snapshot.subject_scope],
+      ['Participants', snapshot.participants],
+      ['Intervention', snapshot.intervention],
+      ['Result', snapshot.reported_outcome || 'No reusable finding-level result available'],
+    ].forEach(([label, value]) => {
+      const row = el('div'); row.append(el('dt', '', label), el('dd', '', display(value))); grid.append(row);
+    });
+    section.append(grid, el('p', 'evidence-snapshot-limit', snapshot.main_limitation || 'Read the linked source for methods, findings, and limitations.'));
+    container.append(section);
+  }
+
   function readableStatus(value) {
     return String(value || 'Status not supplied').replace(/_/g, ' ').toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase());
   }
@@ -298,13 +318,7 @@
       topicLinks(record, 'research_item_topics').forEach((topic) => tags.append(link('record-tag', topic.name, `/topics/${encodeURIComponent(topic.slug)}`)));
       if (record.is_open_access) tags.append(el('span', 'record-tag', 'Open access'));
       main.append(tags);
-      appendHumanGuide(main, [
-        ['What this is', `${evidenceLabel(record.evidence_level, record.status)} indexed from ${record.journal || 'a scholarly source'}.`],
-        ['Why it may matter', 'It matched one or more longevity topics and may help show how that area is developing.'],
-        ['Main limitation', record.evidence_level === 'preclinical' ? 'Lab or animal findings may not apply to people.' : record.evidence_level === 'preprint' ? 'This record has not completed peer review.' : 'A single record does not establish safety, effectiveness, or medical usefulness.'],
-        ['What changed', `Added or refreshed from source metadata dated ${formatDate(record.published_on)}.`],
-        ['Where to verify', 'Use “Open source record” below to read the original publication record.'],
-      ]);
+      appendEvidenceSnapshot(main, record.evidence_snapshot);
       appendQualityExplanation(main, record, 'research_item_topics');
 
       const action = el('div', 'record-action');
@@ -383,13 +397,7 @@
       topicLinks(record, 'clinical_trial_topics').forEach((topic) => tags.append(link('record-tag', topic.name, `/topics/${encodeURIComponent(topic.slug)}`)));
       (record.phases || []).forEach((phase) => tags.append(el('span', 'record-tag', phase.replace(/_/g, ' '))));
       main.append(tags);
-      appendHumanGuide(main, [
-        ['What this is', `${phases} registered clinical study.`],
-        ['Why it may matter', `The registry currently reports the study as ${readableStatus(record.overall_status)}.`],
-        ['Main limitation', 'Registration is not proof that a treatment works, is safe, or is available to you.'],
-        ['What changed', `Registry metadata was last updated ${formatDate(record.last_update_date)}.`],
-        ['Where to verify', 'Use “Open registry record” below for eligibility, sites, contacts, and current status.'],
-      ]);
+      appendEvidenceSnapshot(main, record.evidence_snapshot);
       appendQualityExplanation(main, record, 'clinical_trial_topics');
 
       const action = el('div', 'record-action');
@@ -816,6 +824,42 @@
       (data.related_topics || []).slice(0, 3).forEach((topic) => elements.relatedJourneys.append(link('', `Compare with ${topic.name}`, `/topics/${encodeURIComponent(topic.slug)}`)));
       elements.relatedJourneys.append(link('', 'Find related university activity', `/universities?topic=${encodeURIComponent(topicSlug)}`));
     }
+  }
+
+  function renderTopicEvidence(data) {
+    const evidence = data?.evidence || {};
+    if (!elements.researchSection?.parentNode) return;
+    let section = document.getElementById('topicEvidenceSection');
+    if (!section) {
+      section = el('section', 'intel-section topic-evidence-overview');
+      section.id = 'topicEvidenceSection';
+      elements.researchSection.parentNode.insertBefore(section, elements.researchSection);
+    }
+    section.replaceChildren();
+    const heading = el('div', 'section-heading');
+    const title = el('div'); title.append(el('span', 'section-index', 'Evidence overview'), el('h2', '', 'What is known—and what is still missing'));
+    heading.append(title, el('p', 'graph-hint', 'Counts describe source records, not proof that an intervention works.'));
+    const metrics = el('div', 'topic-evidence-metrics');
+    [
+      ['Research records', Number(evidence.research_total || 0), '#researchSection'],
+      ['Registered trials', Number(evidence.trial_total || 0), '#trialsSection'],
+      ['Recruiting or active', Number(evidence.recruiting_trials || 0), '#trialsSection'],
+      ['Trials with posted results', Number(evidence.trials_with_results || 0), '#trialsSection'],
+      ['Live source feeds represented', Number(evidence.source_count || 0), '#sourceSection'],
+    ].forEach(([label, count, href]) => {
+      const card = link('topic-evidence-stat', '', href);
+      card.append(el('strong', '', numberFormatter.format(count)), el('span', '', label), el('small', '', 'View records →'));
+      metrics.append(card);
+    });
+    const stages = el('div', 'topic-evidence-stages');
+    const labels = { 'human-synthesis': 'Evidence syntheses', 'randomized-human': 'Randomized human studies', 'human-study': 'Human studies', preclinical: 'Preclinical research', preprint: 'Preprints', 'research-record': 'Unclassified research records' };
+    Object.entries(evidence.research_by_stage || {}).sort((a, b) => Number(b[1]) - Number(a[1])).forEach(([stage, count]) => {
+      const item = el('span'); item.append(el('strong', '', numberFormatter.format(Number(count || 0))), document.createTextNode(` ${labels[stage] || readableStatus(stage)}`)); stages.append(item);
+    });
+    const caveat = Number(evidence.trials_with_results || 0) === 0
+      ? 'No indexed trial currently includes a reusable posted result. Registrations describe plans, not findings.'
+      : 'Posted registry results are source-supplied; check the full registry record and peer-reviewed publication before drawing conclusions.';
+    section.append(heading, metrics, stages, el('p', 'topic-evidence-caveat', caveat));
   }
 
   function renderSources(sources, showList) {
@@ -1350,11 +1394,12 @@
         renderTopics(data.topics || [], false);
         renderSources(data.sources || [], false);
       } else if (view === 'topic') {
-        const [research, trials, topics, timeline] = await Promise.all([
+        const [research, trials, topics, timeline, evidence] = await Promise.all([
           request('research', 12),
           request('trials', 12),
           request('topics', 100),
           request('timeline', 40),
+          request('topic-evidence', 1),
         ]);
         renderResearch(research.research || []);
         renderTrials(trials.trials || []);
@@ -1364,6 +1409,7 @@
           renderStats({ research: selected.research_count, trials: selected.trial_count });
         }
         renderTimeline(timeline);
+        renderTopicEvidence(evidence);
       } else if (view === 'regulatory') {
         const data = await request('regulatory', 80);
         renderRegulatory(data.regulatory || [], data.regulatory_guides || [], data.regulatory_coverage || {});

@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { researchEvidenceSnapshot, trialEvidenceSnapshot } from '../_shared/intelligence.ts'
 import { serviceRoleKey } from '../_shared/security.ts'
 
 const SITE = 'https://www.immortal.life'
@@ -59,11 +60,11 @@ function pageShell(input: { title: string; description: string; canonical: strin
 <link rel="canonical" href="${escapeHtml(input.canonical)}"><link rel="alternate" type="application/rss+xml" title="immortal.life updates" href="${SITE}/feed.xml">
 <meta property="og:type" content="article"><meta property="og:title" content="${escapeHtml(input.title)}"><meta property="og:description" content="${escapeHtml(input.description)}"><meta property="og:url" content="${escapeHtml(input.canonical)}"><meta property="og:image" content="${escapeHtml(input.socialImage || `${SITE}/og-image.png`)}">
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(input.title)}"><meta name="twitter:description" content="${escapeHtml(input.description)}">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,300&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="/intelligence.css?v=20260925-ux-consolidation-a"><link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,300&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="/intelligence.css?v=20260925-evidence-global-a"><link rel="icon" href="/favicon.ico">
 <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}</script></head><body>
 <header class="intel-header"><a class="intel-logo" href="/" aria-label="immortal.life home"><img src="/linkedin-app-logo.png" width="54" height="54" alt="" decoding="async"><span>immortal.life</span></a><button class="intel-nav-toggle" id="intelNavToggle" type="button" aria-expanded="false" aria-controls="intelNav"><span>Menu</span><i aria-hidden="true"></i></button><nav class="intel-nav" id="intelNav" aria-label="Primary navigation"><a href="/changes">Today</a><a href="/topics">Topics</a><a href="/trials">Trials</a><a href="/universities">Universities</a><a href="/research">Research</a><a href="/discover">Explore</a><a href="/learn">Longevity 101</a><a href="/regulatory">Regulatory</a><a href="/resources">Resources</a><a href="/briefings">Briefings</a><a href="/methodology">How it works</a><form class="intel-nav-search" role="search"><input type="search" aria-label="Search longevity topics" placeholder="Search topics…"><button type="submit">Search</button></form></nav></header>
 <main><section class="intel-hero record-hero"><div class="bio-ambient bio-ambient--intel" aria-hidden="true"><div class="bio-dna"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><div class="bio-human"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div class="intel-kicker">${escapeHtml(input.kicker)}</div><h1>${escapeHtml(input.heading)}</h1><p class="intel-lede">${escapeHtml(input.description)}</p></section>${input.body}<nav class="next-journey" aria-label="Related discoveries"><span>${input.journeys?.length ? 'Related discoveries' : 'Continue exploring'}</span>${(input.journeys?.length ? input.journeys : [{ href: '/changes', label: "What's new today" }, { href: '/topics', label: 'Choose a topic' }, { href: '/trials', label: 'Open Trial Radar' }, { href: '/universities', label: 'Compare universities' }]).map((item) => `<a href="${escapeHtml(item.href)}">${escapeHtml(item.label)}</a>`).join('')}</nav></main>
-<footer class="intel-footer"><p><strong>Automated publication.</strong> ${escapeHtml(DISCLOSURE)} Research information only; not medical advice, diagnosis, or treatment guidance.</p><div><a href="/changes">What's new</a><a href="/reports">Reports</a><a href="/data">Data & feeds</a><a href="/methodology">Methodology</a><a href="/automation">Automation disclosure</a><a href="/corrections">Corrections</a><span>© 2026 immortal.life</span></div></footer><nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/topics"><span aria-hidden="true">◇</span>Topics</a><a href="/trials"><span aria-hidden="true">＋</span>Trials</a><a href="/changes"><span aria-hidden="true">↻</span>Updates</a><button type="button" data-mobile-menu-open><span aria-hidden="true">☰</span>Menu</button></nav><script src="/il-config.js"></script><script src="/intelligence.js?v=20260925-ux-consolidation-a"></script><script src="/telemetry.js"></script></body></html>`
+<footer class="intel-footer"><p><strong>Automated publication.</strong> ${escapeHtml(DISCLOSURE)} Research information only; not medical advice, diagnosis, or treatment guidance.</p><div><a href="/changes">What's new</a><a href="/reports">Reports</a><a href="/data">Data & feeds</a><a href="/methodology">Methodology</a><a href="/automation">Automation disclosure</a><a href="/corrections">Corrections</a><span>© 2026 immortal.life</span></div></footer><nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/topics"><span aria-hidden="true">◇</span>Topics</a><a href="/trials"><span aria-hidden="true">＋</span>Trials</a><a href="/changes"><span aria-hidden="true">↻</span>Updates</a><button type="button" data-mobile-menu-open><span aria-hidden="true">☰</span>Menu</button></nav><script src="/il-config.js"></script><script src="/intelligence.js?v=20260925-evidence-global-a"></script><script src="/telemetry.js"></script></body></html>`
 }
 
 function chips(topics: string[]): string {
@@ -103,6 +104,24 @@ function qualityDisclosure(record: any, relationField = ''): string {
     return `<li><strong>${escapeHtml(topic)} · ${Number(item?.relevance_score ?? record?.relevance_confidence ?? 0)}%</strong>${reasons.length ? `<span>${escapeHtml(reasons.join(' '))}</span>` : ''}</li>`
   }).join('')
   return `<details class="quality-explanation"><summary>Why this record appears here · ${Number(record?.relevance_confidence ?? 0)}% topic match</summary><p>The title, summary, or source keywords matched one or more topics followed by immortal.life. A higher percentage means a stronger topic match; it does not rate safety, effectiveness, or study quality.</p>${details ? `<ul>${details}</ul>` : ''}<p>Automated source check ${Number(record?.source_quality_score ?? 0)}% · update recency ${Number(record?.freshness_score ?? 0)}%. These figures help sort records; they are not medical ratings.</p></details>`
+}
+
+function evidenceSnapshotHtml(snapshot: any): string {
+  if (!snapshot || typeof snapshot !== 'object' || !snapshot.evidence_stage) return ''
+  const value = (input: any): string => Array.isArray(input) ? input.filter(Boolean).join('; ') : input == null || input === '' ? 'Not reported' : String(input)
+  const fields: Array<[string, any]> = [
+    ['Evidence stage', snapshot.evidence_stage],
+    ['Study design', snapshot.study_design],
+    ['Evidence population', snapshot.subject_scope],
+    ['Participants', snapshot.participants],
+    ['Population', snapshot.population],
+    ['Duration', snapshot.duration],
+    ['Intervention', snapshot.intervention],
+    ['Comparator', snapshot.comparator],
+    ['Outcomes measured', snapshot.outcomes_measured],
+    ['Reported result', snapshot.reported_outcome || 'No reusable finding-level result is available in this record.'],
+  ]
+  return `<section class="evidence-snapshot" aria-labelledby="evidenceSnapshotTitle"><span class="section-index">Evidence snapshot</span><h2 id="evidenceSnapshotTitle">What the source actually supports</h2><dl>${fields.map(([name, field]) => `<div><dt>${escapeHtml(name)}</dt><dd>${escapeHtml(value(field))}</dd></div>`).join('')}</dl><div class="evidence-snapshot-notes"><p><strong>Main limitation</strong>${escapeHtml(value(snapshot.main_limitation))}</p><p><strong>Safety and approval</strong>${escapeHtml(value(snapshot.safety_context))} ${escapeHtml(value(snapshot.regulatory_context))}</p><p><strong>Source support</strong>${escapeHtml(value(snapshot.source_support))}</p></div></section>`
 }
 
 function evidenceLadderHtml(level: unknown): string {
@@ -158,16 +177,18 @@ function renderRecord(kind: string, record: any): string {
   let extra = ''
   let guide: Array<[string, string]> = []
   if (kind === 'research') {
+    if (!record.evidence_snapshot || !Object.keys(record.evidence_snapshot).length) record.evidence_snapshot = researchEvidenceSnapshot(record)
     topics = relationTopics(record, 'research_item_topics'); date = record.published_on
     rows = [['Published', formatDate(record.published_on)], ['Journal', record.journal], ['Authors', Array.isArray(record.authors) ? record.authors.join(', ') : record.authors], ['DOI', record.doi], ['Evidence class', record.evidence_level], ['Record status', record.status], ['Match confidence', `${record.relevance_confidence}%`], ['Citations', record.cited_by_count], ['Source feed', record.content_sources?.name]]
     kicker = record.status === 'retracted' ? 'Retracted research record' : 'Research record'
-    extra = evidenceLadderHtml(record.evidence_level) + qualityDisclosure(record, 'research_item_topics')
+    extra = evidenceSnapshotHtml(record.evidence_snapshot) + evidenceLadderHtml(record.evidence_level) + qualityDisclosure(record, 'research_item_topics')
     guide = [['What this is', `${record.evidence_level || 'Research'} record from ${record.journal || 'a scholarly source'}.`], ['Why it may matter', 'It matched a longevity topic and may show how that evidence area is developing.'], ['Evidence', `Automated topic match ${record.relevance_confidence || 0}%; this is not a medical rating.`], ['Main limitation', 'One research record does not prove safety, effectiveness, or usefulness for an individual.'], ['What changed', `Source metadata was published or refreshed ${formatDate(record.published_on)}.`], ['Where to verify', 'Open the primary source below for methods, population, results, and limitations.']]
   } else if (kind === 'trials') {
+    if (!record.evidence_snapshot || !Object.keys(record.evidence_snapshot).length) record.evidence_snapshot = trialEvidenceSnapshot(record)
     topics = relationTopics(record, 'clinical_trial_topics'); date = record.last_update_date
     rows = [['Registry ID', record.external_id], ['Last registry update', formatDate(record.last_update_date)], ['Status', record.overall_status], ['Phase', (record.phases || []).join(', ')], ['Sponsor', record.sponsor], ['Enrollment', record.enrollment], ['Countries', (record.countries || []).join(', ')], ['Match confidence', `${record.relevance_confidence}%`], ['Source feed', record.content_sources?.name]]
     kicker = 'Clinical trial registry record'
-    extra = trialLadderHtml(record.phases) + '<p class="record-caveat">Registration and recruitment status do not establish safety, efficacy, or regulatory approval.</p>' + qualityDisclosure(record, 'clinical_trial_topics')
+    extra = evidenceSnapshotHtml(record.evidence_snapshot) + trialLadderHtml(record.phases) + '<p class="record-caveat">Registration and recruitment status do not establish safety, efficacy, or regulatory approval.</p>' + qualityDisclosure(record, 'clinical_trial_topics')
     guide = [['What this is', 'A clinical study registration, not a result or recommendation.'], ['Why it may matter', `The registry currently reports ${String(record.overall_status || 'an unknown status').replace(/_/g, ' ')}.`], ['Evidence', `Registered ${Array.isArray(record.phases) && record.phases.length ? record.phases.join(', ') : 'phase not supplied'} study.`], ['Main limitation', 'Registration does not prove that the intervention works, is safe, or is available to you.'], ['What changed', `Registry metadata was last updated ${formatDate(record.last_update_date)}.`], ['Where to verify', 'Open the primary registry below for eligibility, locations, contacts, and current status.']]
   } else if (kind === 'regulatory') {
     topics = record.matched_topics || []; date = record.published_at

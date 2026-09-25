@@ -3,6 +3,7 @@ import { isInternalServiceRequest, jsonResponse, serviceRoleKey } from '../_shar
 
 const ALLOWED_HOSTS = new Set([
   'www.who.int', 'trialsearch.who.int', 'europepmc.org', 'www.ebi.ac.uk',
+  'doaj.org',
   'pubmed.ncbi.nlm.nih.gov', 'eutils.ncbi.nlm.nih.gov', 'www.ncbi.nlm.nih.gov',
   'www.crossref.org', 'api.crossref.org', 'clinicaltrials.gov',
   'www.canada.ca', 'health-products.canada.ca', 'open.canada.ca', 'recalls-rappels.canada.ca',

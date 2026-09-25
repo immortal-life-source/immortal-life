@@ -40,6 +40,8 @@ test('new regulator feeds use the shared relevance quarantine path', () => {
 test('expanded sources have explicit trust scores', async () => {
   const { sourceQualityScore } = await import('../supabase/functions/_shared/intelligence.ts');
   assert.equal(sourceQualityScore('pubmed'), 95);
+  assert.equal(sourceQualityScore('isrctn'), 98);
+  assert.equal(sourceQualityScore('doaj'), 90);
   for (const source of ['fda-medwatch', 'mhra', 'health-canada-safety', 'tga-safety']) {
     assert.equal(sourceQualityScore(source), 100);
   }

@@ -8,7 +8,9 @@ import {
   freshnessScore,
   normalizeTrialStatus,
   researchEditorialSummary,
+  researchEvidenceSnapshot,
   sourceQualityScore,
+  trialEvidenceSnapshot,
   trialEditorialSummary,
   uniqueStrings,
 } from '../_shared/intelligence.ts'
@@ -40,6 +42,8 @@ const RUN_TIME_BUDGET_MS = 118_000
 const PUBMED_PAGE_SIZE = 200
 const EUROPE_PMC_PAGE_SIZE = 1000
 const CLINICAL_TRIALS_PAGE_SIZE = 1000
+const ISRCTN_PAGE_SIZE = 1000
+const DOAJ_PAGE_SIZE = 100
 const HISTORY_START = '1800-01-01'
 const USER_AGENT = 'immortal.life-intelligence/1.0 (contact: research@immortal.life)'
 
@@ -53,7 +57,7 @@ const REGULATORY_FEEDS = {
 } as const
 
 type RegulatorySourceId = keyof typeof REGULATORY_FEEDS
-const TOPIC_SOURCE_IDS = new Set(['europe-pmc', 'pubmed', 'clinicaltrials-gov'])
+const TOPIC_SOURCE_IDS = new Set(['europe-pmc', 'pubmed', 'doaj', 'clinicaltrials-gov', 'isrctn'])
 const GENERIC_SOURCE_IDS = new Set([...TOPIC_SOURCE_IDS, 'crossref', ...Object.keys(REGULATORY_FEEDS)])
 const HISTORY_SOURCE_IDS = new Set([...TOPIC_SOURCE_IDS, 'crossref'])
 let lastNcbiRequestAt = 0
@@ -137,6 +141,10 @@ function xmlTexts(block: string, tag: string, maxItems = 80): string[] {
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
     .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'"), 1200)), maxItems)
+}
+
+function xmlAttribute(block: string, attribute: string): string {
+  return cleanText(block.match(new RegExp(`\\b${attribute}=["']([^"']+)["']`, 'i'))?.[1], 240)
 }
 
 async function throttleNcbi(): Promise<void> {
@@ -498,6 +506,7 @@ async function syncPubMed(supabase: any, topic: Topic, job: Job): Promise<SyncOu
       is_open_access: null,
       cited_by_count: null,
       editorial_summary: researchEditorialSummary(level, journal),
+      evidence_snapshot: researchEvidenceSnapshot({ evidence_level: level, publication_type: publicationType }),
       source_updated_at: now,
       last_seen_at: now,
       status,
@@ -618,6 +627,7 @@ async function syncEuropePmc(supabase: any, topic: Topic, job: Job): Promise<Syn
           ? Number(item.citedByCount)
           : null,
         editorial_summary: researchEditorialSummary(level, item?.journalTitle),
+        evidence_snapshot: researchEvidenceSnapshot({ evidence_level: level, publication_type: publicationType }),
         source_updated_at: now,
         last_seen_at: now,
         status,
@@ -672,6 +682,211 @@ async function syncEuropePmc(supabase: any, topic: Topic, job: Job): Promise<Syn
   return { seen: results.length, written: records.length, done, cursorState: done ? {} : { cursor: nextCursor }, totalAvailable: total }
 }
 
+async function syncDoaj(supabase: any, topic: Topic, job: Job): Promise<SyncOutcome> {
+  const page = Math.max(1, Math.trunc(Number(job.cursor_state?.page ?? 1)))
+  const url = new URL(`/api/search/articles/${encodeURIComponent(topic.literature_query)}`, 'https://doaj.org')
+  url.searchParams.set('page', String(page))
+  url.searchParams.set('pageSize', String(DOAJ_PAGE_SIZE))
+  url.searchParams.set('sort', 'created_date:desc')
+  const payload = await fetchJson(url)
+  const results = Array.isArray(payload?.results) ? payload.results : []
+  const total = Math.max(0, Math.trunc(Number(payload?.total ?? 0)))
+  const now = new Date().toISOString()
+  const assessments = new Map<string, ReturnType<typeof assessTopicMatch>>()
+  const records = results.map((item: any) => {
+    const bib = item?.bibjson ?? {}
+    const externalId = cleanText(item?.id, 80)
+    const title = cleanText(bib?.title, 500)
+    if (!externalId || !title) return null
+    const identifiers = Array.isArray(bib?.identifier) ? bib.identifier : []
+    const doi = cleanText(identifiers.find((identifier: any) => String(identifier?.type).toLowerCase() === 'doi')?.id, 240) || null
+    const keywords = uniqueStrings(bib?.keywords, 60)
+    const subjects = uniqueStrings((bib?.subject ?? []).map((subject: any) => subject?.term), 40)
+    const controlledTerms = uniqueStrings([...keywords, ...subjects], 80)
+    const publishedOn = dateOnly(String(bib?.year ?? ''))
+    const publicationType = 'Open-access journal article'
+    const level = classifyEvidence(publicationType, title, 'doaj')
+    const assessment = assessTopicMatch(topic.slug, {
+      title,
+      controlledTerms,
+      studyType: publicationType,
+      sourceId: 'doaj',
+      sourceDate: publishedOn,
+    })
+    assessments.set(externalId, assessment)
+    return {
+      source_id: 'doaj',
+      external_id: externalId,
+      title,
+      authors: uniqueStrings((bib?.author ?? []).map((author: any) => author?.name), 30).join(', ') || null,
+      journal: cleanText(bib?.journal?.title, 240) || null,
+      published_on: publishedOn,
+      doi,
+      publication_type: publicationType,
+      abstract_text: null,
+      controlled_terms: controlledTerms,
+      evidence_level: level,
+      source_url: `https://doaj.org/article/${encodeURIComponent(externalId)}`,
+      is_open_access: true,
+      cited_by_count: null,
+      editorial_summary: researchEditorialSummary(level, bib?.journal?.title),
+      evidence_snapshot: researchEvidenceSnapshot({ evidence_level: level, publication_type: publicationType }),
+      source_updated_at: cleanText(item?.last_updated, 80) || now,
+      last_seen_at: now,
+      status: 'published',
+      relevance_confidence: assessment.relevanceScore,
+      source_quality_score: assessment.sourceQualityScore,
+      freshness_score: assessment.freshnessScore,
+      publication_state: assessment.publish ? 'published' : 'quarantined',
+      match_explanation: assessment.explanation,
+      quality_checked_at: now,
+      duplicate_cluster_key: duplicateClusterKey(title, doi || externalId),
+      metadata: { doaj_id: externalId, keywords, source: 'DOAJ article metadata (CC0)' },
+    }
+  }).filter(Boolean)
+
+  const incrementalFloor = new Date(Date.now() - 31 * 86400000).toISOString()
+  const oldestCreated = results.map((item: any) => cleanText(item?.created_date, 80)).filter(Boolean).sort()[0] ?? null
+  const reachedIncrementalFloor = job.sync_mode === 'incremental' && oldestCreated && oldestCreated < incrementalFloor
+  const done = !results.length || page * DOAJ_PAGE_SIZE >= total || Boolean(reachedIncrementalFloor)
+  if (!records.length) return { seen: results.length, written: 0, done, cursorState: done ? {} : { page: page + 1 }, totalAvailable: total }
+  const { data, error } = await supabase.from('research_items')
+    .upsert(records, { onConflict: 'source_id,external_id', defaultToNull: false })
+    .select('id,external_id')
+  if (error) throw error
+  const topicLinks = (data ?? []).map((record: { id: number; external_id: string }) => {
+    const assessment = assessments.get(record.external_id) ?? assessTopicMatch(topic.slug, { title: '', sourceId: 'doaj' })
+    return {
+      research_item_id: record.id,
+      topic_slug: topic.slug,
+      matched_by: 'source-query',
+      relevance_score: assessment.relevanceScore,
+      match_reasons: assessment.reasons,
+      matched_fields: assessment.matchedFields,
+      is_published: assessment.publish,
+      evaluated_at: now,
+    }
+  })
+  if (topicLinks.length) {
+    const { error: linkError } = await supabase.from('research_item_topics')
+      .upsert(topicLinks, { onConflict: 'research_item_id,topic_slug', defaultToNull: false })
+    if (linkError) throw linkError
+    const { error: qualityError } = await supabase.rpc('refresh_research_quality', { record_ids: topicLinks.map((link) => link.research_item_id) })
+    if (qualityError) throw qualityError
+  }
+  return { seen: results.length, written: records.length, done, cursorState: done ? {} : { page: page + 1 }, totalAvailable: total }
+}
+
+function initialIsrctnState(job: Job): { ranges: DateRange[]; current: DateRange | null } {
+  const existing = job.cursor_state ?? {}
+  const ranges = Array.isArray(existing.ranges)
+    ? existing.ranges.filter((range: any) => /^\d{4}-\d{2}-\d{2}$/.test(range?.from) && /^\d{4}-\d{2}-\d{2}$/.test(range?.to))
+    : []
+  const current = existing.current && typeof existing.current === 'object' ? existing.current as DateRange : null
+  if (current || ranges.length) return { ranges, current }
+  const window = job.sync_mode === 'history'
+    ? { from: HISTORY_START, to: new Date().toISOString().slice(0, 10) }
+    : { from: new Date(new Date(job.window_start).getTime() - 31 * 86400000).toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) }
+  return { ranges: [window], current: null }
+}
+
+function inferredIsrctnStatus(start: string | null, end: string | null, override: string): string {
+  if (override) return normalizeTrialStatus(override)
+  const today = new Date().toISOString().slice(0, 10)
+  if (end && end < today) return 'Completed'
+  if (start && start > today) return 'Not Yet Recruiting'
+  if (start && (!end || end >= today)) return 'Recruiting'
+  return 'Unknown'
+}
+
+async function syncIsrctn(supabase: any, topic: Topic, job: Job): Promise<SyncOutcome> {
+  const state = initialIsrctnState(job)
+  const range = state.current ?? state.ranges.pop()
+  if (!range) return { seen: 0, written: 0, done: true, cursorState: {} }
+  const query = `(${topic.trials_query}) AND lastEdited GE ${range.from}T00:00:00 AND lastEdited LE ${range.to}T23:59:59`
+  const url = new URL('/api/query/format/default', 'https://www.isrctn.com')
+  url.searchParams.set('q', query)
+  url.searchParams.set('limit', String(ISRCTN_PAGE_SIZE))
+  const xml = await fetchText(url)
+  const total = Math.max(0, Math.trunc(Number(xmlAttribute(xml.match(/<allTrials\b[^>]*>/i)?.[0] ?? '', 'totalCount') || 0)))
+  if (total > ISRCTN_PAGE_SIZE) {
+    const split = splitDateRange(range)
+    if (!split) throw new Error(`ISRCTN result partition exceeds ${ISRCTN_PAGE_SIZE} records for ${range.from}`)
+    state.ranges.push(split[0], split[1])
+    return { seen: 0, written: 0, done: false, cursorState: { ranges: state.ranges, current: null }, totalAvailable: total }
+  }
+  const blocks = xml.match(/<fullTrial\b[\s\S]*?<\/fullTrial>/gi) ?? []
+  const now = new Date().toISOString()
+  const assessments = new Map<string, ReturnType<typeof assessTopicMatch>>()
+  const records = blocks.map((block) => {
+    const trialBlock = block.match(/<trial\b[\s\S]*?<\/trial>/i)?.[0] ?? block
+    const idNumber = xmlText(trialBlock, 'isrctn')
+    const externalId = idNumber ? `ISRCTN${idNumber.replace(/^ISRCTN/i, '')}` : ''
+    const title = xmlText(trialBlock, 'title') || xmlText(trialBlock, 'scientificTitle')
+    if (!externalId || !title) return null
+    const design = xmlText(trialBlock, 'primaryStudyDesign') || xmlText(trialBlock, 'studyDesign') || null
+    const phases = uniqueStrings(xmlTexts(trialBlock, 'phase', 8), 8).filter((phase) => !/not specified/i.test(phase))
+    const countries = uniqueStrings(xmlTexts(trialBlock, 'country', 80), 40)
+    const conditions = uniqueStrings(xmlTexts(trialBlock, 'description', 30).slice(0, 10), 20)
+    const interventions = uniqueStrings([...xmlTexts(trialBlock, 'drugNames', 20), ...xmlTexts(trialBlock, 'interventionType', 20)], 30)
+    const outcomeMeasures = uniqueStrings([...xmlTexts(trialBlock, 'primaryOutcome', 10), ...xmlTexts(trialBlock, 'secondaryOutcome', 20)], 20)
+    const controlledTerms = uniqueStrings([...conditions, ...interventions], 80)
+    const startDate = dateOnly(xmlText(trialBlock, 'recruitmentStart'))
+    const completionDate = dateOnly(xmlText(trialBlock, 'overallEndDate') || xmlText(trialBlock, 'recruitmentEnd'))
+    const rawStatus = xmlText(trialBlock, 'recruitmentStatusOverride') || xmlText(trialBlock, 'trialStatus')
+    const status = inferredIsrctnStatus(startDate, completionDate, rawStatus)
+    const enrollmentRaw = Number(xmlText(trialBlock, 'totalFinalEnrolment') || xmlText(trialBlock, 'targetEnrolment'))
+    const enrollment = Number.isSafeInteger(enrollmentRaw) && enrollmentRaw >= 0 ? enrollmentRaw : null
+    const hypothesis = xmlText(trialBlock, 'studyHypothesis') || null
+    const lastUpdateDate = dateOnly(xmlAttribute(trialBlock.match(/<trial\b[^>]*>/i)?.[0] ?? '', 'lastUpdated'))
+    const metadata = {
+      source_has_results: Boolean(xmlText(trialBlock, 'basicReport') || xmlText(trialBlock, 'plainEnglishReport')),
+      interventions,
+      outcome_measures: outcomeMeasures,
+      comparator: null,
+      sex: xmlText(trialBlock, 'gender') || null,
+      age_range: xmlText(trialBlock, 'ageRange') || null,
+      design_description: design,
+      registry_source: 'ISRCTN',
+      reuse_license: 'Registry contribution CC BY 4.0; generated metadata CC0',
+      attribution: `Source: ISRCTN ${externalId}; retrieved ${now.slice(0, 10)}`,
+    }
+    const assessment = assessTopicMatch(topic.slug, { title, abstract: hypothesis, controlledTerms, studyType: design, sourceId: 'isrctn', sourceDate: lastUpdateDate })
+    assessments.set(externalId, assessment)
+    return {
+      source_id: 'isrctn', external_id: externalId, title, brief_summary: hypothesis,
+      overall_status: status, phases, study_type: design, controlled_terms: controlledTerms,
+      sponsor: xmlText(block, 'organisation') || null, enrollment, countries,
+      start_date: startDate, completion_date: completionDate, last_update_date: lastUpdateDate,
+      source_url: `https://www.isrctn.com/${encodeURIComponent(externalId)}`,
+      editorial_summary: trialEditorialSummary(status, phases),
+      evidence_snapshot: trialEvidenceSnapshot({ phases, study_type: design, enrollment, start_date: startDate, completion_date: completionDate, metadata }),
+      last_seen_at: now, relevance_confidence: assessment.relevanceScore,
+      source_quality_score: assessment.sourceQualityScore, freshness_score: assessment.freshnessScore,
+      publication_state: assessment.publish ? 'published' : 'quarantined',
+      match_explanation: assessment.explanation, quality_checked_at: now,
+      duplicate_cluster_key: duplicateClusterKey(title, externalId), metadata,
+    }
+  }).filter(Boolean)
+  const done = state.ranges.length === 0
+  if (!records.length) return { seen: blocks.length, written: 0, done, cursorState: done ? {} : { ranges: state.ranges, current: null }, totalAvailable: total }
+  const { data, error } = await supabase.from('clinical_trials')
+    .upsert(records, { onConflict: 'source_id,external_id', defaultToNull: false })
+    .select('id,external_id')
+  if (error) throw error
+  const topicLinks = (data ?? []).map((record: { id: number; external_id: string }) => {
+    const assessment = assessments.get(record.external_id) ?? assessTopicMatch(topic.slug, { title: '', sourceId: 'isrctn' })
+    return { clinical_trial_id: record.id, topic_slug: topic.slug, matched_by: 'source-query', relevance_score: assessment.relevanceScore, match_reasons: assessment.reasons, matched_fields: assessment.matchedFields, is_published: assessment.publish, evaluated_at: now }
+  })
+  if (topicLinks.length) {
+    const { error: linkError } = await supabase.from('clinical_trial_topics').upsert(topicLinks, { onConflict: 'clinical_trial_id,topic_slug', defaultToNull: false })
+    if (linkError) throw linkError
+    const { error: qualityError } = await supabase.rpc('refresh_trial_quality', { record_ids: topicLinks.map((link) => link.clinical_trial_id) })
+    if (qualityError) throw qualityError
+  }
+  return { seen: blocks.length, written: records.length, done, cursorState: done ? {} : { ranges: state.ranges, current: null }, totalAvailable: total }
+}
+
 function trialDate(value: any): string | null {
   return dateOnly(value?.date ?? value)
 }
@@ -699,6 +914,9 @@ async function syncClinicalTrials(supabase: any, topic: Topic, job: Job): Promis
       const sponsors = protocol?.sponsorCollaboratorsModule ?? {}
       const locations = protocol?.contactsLocationsModule?.locations ?? []
       const description = protocol?.descriptionModule ?? {}
+      const eligibility = protocol?.eligibilityModule ?? {}
+      const armsModule = protocol?.armsInterventionsModule ?? {}
+      const outcomesModule = protocol?.outcomesModule ?? {}
       const externalId = cleanText(identification?.nctId, 40)
       const title = cleanText(identification?.briefTitle ?? identification?.officialTitle, 500)
       if (!externalId || !title) return null
@@ -708,10 +926,36 @@ async function syncClinicalTrials(supabase: any, topic: Topic, job: Job): Promis
       const enrollment = Number(design?.enrollmentInfo?.count)
       const briefSummary = cleanText(description?.briefSummary, 3000) || null
       const conditions = uniqueStrings(protocol?.conditionsModule?.conditions, 40)
-      const interventions = uniqueStrings((protocol?.armsInterventionsModule?.interventions ?? []).map((item: any) => item?.name), 40)
+      const interventions = uniqueStrings((armsModule?.interventions ?? []).map((item: any) => item?.name), 40)
       const controlledTerms = uniqueStrings([...conditions, ...interventions], 80)
       const studyType = cleanText(design?.studyType, 100).replace(/_/g, ' ') || null
       const lastUpdateDate = trialDate(statusModule?.lastUpdatePostDateStruct ?? statusModule?.studyFirstPostDateStruct)
+      const designParts = uniqueStrings([
+        design?.designInfo?.allocation,
+        design?.designInfo?.interventionModel,
+        design?.designInfo?.primaryPurpose,
+        design?.designInfo?.maskingInfo?.masking,
+      ].map((value) => cleanText(value, 80).replace(/_/g, ' ')), 8)
+      const comparator = uniqueStrings((armsModule?.armGroups ?? [])
+        .filter((arm: any) => ['PLACEBO_COMPARATOR', 'ACTIVE_COMPARATOR', 'NO_INTERVENTION'].includes(String(arm?.type ?? '')))
+        .map((arm: any) => arm?.label), 8).join('; ') || null
+      const outcomeMeasures = uniqueStrings([
+        ...(outcomesModule?.primaryOutcomes ?? []),
+        ...(outcomesModule?.secondaryOutcomes ?? []),
+      ].map((outcome: any) => [cleanText(outcome?.measure, 220), cleanText(outcome?.timeFrame, 160)].filter(Boolean).join(' — ')), 20)
+      const ageRange = [cleanText(eligibility?.minimumAge, 60), cleanText(eligibility?.maximumAge, 60)].filter(Boolean).join(' to ') || null
+      const metadata = {
+        acronym: cleanText(identification?.acronym, 80) || null,
+        organization: cleanText(identification?.organization?.fullName, 240) || null,
+        source_has_results: Boolean(study?.hasResults),
+        interventions,
+        outcome_measures: outcomeMeasures,
+        comparator,
+        sex: cleanText(eligibility?.sex, 40).replace(/_/g, ' ') || null,
+        age_range: ageRange,
+        design_description: designParts.join(' · ') || null,
+        registry_source: 'ClinicalTrials.gov',
+      }
       const assessment = assessTopicMatch(topic.slug, {
         title,
         abstract: briefSummary,
@@ -739,6 +983,7 @@ async function syncClinicalTrials(supabase: any, topic: Topic, job: Job): Promis
         last_update_date: lastUpdateDate,
         source_url: `https://clinicaltrials.gov/study/${encodeURIComponent(externalId)}`,
         editorial_summary: trialEditorialSummary(rawStatus, phases),
+        evidence_snapshot: trialEvidenceSnapshot({ phases, study_type: studyType, enrollment: Number.isSafeInteger(enrollment) && enrollment >= 0 ? enrollment : null, start_date: trialDate(statusModule?.startDateStruct), completion_date: trialDate(statusModule?.completionDateStruct), metadata }),
         last_seen_at: now,
         relevance_confidence: assessment.relevanceScore,
         source_quality_score: assessment.sourceQualityScore,
@@ -747,11 +992,7 @@ async function syncClinicalTrials(supabase: any, topic: Topic, job: Job): Promis
         match_explanation: assessment.explanation,
         quality_checked_at: now,
         duplicate_cluster_key: duplicateClusterKey(title, externalId),
-        metadata: {
-          acronym: cleanText(identification?.acronym, 80) || null,
-          organization: cleanText(identification?.organization?.fullName, 240) || null,
-          source_has_results: Boolean(study?.hasResults),
-        },
+        metadata,
       }
     })
     .filter(Boolean)
@@ -910,7 +1151,9 @@ Deno.serve(async (req) => {
         let outcome: SyncOutcome
         if (job.source_id === 'europe-pmc') outcome = await syncEuropePmc(supabase, topic as Topic, job)
         else if (job.source_id === 'pubmed') outcome = await syncPubMed(supabase, topic as Topic, job)
+        else if (job.source_id === 'doaj') outcome = await syncDoaj(supabase, topic as Topic, job)
         else if (job.source_id === 'clinicaltrials-gov') outcome = await syncClinicalTrials(supabase, topic as Topic, job)
+        else if (job.source_id === 'isrctn') outcome = await syncIsrctn(supabase, topic as Topic, job)
         else if (job.source_id === 'crossref') outcome = await syncCrossref(supabase, job)
         else if (job.source_id in REGULATORY_FEEDS) outcome = { ...await syncRegulatoryFeed(supabase, job.source_id as RegulatorySourceId), done: true }
         else throw new Error(`Unsupported source ${job.source_id}`)

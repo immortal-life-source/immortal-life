@@ -16,6 +16,28 @@ export type QualityAssessment = {
   explanation: string
 }
 
+export type EvidenceSnapshot = {
+  version: 1
+  status: 'structured' | 'metadata-only'
+  evidence_stage: string
+  study_design: string | null
+  subject_scope: string
+  participants: number | null
+  population: string | null
+  duration: string | null
+  intervention: string[]
+  comparator: string | null
+  outcomes_measured: string[]
+  reported_outcome: string | null
+  main_limitation: string
+  safety_context: string
+  regulatory_context: string
+  source_support: string
+  confidence: 'structured-source' | 'metadata-limited'
+  generated_at: string
+  provenance: Record<string, string>
+}
+
 type MatchInput = {
   title: unknown
   abstract?: unknown
@@ -133,6 +155,7 @@ function containsAny(text: string, terms: string[]): string[] {
 export function sourceQualityScore(sourceId: string): number {
   const scores: Record<string, number> = {
     'clinicaltrials-gov': 100,
+    isrctn: 98,
     ema: 100,
     sukl: 100,
     'fda-medwatch': 100,
@@ -141,6 +164,7 @@ export function sourceQualityScore(sourceId: string): number {
     'tga-safety': 100,
     crossref: 95,
     pubmed: 95,
+    doaj: 90,
     'europe-pmc': 90,
   }
   return scores[sourceId] ?? 70
@@ -325,6 +349,102 @@ export function trialEditorialSummary(status: unknown, phases: unknown): string 
     : []
   const phaseText = phaseList.length ? `${phaseList.join(', ')} ` : ''
   return `A registered ${phaseText}study indexed because it matched monitored longevity research terms. Registry status: ${normalizeTrialStatus(status)}. Registration does not establish safety or effectiveness.`
+}
+
+function snapshotDateRange(start: unknown, end: unknown): string | null {
+  const from = dateOnly(start)
+  const to = dateOnly(end)
+  if (from && to) return `${from} to ${to}`
+  if (from) return `From ${from}`
+  if (to) return `Until ${to}`
+  return null
+}
+
+export function researchEvidenceSnapshot(record: Record<string, any>): EvidenceSnapshot {
+  const level = (record.evidence_level || 'research-record') as EvidenceLevel
+  const publicationType = cleanText(record.publication_type, 180) || null
+  const subjectScope = level === 'preclinical'
+    ? 'Preclinical (laboratory or animal research)'
+    : ['human-synthesis', 'randomized-human', 'human-study'].includes(level)
+      ? 'Human evidence'
+      : level === 'preprint' ? 'Not established from reusable metadata' : 'Not reported in reusable metadata'
+  const limitation = level === 'preclinical'
+    ? 'Preclinical findings may not apply to people; the reusable source metadata does not provide enough detail to assess the result.'
+    : level === 'preprint'
+      ? 'This record has not completed peer review, and the reusable source metadata does not support a finding-level summary.'
+      : 'Bibliographic metadata identifies the record but does not provide enough reusable detail to summarize its population, comparison, findings, or effect size.'
+  return {
+    version: 1,
+    status: 'metadata-only',
+    evidence_stage: evidenceLabel(level),
+    study_design: publicationType,
+    subject_scope: subjectScope,
+    participants: null,
+    population: null,
+    duration: null,
+    intervention: [],
+    comparator: null,
+    outcomes_measured: [],
+    reported_outcome: null,
+    main_limitation: limitation,
+    safety_context: 'This index record does not establish safety, effectiveness, dose, or suitability for any person.',
+    regulatory_context: 'A publication record is not a regulatory approval or treatment recommendation.',
+    source_support: 'Bibliographic citation metadata and controlled indexing terms only. Read the linked source for methods and results.',
+    confidence: 'metadata-limited',
+    generated_at: new Date().toISOString(),
+    provenance: {
+      evidence_stage: 'evidence_level',
+      study_design: 'publication_type',
+      source_support: 'content source reuse policy',
+    },
+  }
+}
+
+export function trialEvidenceSnapshot(record: Record<string, any>): EvidenceSnapshot {
+  const metadata = record.metadata && typeof record.metadata === 'object' ? record.metadata : {}
+  const interventions = uniqueStrings(metadata.interventions ?? [], 20)
+  const outcomes = uniqueStrings(metadata.outcome_measures ?? [], 20)
+  const populationParts = uniqueStrings([
+    cleanText(metadata.sex, 80),
+    cleanText(metadata.age_range, 120),
+    ...uniqueStrings(metadata.eligibility_summary ?? [], 4),
+  ], 6)
+  const resultsAvailable = Boolean(metadata.source_has_results && cleanText(metadata.result_summary, 1200))
+  return {
+    version: 1,
+    status: 'structured',
+    evidence_stage: Array.isArray(record.phases) && record.phases.length ? record.phases.join(', ') : 'Phase not reported',
+    study_design: cleanText(metadata.design_description, 240) || cleanText(record.study_type, 120) || null,
+    subject_scope: 'Human clinical study registration',
+    participants: Number.isSafeInteger(Number(record.enrollment)) && Number(record.enrollment) >= 0 ? Number(record.enrollment) : null,
+    population: populationParts.join(' · ') || null,
+    duration: snapshotDateRange(record.start_date, record.completion_date),
+    intervention: interventions,
+    comparator: cleanText(metadata.comparator, 300) || null,
+    outcomes_measured: outcomes,
+    reported_outcome: resultsAvailable ? cleanText(metadata.result_summary, 1200) : null,
+    main_limitation: resultsAvailable
+      ? 'Registry results are sponsor-submitted and should be checked against the full source record and any peer-reviewed publication.'
+      : 'This is a study registration. No reusable structured result is available here, so it cannot show whether the intervention worked or was safe.',
+    safety_context: 'Eligibility, adverse-event details, and clinical decisions must be checked in the official registry and with qualified clinicians.',
+    regulatory_context: 'Trial registration is not regulatory approval and does not establish that an intervention is available.',
+    source_support: resultsAvailable
+      ? 'Structured registry metadata with a source-supplied result summary.'
+      : 'Structured registry protocol metadata; no finding-level conclusion is generated.',
+    confidence: 'structured-source',
+    generated_at: new Date().toISOString(),
+    provenance: {
+      evidence_stage: 'phases',
+      study_design: 'study_type and registry design fields',
+      participants: 'enrollment',
+      population: 'registry eligibility fields',
+      duration: 'start_date and completion_date',
+      intervention: 'registry intervention fields',
+      comparator: 'registry arm fields',
+      outcomes_measured: 'registry outcome-measure fields',
+      reported_outcome: resultsAvailable ? 'registry structured result summary' : 'not available',
+    },
+  }
 }
 
 export function uniqueStrings(values: unknown, maxItems = 30): string[] {

@@ -248,6 +248,23 @@ body[data-view="topics"] .intel-section { padding-top: clamp(38px, 4vw, 58px); }
 .record-guide div { display:grid; grid-template-columns:120px 1fr; gap:14px; padding:11px 0; border-top:1px solid var(--border); }
 .record-guide dt { color:var(--text); font-size:10px; font-weight:500; }
 .record-guide dd { color:var(--muted); font-size:11px; line-height:1.55; }
+.evidence-snapshot { margin:24px 0; padding:20px; border:1px solid rgba(110,183,168,.28); background:rgba(110,183,168,.035); }
+.evidence-snapshot h2,.evidence-snapshot h4 { margin:7px 0 16px; font-family:var(--serif); font-weight:300; color:var(--text); }
+.evidence-snapshot h2 { font-size:clamp(24px,2.5vw,36px); }.evidence-snapshot h4 { font-size:22px; }
+.evidence-snapshot dl,.evidence-snapshot-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); margin:0; border-top:1px solid var(--border); }
+.evidence-snapshot dl div,.evidence-snapshot-grid div { padding:10px 12px 10px 0; border-bottom:1px solid var(--border); }
+.evidence-snapshot dt { color:var(--teal); font-size:8px; letter-spacing:.12em; text-transform:uppercase; }
+.evidence-snapshot dd { margin:5px 0 0; color:var(--text); font-size:11px; line-height:1.5; }
+.evidence-snapshot-notes { margin-top:14px; }.evidence-snapshot-notes p,.evidence-snapshot-limit { margin:8px 0 0; color:var(--muted); font-size:11px; line-height:1.6; }
+.evidence-snapshot-notes strong { display:block; color:var(--text); font-size:9px; letter-spacing:.08em; text-transform:uppercase; }
+.evidence-snapshot--compact { margin:16px 0 4px; padding:15px; }.evidence-snapshot--compact .section-index { color:var(--teal); }.evidence-snapshot--compact h4 { margin:5px 0 12px; font-size:18px; }
+.topic-evidence-overview { background:linear-gradient(135deg,rgba(110,183,168,.035),transparent 65%); }
+.topic-evidence-metrics { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); border:1px solid var(--border); }
+.topic-evidence-stat { min-height:128px; padding:20px; border-right:1px solid var(--border); color:inherit; text-decoration:none; display:flex; flex-direction:column; justify-content:flex-end; }
+.topic-evidence-stat:last-child { border-right:0; }.topic-evidence-stat:hover,.topic-evidence-stat:focus-visible { background:rgba(184,149,90,.055); }
+.topic-evidence-stat strong { color:var(--gold); font-family:var(--serif); font-size:38px; font-weight:300; }.topic-evidence-stat span { color:var(--text); font-size:11px; }.topic-evidence-stat small { margin-top:8px; color:var(--muted); font-size:8px; text-transform:uppercase; letter-spacing:.08em; }
+.topic-evidence-stages { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }.topic-evidence-stages span { padding:8px 10px; border:1px solid var(--border); color:var(--muted); font-size:10px; }.topic-evidence-stages strong { color:var(--text); }
+.topic-evidence-caveat { max-width:850px; margin:16px 0 0; color:var(--muted); font-size:12px; line-height:1.65; }
 
 .quality-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
 .quality-stat { min-width: 0; min-height: 176px; padding: 28px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
@@ -616,6 +633,10 @@ body[data-view="quality"] #qualitySection { padding-top:24px; }
   .topic-tools { grid-template-columns:1fr; gap:8px; margin-top:-12px; }.topic-tools span { justify-self:start; }.topic-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }.topic-card { min-height:150px; padding:17px; }.topic-card h3 { font-size:21px; }
   .record-card { grid-template-columns: 1fr; gap: 14px; }
   .record-guide div { grid-template-columns:1fr; gap:5px; }
+  .evidence-snapshot dl,.evidence-snapshot-grid { grid-template-columns:1fr; }
+  .topic-evidence-metrics { grid-template-columns:1fr 1fr; }
+  .topic-evidence-stat { min-height:105px; border-bottom:1px solid var(--border); }
+  .topic-evidence-stat:nth-child(2n) { border-right:0; }
   .timeline-event { grid-template-columns:1fr; gap:6px; padding-left:18px; }.timeline-event h3,.timeline-event p { grid-column:1; }.evidence-timeline { padding-left:20px; }
   .record-action { align-items: flex-start; }
   .record-status { text-align: left; }

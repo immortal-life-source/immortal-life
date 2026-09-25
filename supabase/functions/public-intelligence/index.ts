@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { cleanText } from '../_shared/intelligence.ts'
+import { cleanText, researchEvidenceSnapshot, trialEvidenceSnapshot } from '../_shared/intelligence.ts'
 import { corsHeaders, serviceRoleKey } from '../_shared/security.ts'
 
 const PUBLIC_METHODS = 'GET, OPTIONS'
@@ -287,6 +287,17 @@ Deno.serve(async (req) => {
       return response(req, { topics: topics ?? [], sources: (sources ?? []).map(publicSourceState) })
     }
 
+    if (view === 'topic-evidence') {
+      if (!topic) return response(req, { error: 'Topic is required' }, 400)
+      const [{ data: snapshot, error }, { data: sources, error: sourcesError }] = await Promise.all([
+        supabase.rpc('get_topic_evidence_snapshot', { requested_topic: topic }),
+        sourcesPromise,
+      ])
+      if (error) throw error
+      if (sourcesError) throw sourcesError
+      return response(req, { topic, evidence: snapshot ?? {}, sources: (sources ?? []).map(publicSourceState) })
+    }
+
     if (view === 'research') {
       const search = publicSearchTerm(url.searchParams.get('q'))
       const evidence = cleanText(url.searchParams.get('evidence') ?? '', 40)
@@ -294,7 +305,7 @@ Deno.serve(async (req) => {
       const topicRelation = 'research_item_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
       let query = supabase
         .from('research_items')
-        .select(`id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,${topicRelation}`, { count: 'exact' })
+        .select(`id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,evidence_snapshot,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${topicRelation}`, { count: 'exact' })
         .eq('publication_state', 'published')
         .eq('research_item_topics.is_published', true)
         .order('published_on', { ascending: false, nullsFirst: false })
@@ -308,7 +319,10 @@ Deno.serve(async (req) => {
       const [{ data, error, count }, { data: sources, error: sourcesError }] = await Promise.all([query, sourcesPromise])
       if (error) throw error
       if (sourcesError) throw sourcesError
-      const research = publicRecords(data, 'research_item_topics')
+      const research = publicRecords(data, 'research_item_topics').map((record: any) => ({
+        ...record,
+        evidence_snapshot: record.evidence_snapshot && Object.keys(record.evidence_snapshot).length ? record.evidence_snapshot : researchEvidenceSnapshot(record),
+      }))
       return response(req, { research, total_matching: count ?? 0, offset, next_offset: offset + (data?.length ?? 0) < Number(count ?? 0) ? offset + (data?.length ?? 0) : null, sources: (sources ?? []).map(publicSourceState) })
     }
 
@@ -320,7 +334,7 @@ Deno.serve(async (req) => {
       const topicRelation = 'clinical_trial_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
       let query = supabase
         .from('clinical_trials')
-        .select(`id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,source_url,editorial_summary,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,${topicRelation}`, { count: 'exact' })
+        .select(`id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,evidence_snapshot,source_url,editorial_summary,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${topicRelation}`, { count: 'exact' })
         .eq('publication_state', 'published')
         .eq('clinical_trial_topics.is_published', true)
         .order('last_update_date', { ascending: false, nullsFirst: false })
@@ -334,7 +348,10 @@ Deno.serve(async (req) => {
       const [{ data, error, count }, { data: sources, error: sourcesError }] = await Promise.all([query, sourcesPromise])
       if (error) throw error
       if (sourcesError) throw sourcesError
-      const trials = publicRecords(data, 'clinical_trial_topics')
+      const trials = publicRecords(data, 'clinical_trial_topics').map((record: any) => ({
+        ...record,
+        evidence_snapshot: record.evidence_snapshot && Object.keys(record.evidence_snapshot).length ? record.evidence_snapshot : trialEvidenceSnapshot(record),
+      }))
       return response(req, { trials, total_matching: count ?? 0, offset, next_offset: offset + (data?.length ?? 0) < Number(count ?? 0) ? offset + (data?.length ?? 0) : null, sources: (sources ?? []).map(publicSourceState) })
     }
 
@@ -449,7 +466,7 @@ Deno.serve(async (req) => {
       supabase.rpc('get_intelligence_topic_counts'),
       supabase
         .from('research_items')
-        .select('id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,research_item_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))')
+        .select('id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,evidence_snapshot,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),research_item_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))')
         .eq('publication_state', 'published')
         .eq('research_item_topics.is_published', true)
         .order('published_on', { ascending: false, nullsFirst: false })
@@ -457,7 +474,7 @@ Deno.serve(async (req) => {
         .limit(Math.min(limit, 12)),
       supabase
         .from('clinical_trials')
-        .select('id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,source_url,editorial_summary,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,clinical_trial_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))')
+        .select('id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,evidence_snapshot,source_url,editorial_summary,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),clinical_trial_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))')
         .eq('publication_state', 'published')
         .eq('clinical_trial_topics.is_published', true)
         .order('last_update_date', { ascending: false, nullsFirst: false })
@@ -480,8 +497,8 @@ Deno.serve(async (req) => {
       },
       sources: (sourcesResult.data ?? []).map(publicSourceState),
       topics: topicsResult.data ?? [],
-      research: publicRecords(researchResult.data, 'research_item_topics'),
-      trials: publicRecords(trialsResult.data, 'clinical_trial_topics'),
+      research: publicRecords(researchResult.data, 'research_item_topics').map((record: any) => ({ ...record, evidence_snapshot: record.evidence_snapshot && Object.keys(record.evidence_snapshot).length ? record.evidence_snapshot : researchEvidenceSnapshot(record) })),
+      trials: publicRecords(trialsResult.data, 'clinical_trial_topics').map((record: any) => ({ ...record, evidence_snapshot: record.evidence_snapshot && Object.keys(record.evidence_snapshot).length ? record.evidence_snapshot : trialEvidenceSnapshot(record) })),
       medical_notice: 'Research information only. Not medical advice, diagnosis, or treatment guidance.',
     })
   } catch (error) {
