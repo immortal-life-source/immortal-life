@@ -319,6 +319,13 @@ body[data-view="topics"] .intel-section { padding-top: clamp(38px, 4vw, 58px); }
 .resource-controls label { display: flex; flex-direction: column; gap: 9px; color: var(--muted); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
 .resource-controls input, .resource-controls select { width: 100%; min-height: 48px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); color: var(--text); font: 300 12px var(--sans); }
 .resource-controls input:focus, .resource-controls select:focus { outline: 1px solid var(--gold); outline-offset: 1px; }
+.record-controls { display:grid; grid-template-columns:1.5fr repeat(3,minmax(130px,1fr)) auto; gap:12px; margin:0 0 4px; padding:22px; border:1px solid var(--border); background:rgba(255,255,255,.012); }
+.record-controls--trials { grid-template-columns:1.45fr repeat(4,minmax(112px,1fr)) auto; }
+.record-controls label { display:flex; flex-direction:column; gap:9px; color:var(--muted); font-size:9px; letter-spacing:.12em; text-transform:uppercase; }
+.record-controls input,.record-controls select { width:100%; min-height:48px; padding:0 14px; border:1px solid var(--border-strong); border-radius:0; background:var(--surface); color:var(--text); font:300 12px var(--sans); }
+.record-controls input:focus,.record-controls select:focus { outline:1px solid var(--gold); outline-offset:1px; }
+.record-filter-clear { align-self:end; min-height:48px; padding:0 16px; border:1px solid var(--border-strong); background:transparent; color:var(--gold); font:400 9px var(--sans); letter-spacing:.1em; text-transform:uppercase; cursor:pointer; }
+.record-filter-clear:hover,.record-filter-clear:focus-visible { border-color:var(--gold); background:rgba(184,149,90,.07); }
 .filter-result { margin: 20px 0; color: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
 .resource-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
 .resource-card { min-width: 0; padding: clamp(24px, 3.5vw, 42px); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; }
@@ -639,6 +646,8 @@ body[data-view="quality"] #qualitySection { padding-top:24px; }
   .resource-country-controls { grid-template-columns: 1fr; }
   .resource-country-regions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
   .resource-controls { grid-template-columns: 1fr; }
+  .record-controls,.record-controls--trials { grid-template-columns:1fr; padding:16px; }
+  .record-filter-clear { width:100%; }
   .entity-record-list li { flex-direction: column; gap: 7px; }
   .entity-record-list span { text-align: left; }
   .change-row { grid-template-columns: 1fr; gap: 8px; }

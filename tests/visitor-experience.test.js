@@ -66,8 +66,21 @@ test('desktop homepage keeps navigation compact and motion clear of the headline
   assert.match(js, /setMoreMenu/)
   assert.match(html, /<a href="\/topics" class="s1-nav-link">Topics<\/a>/)
   assert.match(html, /<a href="\/discover" class="s1-nav-leaderboard">Explore<\/a>/)
+  assert.match(html, /href="\/universities" class="s1-nav-link">Universities<\/a>[\s\S]*?href="\/research" class="s1-nav-link">Research<\/a>[\s\S]*?class="s1-nav-more-toggle"/)
   assert.match(css, /font-size: clamp\(50px, 5\.25vw, 81px\)/)
   assert.match(css, /\.brand-mark \{[\s\S]*?width: 57px;/)
+})
+
+test('research and trials use complete searchable filter systems', async () => {
+  const [template, portal, css] = await Promise.all([read('intelligence-template.html'), read('intelligence.js'), read('intelligence.css')])
+  for (const id of ['researchControls', 'researchSearch', 'researchTopic', 'researchEvidence', 'researchAccess', 'researchResult', 'trialControls', 'trialSearch', 'trialTopic', 'trialStatus', 'trialPhase', 'trialCountry', 'trialResult']) assert.match(template, new RegExp(`id="${id}"`))
+  assert.match(portal, /request\('research', 500\)/)
+  assert.match(portal, /request\('trials', 500\)/)
+  assert.match(portal, /function filterResearchRecords/)
+  assert.match(portal, /function filterTrialRecords/)
+  assert.match(portal, /Showing the newest/)
+  assert.match(css, /\.record-controls/)
+  assert.match(css, /\.record-controls--trials/)
 })
 
 test('public page shells provide search, related journeys and mobile navigation', async () => {

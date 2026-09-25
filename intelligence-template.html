@@ -29,7 +29,7 @@
     <button class="intel-nav-toggle" id="intelNavToggle" type="button" aria-expanded="false" aria-controls="intelNav">
       <span>Menu</span><i aria-hidden="true"></i>
     </button>
-    <nav class="intel-nav" id="intelNav" aria-label="Primary navigation"><a href="/changes">Today</a><a href="/topics" data-nav="topics">Topics</a><a href="/trials" data-nav="trials">Trials</a><a href="/universities" data-nav="universities">Universities</a><div class="intel-nav-more"><button class="intel-nav-more-toggle" type="button" aria-expanded="false">More</button><div><form class="intel-nav-search" role="search"><input type="search" aria-label="Search longevity topics" placeholder="Search topics…" /><button type="submit">Search</button></form><a href="/discover">Explore</a><a href="/learn">Longevity 101</a><a href="/research" data-nav="research">Research</a><a href="/regulatory" data-nav="regulatory">Regulatory</a><a href="/resources" data-nav="resources">Resources</a><a href="/briefings">Briefings</a><a href="/methodology">How it works</a></div></div></nav>
+    <nav class="intel-nav" id="intelNav" aria-label="Primary navigation"><a href="/changes">Today</a><a href="/topics" data-nav="topics">Topics</a><a href="/trials" data-nav="trials">Trials</a><a href="/universities" data-nav="universities">Universities</a><a href="/research" data-nav="research">Research</a><div class="intel-nav-more"><button class="intel-nav-more-toggle" type="button" aria-expanded="false">More</button><div><form class="intel-nav-search" role="search"><input type="search" aria-label="Search longevity topics" placeholder="Search topics…" /><button type="submit">Search</button></form><a href="/discover">Explore</a><a href="/learn">Longevity 101</a><a href="/regulatory" data-nav="regulatory">Regulatory</a><a href="/resources" data-nav="resources">Resources</a><a href="/briefings">Briefings</a><a href="/methodology">How it works</a></div></div></nav>
   </header>
 
   <main>
@@ -87,7 +87,14 @@
         <div><span class="section-index">Research updates</span><h2>New research records</h2></div>
         <a href="/research" class="section-link" id="researchAllLink">View research feed</a>
       </div>
-      <div class="filter-row" id="researchFilters" hidden></div>
+      <form class="record-controls" id="researchControls" role="search" aria-label="Search and filter longevity research" hidden>
+        <label><span>Search research</span><input id="researchSearch" type="search" placeholder="Title, journal, or author" autocomplete="off" /></label>
+        <label><span>Longevity topic</span><select id="researchTopic"><option value="">All topics</option></select></label>
+        <label><span>Evidence stage</span><select id="researchEvidence"><option value="">All evidence stages</option></select></label>
+        <label><span>Access</span><select id="researchAccess"><option value="">All access types</option><option value="open">Open access</option><option value="other">Other access</option></select></label>
+        <button class="record-filter-clear" id="researchClear" type="button">Clear filters</button>
+      </form>
+      <p class="filter-result" id="researchResult" aria-live="polite"></p>
       <div class="record-list" id="researchList"></div>
     </section>
 
@@ -96,7 +103,15 @@
         <div><span class="section-index">Clinical studies</span><h2>Trial Radar</h2></div>
         <a href="/trials" class="section-link" id="trialsAllLink">View all trials</a>
       </div>
-      <div class="filter-row" id="trialFilters" hidden></div>
+      <form class="record-controls record-controls--trials" id="trialControls" role="search" aria-label="Search and filter clinical trials" hidden>
+        <label><span>Search trials</span><input id="trialSearch" type="search" placeholder="Title, sponsor, or registry ID" autocomplete="off" /></label>
+        <label><span>Longevity topic</span><select id="trialTopic"><option value="">All topics</option></select></label>
+        <label><span>Status</span><select id="trialStatus"><option value="">All statuses</option></select></label>
+        <label><span>Phase</span><select id="trialPhase"><option value="">All phases</option></select></label>
+        <label><span>Country</span><select id="trialCountry"><option value="">All countries</option></select></label>
+        <button class="record-filter-clear" id="trialClear" type="button">Clear filters</button>
+      </form>
+      <p class="filter-result" id="trialResult" aria-live="polite"></p>
       <div class="record-list" id="trialList"></div>
     </section>
 

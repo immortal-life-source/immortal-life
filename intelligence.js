@@ -103,8 +103,23 @@
     topicResult: document.getElementById('topicResult'),
     researchSection: document.getElementById('researchSection'),
     researchList: document.getElementById('researchList'),
+    researchControls: document.getElementById('researchControls'),
+    researchSearch: document.getElementById('researchSearch'),
+    researchTopic: document.getElementById('researchTopic'),
+    researchEvidence: document.getElementById('researchEvidence'),
+    researchAccess: document.getElementById('researchAccess'),
+    researchClear: document.getElementById('researchClear'),
+    researchResult: document.getElementById('researchResult'),
     trialsSection: document.getElementById('trialsSection'),
     trialList: document.getElementById('trialList'),
+    trialControls: document.getElementById('trialControls'),
+    trialSearch: document.getElementById('trialSearch'),
+    trialTopic: document.getElementById('trialTopic'),
+    trialStatus: document.getElementById('trialStatus'),
+    trialPhase: document.getElementById('trialPhase'),
+    trialCountry: document.getElementById('trialCountry'),
+    trialClear: document.getElementById('trialClear'),
+    trialResult: document.getElementById('trialResult'),
     regulatorySection: document.getElementById('regulatorySection'),
     regulatoryList: document.getElementById('regulatoryList'),
     regulatoryLibrary: document.getElementById('regulatoryLibrary'),
@@ -271,10 +286,10 @@
     }
   }
 
-  function renderResearch(records) {
+  function drawResearch(records, emptyMessage = 'The first source sync is in progress. This page will populate automatically.') {
     elements.researchList.replaceChildren();
     if (!records.length) {
-      elements.researchList.append(el('p', 'empty-list', 'The first source sync is in progress. This page will populate automatically.'));
+      elements.researchList.append(el('p', 'empty-list', emptyMessage));
     }
     records.forEach((record) => {
       const card = el('article', 'record-card');
@@ -355,10 +370,10 @@
     return ladder;
   }
 
-  function renderTrials(records) {
+  function drawTrials(records, emptyMessage = 'The first registry sync is in progress. This page will populate automatically.') {
     elements.trialList.replaceChildren();
     if (!records.length) {
-      elements.trialList.append(el('p', 'empty-list', 'The first registry sync is in progress. This page will populate automatically.'));
+      elements.trialList.append(el('p', 'empty-list', emptyMessage));
     }
     records.forEach((record) => {
       const card = el('article', 'record-card');
@@ -402,6 +417,131 @@
       elements.trialList.append(card);
     });
     elements.trialsSection.hidden = false;
+  }
+
+  const RECORD_PAGE_SIZE = 60;
+  let searchableResearch = [];
+  let searchableTrials = [];
+
+  function replaceFilterOptions(select, firstLabel, entries) {
+    if (!select) return;
+    select.replaceChildren(new Option(firstLabel, ''));
+    entries.forEach(([value, label]) => select.append(new Option(label, value)));
+  }
+
+  function topicOptions(records, relationName) {
+    const topics = new Map();
+    records.forEach((record) => topicLinks(record, relationName).forEach((topic) => topics.set(topic.slug, topic.name)));
+    return [...topics.entries()].sort((left, right) => left[1].localeCompare(right[1]));
+  }
+
+  function includesTopic(record, relationName, slug) {
+    return !slug || topicLinks(record, relationName).some((topic) => topic.slug === slug);
+  }
+
+  function researchSearchText(record) {
+    const authors = Array.isArray(record.authors)
+      ? record.authors.map((author) => typeof author === 'string' ? author : author?.name || '').join(' ')
+      : String(record.authors || '');
+    return `${record.title || ''} ${record.journal || ''} ${authors} ${record.doi || ''}`.toLowerCase();
+  }
+
+  function filterResearchRecords() {
+    const query = String(elements.researchSearch?.value || '').trim().toLowerCase();
+    const topic = elements.researchTopic?.value || '';
+    const evidence = elements.researchEvidence?.value || '';
+    const access = elements.researchAccess?.value || '';
+    const filtered = searchableResearch.filter((record) =>
+      (!query || researchSearchText(record).includes(query)) &&
+      includesTopic(record, 'research_item_topics', topic) &&
+      (!evidence || record.evidence_level === evidence) &&
+      (!access || (access === 'open' ? record.is_open_access : !record.is_open_access))
+    );
+    const visible = filtered.slice(0, RECORD_PAGE_SIZE);
+    drawResearch(visible, 'No research record matches these filters. Try a broader search or clear one of the filters.');
+    if (elements.researchResult) elements.researchResult.textContent = filtered.length > visible.length
+      ? `Showing the newest ${numberFormatter.format(visible.length)} of ${numberFormatter.format(filtered.length)} matching records. Refine the filters to narrow the result.`
+      : `Showing ${numberFormatter.format(filtered.length)} of ${numberFormatter.format(searchableResearch.length)} research records.`;
+  }
+
+  function setupResearchSearch() {
+    if (!elements.researchControls || elements.researchControls.dataset.ready) return;
+    replaceFilterOptions(elements.researchTopic, 'All topics', topicOptions(searchableResearch, 'research_item_topics'));
+    const evidence = [...new Set(searchableResearch.map((record) => record.evidence_level).filter(Boolean))]
+      .map((value) => [value, evidenceLabel(value)])
+      .sort((left, right) => left[1].localeCompare(right[1]));
+    replaceFilterOptions(elements.researchEvidence, 'All evidence stages', evidence);
+    elements.researchSearch.value = new URLSearchParams(location.search).get('search')?.trim() || '';
+    elements.researchControls.addEventListener('input', filterResearchRecords);
+    elements.researchClear.onclick = () => {
+      elements.researchSearch.value = '';
+      elements.researchTopic.value = '';
+      elements.researchEvidence.value = '';
+      elements.researchAccess.value = '';
+      filterResearchRecords();
+      elements.researchSearch.focus();
+    };
+    elements.researchControls.dataset.ready = 'true';
+    elements.researchControls.hidden = false;
+  }
+
+  function renderResearch(records) {
+    if (view !== 'research') return drawResearch(records);
+    searchableResearch = records;
+    setupResearchSearch();
+    filterResearchRecords();
+  }
+
+  function trialSearchText(record) {
+    return `${record.title || ''} ${record.sponsor || ''} ${record.external_id || ''}`.toLowerCase();
+  }
+
+  function filterTrialRecords() {
+    const query = String(elements.trialSearch?.value || '').trim().toLowerCase();
+    const topic = elements.trialTopic?.value || '';
+    const status = elements.trialStatus?.value || '';
+    const phase = elements.trialPhase?.value || '';
+    const country = elements.trialCountry?.value || '';
+    const filtered = searchableTrials.filter((record) =>
+      (!query || trialSearchText(record).includes(query)) &&
+      includesTopic(record, 'clinical_trial_topics', topic) &&
+      (!status || record.overall_status === status) &&
+      (!phase || (record.phases || []).includes(phase)) &&
+      (!country || (record.countries || []).includes(country))
+    );
+    const visible = filtered.slice(0, RECORD_PAGE_SIZE);
+    drawTrials(visible, 'No clinical trial matches these filters. Try a broader search or clear one of the filters.');
+    if (elements.trialResult) elements.trialResult.textContent = filtered.length > visible.length
+      ? `Showing the newest ${numberFormatter.format(visible.length)} of ${numberFormatter.format(filtered.length)} matching trials. Refine the filters to narrow the result.`
+      : `Showing ${numberFormatter.format(filtered.length)} of ${numberFormatter.format(searchableTrials.length)} clinical trials.`;
+  }
+
+  function setupTrialSearch() {
+    if (!elements.trialControls || elements.trialControls.dataset.ready) return;
+    replaceFilterOptions(elements.trialTopic, 'All topics', topicOptions(searchableTrials, 'clinical_trial_topics'));
+    replaceFilterOptions(elements.trialStatus, 'All statuses', [...new Set(searchableTrials.map((record) => record.overall_status).filter(Boolean))].sort().map((value) => [value, readableStatus(value)]));
+    replaceFilterOptions(elements.trialPhase, 'All phases', [...new Set(searchableTrials.flatMap((record) => record.phases || []).filter(Boolean))].sort().map((value) => [value, readableStatus(value)]));
+    replaceFilterOptions(elements.trialCountry, 'All countries', [...new Set(searchableTrials.flatMap((record) => record.countries || []).filter(Boolean))].sort((left, right) => left.localeCompare(right)).map((value) => [value, value]));
+    elements.trialSearch.value = new URLSearchParams(location.search).get('search')?.trim() || '';
+    elements.trialControls.addEventListener('input', filterTrialRecords);
+    elements.trialClear.onclick = () => {
+      elements.trialSearch.value = '';
+      elements.trialTopic.value = '';
+      elements.trialStatus.value = '';
+      elements.trialPhase.value = '';
+      elements.trialCountry.value = '';
+      filterTrialRecords();
+      elements.trialSearch.focus();
+    };
+    elements.trialControls.dataset.ready = 'true';
+    elements.trialControls.hidden = false;
+  }
+
+  function renderTrials(records) {
+    if (view !== 'trials') return drawTrials(records);
+    searchableTrials = records;
+    setupTrialSearch();
+    filterTrialRecords();
   }
 
   function regulatoryGuideTitle(resource) {
@@ -1081,11 +1221,11 @@
         renderTrials(data.trials || []);
         renderSources(data.sources || [], true);
       } else if (view === 'research') {
-        const data = await request('research', 60);
+        const data = await request('research', 500);
         renderResearch(data.research || []);
         renderSources(data.sources || [], false);
       } else if (view === 'trials') {
-        const data = await request('trials', 60);
+        const data = await request('trials', 500);
         renderTrials(data.trials || []);
         renderSources(data.sources || [], false);
       } else if (view === 'topics') {
