@@ -16,7 +16,10 @@ module.exports = async function sitemapProxy(request, response) {
   upstream.searchParams.set('mode', 'sitemap');
   upstream.searchParams.set('type', type);
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 2200);
+  // Sitemaps traverse thousands of retained records. They refresh behind the CDN,
+  // so a slower crawler-only origin budget preserves completeness without
+  // affecting visitor-facing page latency.
+  const timeout = setTimeout(() => controller.abort(), 8000);
   try {
     const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
     const result = await fetch(upstream, {
