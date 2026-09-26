@@ -468,6 +468,17 @@
   let trialRequestVersion = 0;
   let researchSearchTimer = 0;
   let trialSearchTimer = 0;
+  let catalogueTopicEntriesPromise;
+
+  function catalogueTopicEntries() {
+    if (!catalogueTopicEntriesPromise) {
+      catalogueTopicEntriesPromise = fetch('/topics-directory.json', { headers: { Accept: 'application/json' } })
+        .then((response) => response.ok ? response.json() : { topics: [] })
+        .then((directory) => (directory.topics || []).map((topic) => [topic.slug, topic.name]).sort((left, right) => left[1].localeCompare(right[1])))
+        .catch(() => []);
+    }
+    return catalogueTopicEntriesPromise;
+  }
 
   function researchQueryParams(offset = 0) {
     return {
@@ -528,9 +539,9 @@
     if (elements.researchResult) elements.researchResult.textContent = `Showing ${numberFormatter.format(filtered.length)} matching records from ${numberFormatter.format(searchableResearch.length)} loaded · ${numberFormatter.format(researchTotal || searchableResearch.length)} available.`;
   }
 
-  function setupResearchSearch() {
+  function setupResearchSearch(topicEntries = []) {
     if (!elements.researchControls || elements.researchControls.dataset.ready) return;
-    replaceFilterOptions(elements.researchTopic, 'All topics', topicOptions(searchableResearch, 'research_item_topics'));
+    replaceFilterOptions(elements.researchTopic, 'All topics', topicEntries.length ? topicEntries : topicOptions(searchableResearch, 'research_item_topics'));
     const evidence = [...new Set(searchableResearch.map((record) => record.evidence_level).filter(Boolean))]
       .map((value) => [value, evidenceLabel(value)])
       .sort((left, right) => left[1].localeCompare(right[1]));
@@ -547,6 +558,7 @@
       elements.researchTopic.value = '';
       elements.researchEvidence.value = '';
       elements.researchAccess.value = '';
+      filterResearchRecords();
       reloadResearch().catch((error) => console.error('Research search failed:', error));
       elements.researchSearch.focus();
     };
@@ -565,10 +577,10 @@
     elements.researchLoadMore.hidden = researchNextOffset == null;
   }
 
-  function renderResearch(records) {
+  function renderResearch(records, topicEntries = []) {
     if (view !== 'research') return drawResearch(records);
     searchableResearch = records;
-    setupResearchSearch();
+    setupResearchSearch(topicEntries);
     filterResearchRecords();
   }
 
@@ -611,9 +623,9 @@
     if (elements.trialResult) elements.trialResult.textContent = `Showing ${numberFormatter.format(filtered.length)} matching trials from ${numberFormatter.format(searchableTrials.length)} loaded · ${numberFormatter.format(trialTotal || searchableTrials.length)} available.`;
   }
 
-  function setupTrialSearch() {
+  function setupTrialSearch(topicEntries = []) {
     if (!elements.trialControls || elements.trialControls.dataset.ready) return;
-    replaceFilterOptions(elements.trialTopic, 'All topics', topicOptions(searchableTrials, 'clinical_trial_topics'));
+    replaceFilterOptions(elements.trialTopic, 'All topics', topicEntries.length ? topicEntries : topicOptions(searchableTrials, 'clinical_trial_topics'));
     replaceFilterOptions(elements.trialStatus, 'All statuses', [...new Set(searchableTrials.map((record) => record.overall_status).filter(Boolean))].sort().map((value) => [value, readableStatus(value)]));
     replaceFilterOptions(elements.trialPhase, 'All phases', [...new Set(searchableTrials.flatMap((record) => record.phases || []).filter(Boolean))].sort().map((value) => [value, readableStatus(value)]));
     replaceFilterOptions(elements.trialCountry, 'All countries', [...new Set(searchableTrials.flatMap((record) => record.countries || []).filter(Boolean))].sort((left, right) => left.localeCompare(right)).map((value) => [value, value]));
@@ -630,6 +642,7 @@
       elements.trialStatus.value = '';
       elements.trialPhase.value = '';
       elements.trialCountry.value = '';
+      filterTrialRecords();
       reloadTrials().catch((error) => console.error('Trial search failed:', error));
       elements.trialSearch.focus();
     };
@@ -648,10 +661,10 @@
     elements.trialLoadMore.hidden = trialNextOffset == null;
   }
 
-  function renderTrials(records) {
+  function renderTrials(records, topicEntries = []) {
     if (view !== 'trials') return drawTrials(records);
     searchableTrials = records;
-    setupTrialSearch();
+    setupTrialSearch(topicEntries);
     filterTrialRecords();
   }
 
@@ -832,6 +845,11 @@
           metric.append(el('strong', '', numberFormatter.format(count)), el('span', '', label));
           metrics.append(metric);
         });
+        if (!metrics.childElementCount && data.fallback) {
+          const guide = link('evidence-topic-metric evidence-topic-metric--guide', '', `/topics/${encodeURIComponent(topic.slug)}`);
+          guide.append(el('strong', '', 'Guide'), el('span', '', 'Open topic'));
+          metrics.append(guide);
+        }
         const related = el('nav', 'evidence-topic-related');
         if (Array.isArray(topic.related_topics) && topic.related_topics.length) {
           related.append(el('span', '', 'Related'));
@@ -862,7 +880,7 @@
     events.slice(0, 20).forEach((event) => {
       const item = el('li', `timeline-event timeline-event--${event.record_type || 'research'}`);
       item.append(el('time', '', formatTimestamp(event.occurred_at)), el('span', 'timeline-kind', readableStatus(event.event_type)));
-      const heading = el('h3'); heading.append(link('', event.title, event.record_type && event.record_id ? `/${event.record_type === 'trials' ? 'trials' : event.record_type}/${encodeURIComponent(event.record_id)}` : event.source_url || '/changes'));
+      const heading = el('h3'); heading.append(link('', event.title, event.source_fallback ? event.source_url : event.record_type && event.record_id ? `/${event.record_type === 'trials' ? 'trials' : event.record_type}/${encodeURIComponent(event.record_id)}` : event.source_url || '/changes'));
       item.append(heading, el('p', '', event.importance === 'important' ? 'Meaningful source change.' : 'New or updated source record. Open it to inspect the evidence and limitations.'));
       elements.timelineList.append(item);
     });
@@ -1456,19 +1474,19 @@
         renderSources(data.sources || [], true);
       } else if (view === 'research') {
         const params = new URLSearchParams(location.search);
-        const data = await request('research', 100, { q: params.get('search')?.trim() || '', topic: params.get('topic')?.trim() || '' });
+        const [data, topicEntries] = await Promise.all([request('research', 100, { q: params.get('search')?.trim() || '', topic: params.get('topic')?.trim() || '' }), catalogueTopicEntries()]);
         researchNextOffset = data.next_offset;
         researchTotal = Number(data.total_matching || data.research?.length || 0);
-        renderResearch(data.research || []);
+        renderResearch(data.research || [], topicEntries);
         elements.researchLoadMore.hidden = researchNextOffset == null;
         elements.researchLoadMore.onclick = () => loadMoreResearch().catch((error) => console.error('Research page request failed:', error));
         renderSources(data.sources || [], false);
       } else if (view === 'trials') {
         const params = new URLSearchParams(location.search);
-        const data = await request('trials', 100, { q: params.get('search')?.trim() || '', topic: params.get('topic')?.trim() || '' });
+        const [data, topicEntries] = await Promise.all([request('trials', 100, { q: params.get('search')?.trim() || '', topic: params.get('topic')?.trim() || '' }), catalogueTopicEntries()]);
         trialNextOffset = data.next_offset;
         trialTotal = Number(data.total_matching || data.trials?.length || 0);
-        renderTrials(data.trials || []);
+        renderTrials(data.trials || [], topicEntries);
         elements.trialLoadMore.hidden = trialNextOffset == null;
         elements.trialLoadMore.onclick = () => loadMoreTrials().catch((error) => console.error('Trial page request failed:', error));
         renderSources(data.sources || [], false);

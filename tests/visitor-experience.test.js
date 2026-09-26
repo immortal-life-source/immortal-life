@@ -34,7 +34,7 @@ test('topic catalogue is compact, searchable, and does not bury research or tria
   assert.match(portal, /fetch\('\/topics-directory\.json'/)
   assert.doesNotMatch(portal.match(/else if \(view === 'topics'\)[\s\S]*?else if \(view === 'topic'\)/)?.[0] || '', /request\('topics'/)
   assert.match(portal, /Showing \$\{numberFormatter\.format\(visible\.length\)\} of/)
-  assert.match(portal, /view === 'trials'[\s\S]*?renderTrials\(data\.trials \|\| \[\]\);[\s\S]*?view === 'topics'/)
+  assert.match(portal, /view === 'trials'[\s\S]*?renderTrials\(data\.trials \|\| \[\], topicEntries\);[\s\S]*?view === 'topics'/)
   assert.doesNotMatch(portal, /view === 'trials'[\s\S]*?renderTopics\(topicsData/)
   assert.match(portal, /allLink\.href = compact \? '\/topics' : '\/resources'/)
   assert.match(css, /grid-template-columns: repeat\(4, minmax\(0,1fr\)\)/)

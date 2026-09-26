@@ -28,7 +28,9 @@ function evidenceLevel(types) {
 }
 
 async function researchFallback(query, limit) {
-  const search = String(query.q || '').trim() || 'longevity OR healthspan OR geroscience OR "biological aging" OR "cellular senescence"';
+  const topicSlug = String(query.topic || '').trim();
+  const topicName = topicSlug.replace(/-/g, ' ');
+  const search = String(query.q || '').trim() || topicName || 'longevity OR healthspan OR geroscience OR "biological aging" OR "cellular senescence"';
   const url = new URL('https://www.ebi.ac.uk/europepmc/webservices/rest/search');
   url.searchParams.set('query', `(${search}) sort_date:y`);
   url.searchParams.set('format', 'json');
@@ -49,13 +51,15 @@ async function researchFallback(query, limit) {
     is_open_access: item.isOpenAccess === 'Y',
     cited_by_count: Number(item.citedByCount || 0),
     status: 'indexed', relevance_confidence: 0, source_quality_score: 0, freshness_score: 0,
-    research_item_topics: [], source_fallback: true,
+    research_item_topics: topicSlug ? [{ topic_slug: topicSlug, is_published: true, intelligence_topics: { slug: topicSlug, name: topicName } }] : [], source_fallback: true,
   }));
   return { generated_at: new Date().toISOString(), total_matching: Number(data?.hitCount || research.length), next_offset: null, research, sources: [{ id: 'europe-pmc', name: 'Europe PMC', health: 'healthy', homepage_url: 'https://europepmc.org/' }] };
 }
 
 async function trialsFallback(query, limit) {
-  const search = String(query.q || '').trim() || '(longevity OR healthspan OR geroscience OR "biological aging" OR "cellular senescence")';
+  const topicSlug = String(query.topic || '').trim();
+  const topicName = topicSlug.replace(/-/g, ' ');
+  const search = String(query.q || '').trim() || topicName || '(longevity OR healthspan OR geroscience OR "biological aging" OR "cellular senescence")';
   const url = new URL('https://clinicaltrials.gov/api/v2/studies');
   url.searchParams.set('query.term', search);
   url.searchParams.set('pageSize', String(Math.min(Math.max(Number(limit) || 24, 1), 100)));
@@ -78,15 +82,16 @@ async function trialsFallback(query, limit) {
       last_update_date: status.lastUpdatePostDateStruct?.date || null,
       source_url: `https://clinicaltrials.gov/study/${encodeURIComponent(nctId)}`,
       relevance_confidence: 0, source_quality_score: 0, freshness_score: 0,
-      clinical_trial_topics: [], source_fallback: true,
+      clinical_trial_topics: topicSlug ? [{ topic_slug: topicSlug, is_published: true, intelligence_topics: { slug: topicSlug, name: topicName } }] : [], source_fallback: true,
     };
   }).filter((trial) => trial.external_id && trial.title);
   return { generated_at: new Date().toISOString(), total_matching: Number(data?.totalCount || trials.length), next_offset: null, trials, sources: [{ id: 'clinicaltrials-gov', name: 'ClinicalTrials.gov', health: 'healthy', homepage_url: 'https://clinicaltrials.gov/' }] };
 }
 
-async function universitiesFallback(limit) {
+async function universitiesFallback(query, limit) {
+  const search = String(query.q || query.topic || '').replace(/-/g, ' ').trim() || 'longevity OR healthspan OR geroscience OR "biological aging"';
   const url = new URL('https://api.openalex.org/works');
-  url.searchParams.set('search', 'longevity OR healthspan OR geroscience OR "biological aging"');
+  url.searchParams.set('search', search);
   url.searchParams.set('filter', 'from_publication_date:2021-01-01');
   url.searchParams.set('group_by', 'authorships.institutions.id');
   url.searchParams.set('per-page', String(Math.min(Math.max(Number(limit) || 24, 1), 100)));
@@ -137,7 +142,13 @@ async function topicDossierFallback(query, limit) {
         return counts;
       }, {}),
     },
-    timeline: { events: [], related_topics: [] },
+    timeline: {
+      events: [
+        ...research.slice(0, 6).map((record) => ({ event_type: 'new research', title: record.title, occurred_at: record.published_on, source_url: record.source_url, source_fallback: true })),
+        ...trials.slice(0, 6).map((record) => ({ event_type: 'registered trial', title: record.title, occurred_at: record.last_update_date || record.start_date, source_url: record.source_url, source_fallback: true })),
+      ].filter((event) => event.title && event.source_url).sort((left, right) => String(right.occurred_at || '').localeCompare(String(left.occurred_at || ''))),
+      related_topics: [],
+    },
   };
 }
 
@@ -146,7 +157,7 @@ async function sourceFallback(query) {
   const limit = query.limit;
   if (view === 'research') return researchFallback(query, limit);
   if (view === 'trials') return trialsFallback(query, limit);
-  if (view === 'universities') return universitiesFallback(limit);
+  if (view === 'universities') return universitiesFallback(query, limit);
   if (view === 'topic-dossier') return topicDossierFallback(query, limit);
   if (view === 'regulatory') return { regulatory: [], regulatory_guides: [], regulatory_coverage: {}, sources: [], fallback: true };
   if (view === 'integrity') return { integrity: [], sources: [], fallback: true };
@@ -209,3 +220,5 @@ module.exports = async function intelligenceProxy(request, response) {
     clearTimeout(timeout);
   }
 };
+
+module.exports.sourceFallback = sourceFallback;

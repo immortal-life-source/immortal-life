@@ -16,9 +16,10 @@ test('public pages permanently disclose the absence of human review', () => {
 test('permanent records, discovery feeds, API, and briefings have clean routes', () => {
   const config = JSON.parse(read('vercel.json'));
   const sources = new Set(config.rewrites.map((rewrite) => rewrite.source));
-  for (const route of ['/research/:id', '/trials/:id', '/regulatory/:id', '/integrity/:id', '/briefings', '/briefings/:slug', '/api/intelligence/:kind/:id', '/sitemap.xml', '/feed.xml', '/feed.atom', '/feed.json']) {
+  for (const route of ['/research/:id', '/trials/:id', '/regulatory/:id', '/integrity/:id', '/briefings', '/briefings/:slug', '/api/intelligence/:kind/:id', '/feed.xml', '/feed.atom', '/feed.json']) {
     assert.ok(sources.has(route), `missing ${route}`);
   }
+  assert.match(read('build.js'), /path\.join\(outputDir, 'sitemap\.xml'\)/);
 });
 
 test('weekly public briefings and IndexNow notifications are scheduled', () => {
@@ -47,9 +48,12 @@ test('record cards link to indexable first-party detail pages', () => {
 test('search-demand utility pages, segmented sitemaps, topic feeds, and datasets are routed', () => {
   const config = JSON.parse(read('vercel.json'));
   const sources = new Set(config.rewrites.map((rewrite) => rewrite.source));
-  for (const route of ['/discover', '/discover/regulatory-status', '/discover/research-integrity', '/reports', '/sitemaps/:type.xml', '/feeds/topics/:topic.xml', '/datasets/:kind.csv', '/api/subscribe']) {
+  for (const route of ['/discover', '/discover/regulatory-status', '/discover/research-integrity', '/reports', '/feeds/topics/:topic.xml', '/datasets/:kind.csv', '/api/subscribe']) {
     assert.ok(sources.has(route), `missing ${route}`);
   }
+  const build = read('build.js');
+  assert.match(build, /sitemapDirectory/);
+  assert.match(build, /sitemaps\/topics\.xml/);
   const pages = read('supabase/functions/public-pages/index.ts');
   assert.match(pages, /noindex,follow/);
   assert.match(pages, /selectedTrials\.length >= 3/);

@@ -334,4 +334,19 @@ window.ilFnHeaders = function ilFnHeaders() {
 `
 );
 
+const sitemapDirectory = path.join(outputDir, 'sitemaps');
+fs.mkdirSync(sitemapDirectory, { recursive: true });
+const sitemapUrlset = (urls) => `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((url) => `  <url><loc>${site}${url}</loc></url>`).join('\n')}\n</urlset>\n`;
+const staticRoutes = fs.readdirSync(outputDir)
+  .filter((name) => name.endsWith('.html') && !['auth-x.html', 'auth-linkedin.html', 'confirmed.html', 'unsubscribed.html'].includes(name))
+  .map((name) => name === 'index.html' ? '/' : `/${name.replace(/\.html$/, '')}`)
+  .sort();
+const topicRoutes = intelligenceTopics.map((topic) => `/topics/${topic.slug}`);
+fs.writeFileSync(path.join(sitemapDirectory, 'static.xml'), sitemapUrlset(staticRoutes));
+fs.writeFileSync(path.join(sitemapDirectory, 'topics.xml'), sitemapUrlset(topicRoutes));
+for (const name of ['research', 'trials', 'regulatory', 'integrity', 'universities', 'entities', 'briefings']) {
+  fs.writeFileSync(path.join(sitemapDirectory, `${name}.xml`), sitemapUrlset([]));
+}
+fs.writeFileSync(path.join(outputDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <sitemap><loc>${site}/sitemaps/static.xml</loc></sitemap>\n  <sitemap><loc>${site}/sitemaps/topics.xml</loc></sitemap>\n</sitemapindex>\n`);
+
 console.log(`Static site written to ${outputDir}`);
