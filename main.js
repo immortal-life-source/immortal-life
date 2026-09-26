@@ -200,132 +200,79 @@ document.addEventListener('keydown', (e) => {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  const N = 220;
-  const CONN_DIST = 90;
-  const ROTATION_PERIOD_S = 120;
-  const dprCap = 2;
-
-  const goldCount = Math.round(N * 0.3);
-  const isGoldArr = [];
-  let i;
-  for (i = 0; i < goldCount; i++) isGoldArr.push(true);
-  for (i = goldCount; i < N; i++) isGoldArr.push(false);
-  for (i = isGoldArr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = isGoldArr[i];
-    isGoldArr[i] = isGoldArr[j];
-    isGoldArr[j] = tmp;
-  }
-
-  const particles = [];
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const palette = [
+    'rgba(199,53,114,.48)',
+    'rgba(232,109,67,.40)',
+    'rgba(197,154,75,.48)',
+    'rgba(85,169,175,.38)',
+    'rgba(140,117,207,.34)',
+  ];
+  let particles = [];
   let cssW = 0;
   let cssH = 0;
+  let rafId = 0;
 
-  function insetXMin(w) {
-    return Math.max(20, Math.round(w * 0.1));
+  function particleCount() {
+    if (reduceMotion) return 38;
+    if (window.innerWidth < 700) return 42;
+    if (window.innerWidth < 1100) return 62;
+    return 86;
   }
 
-  function wrap1D(v, lo, hi) {
-    const span = hi - lo;
-    if (span < 1) return lo;
-    let t = v - lo;
-    t = ((t % span) + span) % span;
-    return lo + t;
+  function createParticles(count) {
+    return Array.from({ length: count }, (_, index) => ({
+      angle: Math.random() * Math.PI * 2,
+      radiusX: .10 + Math.random() * .38,
+      radiusY: .07 + Math.random() * .28,
+      speed: (.000035 + Math.random() * .000055) * (index % 2 ? 1 : -1),
+      phase: Math.random() * Math.PI * 2,
+      wobble: 5 + Math.random() * 16,
+      baseR: .9 + Math.random() * 1.8,
+      color: palette[index % palette.length],
+      x: 0,
+      y: 0,
+    }));
   }
 
   function layoutCanvas() {
     const nextW = canvas.clientWidth;
     const nextH = canvas.clientHeight;
     if (nextW < 2 || nextH < 2) return;
-
-    const xMin = insetXMin(nextW);
-
-    if (particles.length === 0) {
-      const spanX = Math.max(1, nextW - xMin);
-      for (i = 0; i < N; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = 0.08 + Math.random() * (0.18 - 0.08);
-        particles.push({
-          x: xMin + Math.random() * spanX,
-          y: Math.random() * nextH,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          baseR: 0.8 + Math.random() * (2 - 0.8),
-          phase: Math.random() * Math.PI * 2,
-          period: 3 + Math.random() * 3,
-          isGold: isGoldArr[i],
-        });
-      }
-    } else if (cssW > 0 && cssH > 0 && (nextW !== cssW || nextH !== cssH)) {
-      const sx = nextW / cssW;
-      const sy = nextH / cssH;
-      const xMinN = insetXMin(nextW);
-      particles.forEach((pp) => {
-        pp.x *= sx;
-        pp.y *= sy;
-        pp.x = wrap1D(pp.x, xMinN, nextW);
-        pp.y = wrap1D(pp.y, 0, nextH);
-      });
-    }
-
     cssW = nextW;
     cssH = nextH;
-    const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
+    const targetCount = particleCount();
+    if (particles.length !== targetCount) particles = createParticles(targetCount);
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     canvas.width = Math.round(cssW * dpr);
     canvas.height = Math.round(cssH * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
   function tick(now) {
-    if (document.hidden) return;
-
-    if (cssW < 2 || cssH < 2) {
-      layoutCanvas();
-      requestAnimationFrame(tick);
-      return;
-    }
-
-    const tSec = now * 0.001;
-    const rot = (tSec * (Math.PI * 2)) / ROTATION_PERIOD_S;
-    const xMin = insetXMin(cssW);
-
+    rafId = 0;
+    if (document.hidden || cssW < 2 || cssH < 2) return;
+    const centerX = cssW * .5;
+    const centerY = cssH * .48;
+    const tSec = now * .001;
     ctx.clearRect(0, 0, cssW, cssH);
+    particles.forEach((particle) => {
+      if (!reduceMotion) particle.angle += particle.speed * 16.667;
+      const wave = Math.sin(tSec * .42 + particle.phase) * particle.wobble;
+      particle.x = centerX + Math.cos(particle.angle) * (particle.radiusX * cssW + wave);
+      particle.y = centerY + Math.sin(particle.angle) * (particle.radiusY * cssH + wave * .35);
+    });
 
-    ctx.save();
-    ctx.translate(cssW * 0.5, cssH * 0.5);
-    ctx.rotate(rot);
-    ctx.translate(-cssW * 0.5, -cssH * 0.5);
-
-    let a;
-    let b;
-    let d;
-    let dx;
-    let dy;
-    let j;
-    let prox;
-    let p;
-    let breath;
-    let r;
-
-    for (i = 0; i < N; i++) {
-      p = particles[i];
-      p.x += p.vx;
-      p.y += p.vy;
-      p.x = wrap1D(p.x, xMin, cssW);
-      p.y = wrap1D(p.y, 0, cssH);
-    }
-
-    for (i = 0; i < N; i++) {
-      a = particles[i];
-      for (j = i + 1; j < N; j++) {
-        b = particles[j];
-        dx = b.x - a.x;
-        dy = b.y - a.y;
-        d = Math.hypot(dx, dy);
-        if (d >= CONN_DIST) continue;
-        prox = 1 - d / CONN_DIST;
-        ctx.strokeStyle = 'rgba(184,149,90,' + (0.12 * prox) + ')';
-        ctx.lineWidth = 2 * prox;
+    const connectionDistance = Math.min(118, Math.max(72, cssW * .075));
+    for (let i = 0; i < particles.length; i += 1) {
+      const a = particles[i];
+      for (let j = i + 1; j < particles.length; j += 1) {
+        const b = particles[j];
+        const distance = Math.hypot(b.x - a.x, b.y - a.y);
+        if (distance >= connectionDistance) continue;
+        const proximity = 1 - distance / connectionDistance;
+        ctx.strokeStyle = 'rgba(198,86,126,' + (.075 * proximity) + ')';
+        ctx.lineWidth = .7 + proximity * .55;
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
         ctx.lineTo(b.x, b.y);
@@ -333,27 +280,36 @@ document.addEventListener('keydown', (e) => {
       }
     }
 
-    for (i = 0; i < N; i++) {
-      p = particles[i];
-      breath = 0.4 * Math.sin((tSec * (Math.PI * 2)) / p.period + p.phase);
-      r = Math.max(0.2, p.baseR + breath);
-      ctx.fillStyle = p.isGold ? 'rgba(184,149,90,0.6)' : 'rgba(237,233,224,0.4)';
+    particles.forEach((particle) => {
+      const breath = .32 * Math.sin(tSec * .85 + particle.phase);
+      const radius = Math.max(.6, particle.baseR + breath);
+      ctx.fillStyle = particle.color;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.arc(particle.x, particle.y, radius, 0, Math.PI * 2);
       ctx.fill();
-    }
+    });
 
-    ctx.restore();
+    if (!reduceMotion) rafId = requestAnimationFrame(tick);
+  }
 
-    requestAnimationFrame(tick);
+  function start() {
+    if (!rafId && !document.hidden) rafId = requestAnimationFrame(tick);
   }
 
   layoutCanvas();
-  window.addEventListener('resize', layoutCanvas);
+  window.addEventListener('resize', () => {
+    layoutCanvas();
+    start();
+  }, { passive: true });
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) requestAnimationFrame(tick);
+    if (document.hidden && rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+    } else {
+      start();
+    }
   });
-  requestAnimationFrame(tick);
+  start();
 })();
 
 window.openPrivacy  = openPrivacy;
