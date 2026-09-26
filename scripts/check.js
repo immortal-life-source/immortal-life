@@ -97,6 +97,8 @@ const requiredFiles = [
   'supabase/migrations/20260925001400_live_topic_count_cache.sql',
   'supabase/migrations/20260925001500_cache_public_quality_telemetry.sql',
   'supabase/migrations/20260925001600_cache_complete_evidence_graph.sql',
+  'supabase/migrations/20260926000100_expand_living_evidence_dossiers.sql',
+  'supabase/migrations/20260926000200_optimize_living_evidence_dossiers.sql',
   'supabase/audits/membership-integrity.sql',
   'intelligence-template.html',
   'content-template.html',

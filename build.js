@@ -260,10 +260,15 @@ for (const page of intelligencePages) {
 const topicOutputDir = path.join(outputDir, 'topics');
 fs.mkdirSync(topicOutputDir, { recursive: true });
 for (const topic of intelligenceTopics) {
-  const dossier = `<section class="intel-section topic-primer" aria-labelledby="topic-question">
-    <div class="section-heading"><div><a class="topic-domain-badge" href="/topics?domain=${encodeURIComponent(topic.domain.slug)}">${htmlEscape(topic.domain.name)}</a><span class="section-index">The question we track</span><h2 id="topic-question">${htmlEscape(topic.question)}</h2></div><a class="section-link" href="/methodology">How records are chosen</a></div>
-    <div class="dossier-grid"><article><h3>What the records show</h3><p>${htmlEscape(topic.state)}</p></article><article><h3>What is still uncertain</h3><p>${htmlEscape(topic.limits)}</p></article><article><h3>Regulatory position</h3><p>${htmlEscape(topic.regulatory)}</p></article></div>
-    <aside class="automation-notice"><strong>Built automatically from source records</strong><p>No scientist, clinician, researcher, editor, or human reviewer evaluates this page before publication. Check important details at the linked original source.</p><div class="topic-follow-actions"><a class="section-link" href="/feeds/topics/${topic.slug}.xml">Follow this topic by RSS</a></div></aside>
+  const dossier = `<section class="intel-section living-dossier" id="topicLivingDossier" aria-labelledby="topic-question" data-topic-name="${htmlEscape(topic.name)}">
+    <div class="living-dossier-heading"><div><a class="topic-domain-badge" href="/topics?domain=${encodeURIComponent(topic.domain.slug)}">${htmlEscape(topic.domain.name)}</a><span class="section-index">Living Evidence Dossier</span><h2 id="topic-question">${htmlEscape(topic.question)}</h2><p>${htmlEscape(topic.description)}</p></div><div class="topic-follow-actions"><button class="section-link save-topic-button" type="button" data-watch-topic="${topic.slug}" data-watch-name="${htmlEscape(topic.name)}" aria-pressed="false">Follow in Longevity Watch</button><a class="section-link" href="/feeds/topics/${topic.slug}.xml">RSS feed</a></div></div>
+    <div class="dossier-snapshot" id="topicDossierSnapshot" aria-live="polite"><p class="dossier-loading">Building the current evidence snapshot…</p></div>
+    <div class="living-dossier-answers" id="topicDossierAnswers">
+      <article id="dossier-definition"><span>01</span><h3>What is this topic?</h3><p>${htmlEscape(topic.state)}</p></article>
+      <article id="dossier-uncertainty"><span>02</span><h3>What is still uncertain?</h3><p>${htmlEscape(topic.limits)}</p></article>
+      <article id="dossier-regulatory-context"><span>03</span><h3>Regulatory context</h3><p>${htmlEscape(topic.regulatory)}</p></article>
+    </div>
+    <aside class="automation-notice living-dossier-notice"><strong>A maintained evidence map—not a systematic review</strong><p>This dossier updates from source-linked metadata and applies transparent, automated rules. No scientist or clinician reviews each update. Counts describe indexed records, not proof of benefit, safety, or agreement. Open consequential details at the original source.</p><a class="section-link" href="/methodology">See the methodology</a></aside>
   </section>`;
   fs.writeFileSync(
     path.join(topicOutputDir, `${topic.slug}.html`),
@@ -273,7 +278,7 @@ for (const topic of intelligenceTopics) {
       CANONICAL_URL: `${site}/topics/${topic.slug}`,
       PAGE_VIEW: 'topic',
       TOPIC_SLUG: topic.slug,
-      PAGE_KICKER: 'Automatically updated topic guide',
+      PAGE_KICKER: 'Living Evidence Dossier',
       PAGE_HEADING: topic.name,
       SOCIAL_IMAGE_URL: `${site}/social-card/entity/topic-${topic.slug}.png`,
     }, dossier)
@@ -282,9 +287,15 @@ for (const topic of intelligenceTopics) {
 
 const publicContentPages = [
   {
-    filename: 'you.html', title: 'You — immortal.life', heading: 'What do you want to find?', kicker: 'Start with your purpose',
-    description: 'Choose the longevity question or evidence path that matters to you, then go directly to the most useful part of immortal.life.',
-    body: `<section class="methodology-directory you-directory" aria-labelledby="youDirectory"><span class="section-index">Choose your path</span><h2 id="youDirectory">Start with what you need.</h2><p>No dashboard, account, or generic feed—just direct routes into the evidence.</p><nav aria-label="Choose your longevity evidence path"><a href="/topics"><strong>Understand a longevity topic</strong><span>Browse mechanisms, interventions, biomarkers, and healthspan</span></a><a href="/trials"><strong>Find registered trials</strong><span>Search studies by topic, status, phase, and country</span></a><a href="/research"><strong>Read source-linked research</strong><span>Filter studies by topic, evidence stage, and access</span></a><a href="/universities"><strong>Compare university activity</strong><span>See institutions connected to indexed longevity work</span></a><a href="/resources"><strong>Check official sources</strong><span>Find registries, regulators, reviews, and ageing datasets</span></a><a href="/changes"><strong>See the latest news</strong><span>Follow newly added research and trial updates</span></a></nav></section>`
+    filename: 'you.html', title: 'Longevity Watch — immortal.life', heading: 'Follow what matters to you.', kicker: 'Longevity Watch', view: 'you',
+    description: 'Build a private longevity watchlist on this device and receive source-linked updates about the topics you choose.',
+    body: `<section class="longevity-watch" data-longevity-watch>
+      <div class="watch-intro"><div><span class="section-index">Your research radar</span><h2>One place for the longevity questions you care about.</h2><p>Choose up to 20 topics. Your watchlist stays in this browser—no account or health profile is required. Open a dossier at any time to see current evidence, trials, recent changes, uncertainty, regulation, and source links.</p></div><div class="watch-privacy"><strong>Private by default</strong><span>Saved only on this device</span><span>No medical profile</span><span>No advertising use</span></div></div>
+      <section class="watch-builder" aria-labelledby="watchBuilderTitle"><div class="watch-builder-heading"><div><span class="section-index">Build your watch</span><h2 id="watchBuilderTitle">Choose longevity topics</h2></div><strong id="watchCounter">0 / 20 followed</strong></div><form class="watch-controls" role="search"><label><span>Find a topic</span><input id="watchTopicSearch" type="search" placeholder="Try rapamycin, brain ageing, or epigenetic clocks…" autocomplete="off" /></label><label><span>Domain</span><select id="watchTopicDomain"><option value="">All domains</option></select></label></form><p class="filter-result" id="watchTopicResult" aria-live="polite"></p><div class="watch-topic-grid" id="watchTopicGrid"><p class="dossier-loading">Loading the topic directory…</p></div></section>
+      <section class="watch-saved" id="watchSavedSection" aria-labelledby="watchSavedTitle"><div class="watch-builder-heading"><div><span class="section-index">Your watchlist</span><h2 id="watchSavedTitle">Followed topics</h2></div><button class="section-link watch-clear" id="watchClear" type="button">Clear watchlist</button></div><div class="watch-saved-grid" id="watchSavedGrid"></div></section>
+      <section class="watch-email" aria-labelledby="watchEmailTitle"><div><span class="section-index">Email delivery</span><h2 id="watchEmailTitle">Receive a weekly topic watch</h2><p>Select one followed topic for a concise, source-linked email when commercially cleared updates are available. If nothing relevant changed, no unnecessary email is sent.</p><small>Automated research information only—not medical advice or a treatment recommendation.</small></div><form class="watch-email-form" method="post" action="/api/subscribe"><label><span>Topic</span><select id="watchEmailTopic" name="topic" required><option value="">Follow a topic above first</option></select></label><label><span>Email address</span><input type="email" name="email" autocomplete="email" required maxlength="254" placeholder="you@example.com" /></label><label class="watch-consent"><input type="checkbox" name="consent" value="yes" required /><span>Email me source-linked Longevity Watch updates. I agree to the <a href="/privacy">privacy notice</a>.</span></label><button type="submit">Activate email watch</button></form></section>
+      <section class="methodology-directory you-directory" aria-labelledby="youDirectory"><span class="section-index">Explore directly</span><h2 id="youDirectory">Or start with a part of the index.</h2><nav aria-label="Choose your longevity evidence path"><a href="/topics"><strong>Understand a longevity topic</strong><span>Browse mechanisms, interventions, biomarkers, and healthspan</span></a><a href="/trials"><strong>Find registered trials</strong><span>Search studies by topic, status, phase, and country</span></a><a href="/research"><strong>Read source-linked research</strong><span>Filter studies by topic, evidence stage, and access</span></a><a href="/universities"><strong>Compare university activity</strong><span>See institutions connected to indexed longevity work</span></a><a href="/resources"><strong>Check official sources</strong><span>Find registries, regulators, reviews, and ageing datasets</span></a><a href="/changes"><strong>See the latest news</strong><span>Follow newly added research and trial updates</span></a></nav></section>
+    </section>`
   },
   {
     filename: 'learn.html', title: 'Longevity 101 — immortal.life', heading: 'Start learning longevity here.', kicker: 'A student guide to the field',
@@ -322,7 +333,7 @@ const publicContentPages = [
 const contentPages = publicContentPages.filter((page) => page.filename !== 'learn.html');
 
 for (const page of contentPages) {
-  const values = { PAGE_TITLE: page.title, PAGE_DESCRIPTION: page.description, CANONICAL_URL: `${site}/${page.filename.replace(/\.html$/, '')}`, PAGE_KICKER: page.kicker, PAGE_HEADING: page.heading };
+  const values = { PAGE_TITLE: page.title, PAGE_DESCRIPTION: page.description, CANONICAL_URL: `${site}/${page.filename.replace(/\.html$/, '')}`, PAGE_KICKER: page.kicker, PAGE_HEADING: page.heading, PAGE_VIEW: page.view || 'page' };
   fs.writeFileSync(path.join(outputDir, page.filename), renderTemplate(contentTemplate, values, { BODY_HTML: page.body, SCHEMA_JSON: pageSchema({ ...values, PAGE_VIEW: page.view || 'page' }) }));
 }
 

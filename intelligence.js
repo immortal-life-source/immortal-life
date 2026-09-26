@@ -59,6 +59,138 @@
     window.location.href = `/topics?search=${encodeURIComponent(query)}`;
   }));
 
+  const WATCH_STORAGE_KEY = 'il_longevity_watch';
+  const WATCH_LIMIT = 20;
+
+  function readLongevityWatch() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(WATCH_STORAGE_KEY) || '[]');
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .map((item) => typeof item === 'string' ? { slug: item, name: item.replace(/-/g, ' ') } : item)
+        .filter((item) => item && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(item.slug || '')))
+        .slice(0, WATCH_LIMIT);
+    } catch (_) { return []; }
+  }
+
+  function writeLongevityWatch(items) {
+    try { localStorage.setItem(WATCH_STORAGE_KEY, JSON.stringify(items.slice(0, WATCH_LIMIT))); } catch (_) { /* local storage is optional */ }
+    window.dispatchEvent(new CustomEvent('il-watch-change', { detail: items }));
+  }
+
+  function syncWatchButtons(items = readLongevityWatch()) {
+    const followed = new Set(items.map((item) => item.slug));
+    document.querySelectorAll('[data-watch-topic]').forEach((button) => {
+      const active = followed.has(button.dataset.watchTopic);
+      button.setAttribute('aria-pressed', String(active));
+      if (button.classList.contains('save-topic-button')) button.textContent = active ? 'Following in Longevity Watch' : 'Follow in Longevity Watch';
+      else button.classList.toggle('is-followed', active);
+    });
+  }
+
+  document.addEventListener('click', (event) => {
+    const button = event.target instanceof Element ? event.target.closest('[data-watch-topic]') : null;
+    if (!(button instanceof HTMLButtonElement)) return;
+    const slug = String(button.dataset.watchTopic || '');
+    const name = String(button.dataset.watchName || slug.replace(/-/g, ' '));
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return;
+    const items = readLongevityWatch();
+    const existing = items.findIndex((item) => item.slug === slug);
+    if (existing >= 0) items.splice(existing, 1);
+    else if (items.length < WATCH_LIMIT) items.push({ slug, name, followedAt: new Date().toISOString() });
+    else {
+      const status = document.getElementById('watchTopicResult');
+      if (status) status.textContent = `Your watchlist is full. Remove one topic before adding another.`;
+      return;
+    }
+    writeLongevityWatch(items);
+    syncWatchButtons(items);
+  });
+
+  async function initLongevityWatch() {
+    const root = document.querySelector('[data-longevity-watch]');
+    syncWatchButtons();
+    if (!root) return;
+    const search = document.getElementById('watchTopicSearch');
+    const domain = document.getElementById('watchTopicDomain');
+    const result = document.getElementById('watchTopicResult');
+    const topicGrid = document.getElementById('watchTopicGrid');
+    const savedGrid = document.getElementById('watchSavedGrid');
+    const counter = document.getElementById('watchCounter');
+    const clear = document.getElementById('watchClear');
+    const emailTopic = document.getElementById('watchEmailTopic');
+    let topics = [];
+
+    const node = (tag, className, text) => {
+      const item = document.createElement(tag);
+      if (className) item.className = className;
+      if (text != null) item.textContent = String(text);
+      return item;
+    };
+
+    const renderSaved = () => {
+      const saved = readLongevityWatch();
+      counter.textContent = `${saved.length} / ${WATCH_LIMIT} followed`;
+      savedGrid.replaceChildren();
+      emailTopic.replaceChildren(new Option(saved.length ? 'Choose a followed topic' : 'Follow a topic above first', ''));
+      saved.forEach((savedTopic) => {
+        const topic = topics.find((item) => item.slug === savedTopic.slug) || savedTopic;
+        const card = node('article', 'watch-saved-card');
+        const copy = node('div');
+        copy.append(node('span', 'section-index', topic.domain_name || 'Longevity topic'), node('h3', '', topic.name));
+        const actions = node('div', 'watch-saved-actions');
+        const open = node('a', 'section-link', 'Open dossier'); open.href = `/topics/${encodeURIComponent(topic.slug)}`;
+        const changes = node('a', 'section-link', 'Recent changes'); changes.href = `/changes?topic=${encodeURIComponent(topic.slug)}`;
+        const feed = node('a', 'section-link', 'RSS'); feed.href = `/feeds/topics/${encodeURIComponent(topic.slug)}.xml`;
+        const remove = node('button', 'section-link watch-remove', 'Remove'); remove.type = 'button'; remove.dataset.watchTopic = topic.slug; remove.dataset.watchName = topic.name;
+        actions.append(open, changes, feed, remove); card.append(copy, actions); savedGrid.append(card);
+        emailTopic.append(new Option(topic.name, topic.slug));
+      });
+      if (!saved.length) savedGrid.append(node('p', 'watch-empty', 'Your watchlist is empty. Follow topics above or use the Follow button on any evidence dossier.'));
+      emailTopic.disabled = saved.length === 0;
+      clear.hidden = saved.length === 0;
+      syncWatchButtons(saved);
+    };
+
+    const renderDirectory = () => {
+      const query = String(search.value || '').trim().toLowerCase();
+      const selectedDomain = domain.value || '';
+      const visible = topics.filter((topic) => {
+        const text = `${topic.name} ${topic.description || ''} ${topic.domain_name || ''}`.toLowerCase();
+        return (!query || text.includes(query)) && (!selectedDomain || topic.domain_slug === selectedDomain);
+      });
+      topicGrid.replaceChildren();
+      visible.forEach((topic) => {
+        const button = node('button', 'watch-topic-card'); button.type = 'button'; button.dataset.watchTopic = topic.slug; button.dataset.watchName = topic.name;
+        button.append(node('span', 'watch-topic-domain', topic.domain_name || 'Longevity topic'), node('strong', '', topic.name), node('small', '', topic.description || 'Open the living evidence dossier.'));
+        topicGrid.append(button);
+      });
+      if (!visible.length) topicGrid.append(node('p', 'watch-empty', 'No topic matches this search. Try a broader term or another domain.'));
+      result.textContent = `Showing ${visible.length} of ${topics.length} topics`;
+      syncWatchButtons();
+    };
+
+    try {
+      const response = await fetch('/topics-directory.json', { headers: { Accept: 'application/json' } });
+      if (!response.ok) throw new Error(`Topic directory returned ${response.status}`);
+      const directory = await response.json();
+      topics = Array.isArray(directory.topics) ? directory.topics : [];
+      const domains = [...new Map(topics.map((topic) => [topic.domain_slug, topic.domain_name])).entries()].filter(([slug]) => slug);
+      domains.forEach(([slug, name]) => domain.append(new Option(name, slug)));
+      search.addEventListener('input', renderDirectory);
+      domain.addEventListener('change', renderDirectory);
+      clear.addEventListener('click', () => writeLongevityWatch([]));
+      window.addEventListener('il-watch-change', () => { renderSaved(); renderDirectory(); });
+      renderSaved(); renderDirectory();
+    } catch (error) {
+      topicGrid.replaceChildren(node('p', 'watch-empty', 'The topic directory could not be loaded. Refresh the page to try again.'));
+      result.textContent = '';
+      console.error('Longevity Watch failed to load:', error);
+    }
+  }
+
+  initLongevityWatch().catch((error) => console.error('Longevity Watch failed to start:', error));
+
   if (!body.dataset.view) return;
 
   const view = body.dataset.view || 'overview';
@@ -161,9 +293,12 @@
     qualityGrid: document.getElementById('qualityGrid'),
     sourceSection: document.getElementById('sourceSection'),
     sourceList: document.getElementById('sourceList'),
+    topicDossierSnapshot: document.getElementById('topicDossierSnapshot'),
+    topicDossierAnswers: document.getElementById('topicDossierAnswers'),
   };
 
   document.querySelector(`[data-nav="${view === 'overview' || view === 'topic' ? 'research' : view}"]`)?.setAttribute('aria-current', 'page');
+  if (view === 'you') return;
 
   function setNavigation(open) {
     if (!elements.navToggle || !elements.nav) return;
@@ -532,7 +667,7 @@
     const filtered = searchableResearch.filter((record) =>
       (!query || researchSearchText(record).includes(query)) &&
       includesTopic(record, 'research_item_topics', topic) &&
-      (!evidence || record.evidence_level === evidence) &&
+      (!evidence || (evidence === 'human' ? ['human-synthesis', 'randomized-human', 'human-study'].includes(record.evidence_level) : record.evidence_level === evidence)) &&
       (!access || (access === 'open' ? record.is_open_access : !record.is_open_access))
     );
     drawResearch(filtered, 'No research record matches these filters. Try a broader search or clear one of the filters.');
@@ -545,9 +680,12 @@
     const evidence = [...new Set(searchableResearch.map((record) => record.evidence_level).filter(Boolean))]
       .map((value) => [value, evidenceLabel(value)])
       .sort((left, right) => left[1].localeCompare(right[1]));
+    if (evidence.some(([value]) => ['human-synthesis', 'randomized-human', 'human-study'].includes(value))) evidence.unshift(['human', 'All human evidence']);
     replaceFilterOptions(elements.researchEvidence, 'All evidence stages', evidence);
     elements.researchSearch.value = new URLSearchParams(location.search).get('search')?.trim() || '';
     elements.researchTopic.value = new URLSearchParams(location.search).get('topic')?.trim() || '';
+    elements.researchEvidence.value = new URLSearchParams(location.search).get('evidence')?.trim() || '';
+    elements.researchAccess.value = new URLSearchParams(location.search).get('access')?.trim() || '';
     elements.researchControls.addEventListener('input', () => {
       filterResearchRecords();
       window.clearTimeout(researchSearchTimer);
@@ -631,6 +769,9 @@
     replaceFilterOptions(elements.trialCountry, 'All countries', [...new Set(searchableTrials.flatMap((record) => record.countries || []).filter(Boolean))].sort((left, right) => left.localeCompare(right)).map((value) => [value, value]));
     elements.trialSearch.value = new URLSearchParams(location.search).get('search')?.trim() || '';
     elements.trialTopic.value = new URLSearchParams(location.search).get('topic')?.trim() || '';
+    elements.trialStatus.value = new URLSearchParams(location.search).get('status')?.trim() || '';
+    elements.trialPhase.value = new URLSearchParams(location.search).get('phase')?.trim() || '';
+    elements.trialCountry.value = new URLSearchParams(location.search).get('country')?.trim() || '';
     elements.trialControls.addEventListener('input', () => {
       filterTrialRecords();
       window.clearTimeout(trialSearchTimer);
@@ -895,38 +1036,84 @@
 
   function renderTopicEvidence(data) {
     const evidence = data?.evidence || {};
-    if (!elements.researchSection?.parentNode) return;
-    let section = document.getElementById('topicEvidenceSection');
-    if (!section) {
-      section = el('section', 'intel-section topic-evidence-overview');
-      section.id = 'topicEvidenceSection';
-      elements.researchSection.parentNode.insertBefore(section, elements.researchSection);
-    }
-    section.replaceChildren();
-    const heading = el('div', 'section-heading');
-    const title = el('div'); title.append(el('span', 'section-index', 'Evidence overview'), el('h2', '', 'What is known—and what is still missing'));
-    heading.append(title, el('p', 'graph-hint', 'Counts describe source records, not proof that an intervention works.'));
-    const metrics = el('div', 'topic-evidence-metrics');
-    [
-      ['Research records', Number(evidence.research_total || 0), '#researchSection'],
-      ['Registered trials', Number(evidence.trial_total || 0), '#trialsSection'],
-      ['Recruiting or active', Number(evidence.recruiting_trials || 0), '#trialsSection'],
-      ['Trials with posted results', Number(evidence.trials_with_results || 0), '#trialsSection'],
-      ['Live source feeds represented', Number(evidence.source_count || 0), '#sourceSection'],
-    ].forEach(([label, count, href]) => {
-      const card = link('topic-evidence-stat', '', href);
-      card.append(el('strong', '', numberFormatter.format(count)), el('span', '', label), el('small', '', 'View records →'));
-      metrics.append(card);
-    });
-    const stages = el('div', 'topic-evidence-stages');
-    const labels = { 'human-synthesis': 'Evidence syntheses', 'randomized-human': 'Randomized human studies', 'human-study': 'Human studies', preclinical: 'Preclinical research', preprint: 'Preprints', 'research-record': 'Unclassified research records' };
-    Object.entries(evidence.research_by_stage || {}).sort((a, b) => Number(b[1]) - Number(a[1])).forEach(([stage, count]) => {
-      const item = el('span'); item.append(el('strong', '', numberFormatter.format(Number(count || 0))), document.createTextNode(` ${labels[stage] || readableStatus(stage)}`)); stages.append(item);
-    });
-    const caveat = Number(evidence.trials_with_results || 0) === 0
-      ? 'No indexed trial currently includes a reusable posted result. Registrations describe plans, not findings.'
-      : 'Posted registry results are source-supplied; check the full registry record and peer-reviewed publication before drawing conclusions.';
-    section.append(heading, metrics, stages, el('p', 'topic-evidence-caveat', caveat));
+    if (!elements.topicDossierSnapshot || !elements.topicDossierAnswers) return;
+    const events = Array.isArray(data?.timeline?.events) ? data.timeline.events : [];
+    const research = Array.isArray(data?.research) ? data.research : [];
+    const trials = Array.isArray(data?.trials) ? data.trials : [];
+    const humanTotal = Number(evidence.human_evidence_total ?? ['human-synthesis', 'randomized-human', 'human-study'].reduce((sum, stage) => sum + Number(evidence.research_by_stage?.[stage] || 0), 0));
+    const preclinicalTotal = Number(evidence.preclinical_total ?? evidence.research_by_stage?.preclinical ?? 0);
+    const trialTotal = Number(evidence.trial_total || 0);
+    const recruiting = Number(evidence.recruiting_trials || 0);
+    const results = Number(evidence.trials_with_results || 0);
+    const enrollment = Number(evidence.registered_enrollment || 0);
+    const regulatory = Number(evidence.regulatory_total ?? events.filter((event) => event.record_type === 'regulatory').length);
+    const integrity = Number(evidence.integrity_total ?? events.filter((event) => event.record_type === 'integrity').length);
+    const lastUpdate = evidence.last_meaningful_update || events[0]?.occurred_at || evidence.generated_at;
+    const metric = (label, value, href, note) => {
+      const card = link('dossier-snapshot-card', '', href);
+      card.append(el('strong', '', typeof value === 'number' ? numberFormatter.format(value) : value), el('span', '', label), el('small', '', note));
+      return card;
+    };
+    elements.topicDossierSnapshot.replaceChildren(
+      metric('Human evidence', humanTotal, '#dossier-human-evidence', 'View evidence →'),
+      metric('Clinical trials', trialTotal, '#dossier-trials', 'View registrations →'),
+      metric('Recruiting or active', recruiting, `/trials?topic=${encodeURIComponent(topicSlug)}&status=Recruiting`, 'Filter trials →'),
+      metric('Participants listed', enrollment, '#dossier-trials', 'Registry enrollment →'),
+      metric('Official notices', regulatory, '#dossier-regulation', 'Check context →'),
+      metric('Corrections or retractions', integrity, `/integrity?topic=${encodeURIComponent(topicSlug)}`, 'Inspect records →'),
+      metric('Last meaningful update', lastUpdate ? formatTimestamp(lastUpdate) : 'None recorded', '#timelineSection', 'Open timeline →'),
+    );
+
+    elements.topicDossierAnswers.querySelectorAll('.living-dossier-answer').forEach((item) => item.remove());
+    const dynamic = document.createDocumentFragment();
+    const answer = (id, number, title, text, links = []) => {
+      const article = el('article', 'living-dossier-answer'); article.id = id;
+      article.append(el('span', '', number), el('h3', '', title), el('p', '', text));
+      if (links.length) {
+        const actions = el('div', 'dossier-answer-actions');
+        links.forEach(([label, href]) => actions.append(link('section-link', label, href)));
+        article.append(actions);
+      }
+      dynamic.append(article);
+    };
+    const randomized = Number(evidence.randomized_human_total ?? evidence.research_by_stage?.['randomized-human'] ?? 0);
+    const syntheses = Number(evidence.human_synthesis_total ?? evidence.research_by_stage?.['human-synthesis'] ?? 0);
+    const phaseCounts = evidence.trials_by_phase || {};
+    const phaseSummary = Object.entries(phaseCounts).filter(([, count]) => Number(count) > 0).map(([phase, count]) => `${readableStatus(phase)}: ${numberFormatter.format(Number(count))}`).join(' · ');
+    answer('dossier-human-evidence', '04', 'What has been demonstrated in humans?', humanTotal
+      ? `${numberFormatter.format(humanTotal)} indexed human evidence record${humanTotal === 1 ? '' : 's'} currently match this topic, including ${numberFormatter.format(randomized)} randomized human stud${randomized === 1 ? 'y' : 'ies'} and ${numberFormatter.format(syntheses)} evidence syntheses. These counts identify study type; they do not establish a shared positive result.`
+      : 'No indexed human evidence record currently matches this topic. That may reflect a genuine research gap, incomplete source coverage, or terminology that the automated matching did not detect.', [['Open human research', `/research?topic=${encodeURIComponent(topicSlug)}&evidence=human`]]);
+    answer('dossier-preclinical', '05', 'What is limited to animals or cells?', preclinicalTotal
+      ? `${numberFormatter.format(preclinicalTotal)} indexed preclinical record${preclinicalTotal === 1 ? '' : 's'} match this topic. Laboratory and animal findings can explain mechanisms and justify further research, but cannot establish a benefit or safety profile in people.`
+      : 'No record is currently classified as preclinical for this topic. This does not prove that no animal or laboratory work exists; it describes the present indexed and classified collection.', [['Inspect research records', `/research?topic=${encodeURIComponent(topicSlug)}&evidence=preclinical`]]);
+    answer('dossier-trials', '06', 'How mature is the trial evidence?', trialTotal
+      ? `${numberFormatter.format(trialTotal)} registered trial${trialTotal === 1 ? '' : 's'} match this topic${phaseSummary ? `. ${phaseSummary}` : ''}. Registries list ${numberFormatter.format(enrollment)} participants in total; enrollment fields may be planned or actual and must be checked in each source record.`
+      : 'No registered clinical trial currently matches this topic in the index. Absence from this collection is not proof that no study exists.', [['Open all matching trials', `/trials?topic=${encodeURIComponent(topicSlug)}`]]);
+    answer('dossier-results', '07', 'Are results available, or only registrations?', results
+      ? `${numberFormatter.format(results)} matched trial registration${results === 1 ? '' : 's'} currently report posted results. The remaining registrations may describe planned, active, completed, withdrawn, or otherwise updated studies without reusable results.`
+      : trialTotal ? 'The matched trial registrations do not currently expose reusable posted results. A registration describes a study plan or status; it does not demonstrate that an intervention worked.' : 'There are no matched trial registrations from which posted results could be assessed.', [['Inspect trial records', `/trials?topic=${encodeURIComponent(topicSlug)}`]]);
+    answer('dossier-safety', '08', 'What safety concerns have been reported?', regulatory
+      ? `${numberFormatter.format(regulatory)} matched official regulatory notice${regulatory === 1 ? '' : 's'} appear in the topic timeline. Their scope is product-, indication-, date-, and jurisdiction-specific. This automated dossier does not constitute a complete safety assessment.`
+      : 'No matched official regulatory notice is currently indexed. That is not evidence of safety. Safety may be reported in study results, product information, or authorities that are not connected to this topic.', [['Check official notices', `/regulatory?topic=${encodeURIComponent(topicSlug)}`]]);
+    answer('dossier-regulation', '09', 'What do regulators say?', regulatory
+      ? 'Open the matched official notices and verify the named product, indication, jurisdiction, and date. Research activity or trial registration does not itself mean that an intervention is approved for longevity use.'
+      : 'The index has not connected an official notice to this topic. Regulatory status remains product-, use-, and jurisdiction-specific; inclusion in longevity research is not approval.', [['Open regulatory sources', '/resources?type=regulator']]);
+    answer('dossier-disagreement', '10', 'Where does the evidence disagree?', 'The current automated metadata does not reliably encode comparable effect directions, endpoints, populations, and risk-of-bias judgments across every record. The dossier therefore does not manufacture a consensus or disagreement score. Compare the linked human studies and syntheses directly.', [['Compare source records', `/research?topic=${encodeURIComponent(topicSlug)}`]]);
+    const latest = events[0];
+    answer('dossier-changes', '11', 'What changed recently?', latest
+      ? `The latest recorded source-level event was “${latest.title}” on ${formatTimestamp(latest.occurred_at)}. The timeline distinguishes new records, trial changes, official notices, corrections, and retractions without treating every update as a change in the scientific conclusion.`
+      : 'No source-level change has yet been recorded for this topic. Monitoring continues automatically.', [['Open the evidence timeline', '#timelineSection']]);
+    const gaps = [];
+    if (!humanTotal) gaps.push('human evidence');
+    if (!randomized) gaps.push('randomized human studies');
+    if (!syntheses) gaps.push('evidence syntheses');
+    if (!trialTotal) gaps.push('registered trials');
+    else if (!results) gaps.push('posted trial results');
+    if (!regulatory) gaps.push('matched regulatory context');
+    answer('dossier-gaps', '12', 'What important questions remain unanswered?', gaps.length
+      ? `The present index has clear gaps in ${gaps.join(', ')}. Further questions include whether observed effects reproduce across populations, persist over meaningful follow-up, improve health outcomes rather than only biomarkers, and have an acceptable safety profile.`
+      : 'Records exist across the main evidence layers, but important questions remain: reproducibility, effect size, long-term outcomes, population differences, clinically meaningful endpoints, and safety. Record counts alone cannot resolve them.', [['See how records are selected', '/methodology']]);
+    elements.topicDossierAnswers.append(dynamic);
   }
 
   function renderSources(sources, showList) {
@@ -1474,7 +1661,7 @@
         renderSources(data.sources || [], true);
       } else if (view === 'research') {
         const params = new URLSearchParams(location.search);
-        const [data, topicEntries] = await Promise.all([request('research', 100, { q: params.get('search')?.trim() || '', topic: params.get('topic')?.trim() || '' }), catalogueTopicEntries()]);
+        const [data, topicEntries] = await Promise.all([request('research', 100, { q: params.get('search')?.trim() || '', topic: params.get('topic')?.trim() || '', evidence: params.get('evidence')?.trim() || '', access: params.get('access')?.trim() || '' }), catalogueTopicEntries()]);
         researchNextOffset = data.next_offset;
         researchTotal = Number(data.total_matching || data.research?.length || 0);
         renderResearch(data.research || [], topicEntries);
@@ -1483,7 +1670,7 @@
         renderSources(data.sources || [], false);
       } else if (view === 'trials') {
         const params = new URLSearchParams(location.search);
-        const [data, topicEntries] = await Promise.all([request('trials', 100, { q: params.get('search')?.trim() || '', topic: params.get('topic')?.trim() || '' }), catalogueTopicEntries()]);
+        const [data, topicEntries] = await Promise.all([request('trials', 100, { q: params.get('search')?.trim() || '', topic: params.get('topic')?.trim() || '', status: params.get('status')?.trim() || '', phase: params.get('phase')?.trim() || '', country: params.get('country')?.trim() || '' }), catalogueTopicEntries()]);
         trialNextOffset = data.next_offset;
         trialTotal = Number(data.total_matching || data.trials?.length || 0);
         renderTrials(data.trials || [], topicEntries);
@@ -1504,7 +1691,7 @@
         renderSources(dossier.sources || [], false);
         renderStats({ research: dossier.evidence?.research_total, trials: dossier.evidence?.trial_total });
         renderTimeline(dossier.timeline || {});
-        renderTopicEvidence({ evidence: dossier.evidence || {} });
+        renderTopicEvidence(dossier);
       } else if (view === 'regulatory') {
         const [data, directoryResponse] = await Promise.all([
           request('regulatory', 80, { topic: new URLSearchParams(location.search).get('topic')?.trim() || '' }),

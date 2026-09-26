@@ -78,7 +78,8 @@ test('desktop homepage exposes the complete navigation and keeps motion clear of
   assert.match(css, /--orbit-size: clamp\(380px, 31vw, 480px\)/)
   assert.match(html, /<a href="\/topics" class="s1-nav-link">Topics<\/a>/)
   assert.match(html, /<a href="\/changes" class="s1-nav-link">News<\/a>/)
-  assert.match(html, /href="\/universities" class="s1-nav-link">Universities<\/a>[\s\S]*?href="\/research" class="s1-nav-link">Research<\/a>[\s\S]*?href="\/you" class="s1-nav-link">You<\/a>/)
+  assert.match(html, /href="\/universities" class="s1-nav-link">Universities<\/a>[\s\S]*?href="\/research" class="s1-nav-link">Research<\/a>[\s\S]*?href="\/you" class="s1-nav-link s1-nav-you">You<\/a>/)
+  assert.match(css, /\.s1-nav-you[\s\S]*?box-shadow:/)
   for (const href of ['/changes', '/topics', '/trials', '/universities', '/research', '/you', '/regulatory', '/resources', '/briefings', '/methodology']) assert.match(html, new RegExp(`href="${href}"`))
   assert.match(html, /<a href="\/methodology" class="s1-nav-link">About<\/a>/)
   assert.doesNotMatch(html, /href="\/(?:discover|learn)"/)
@@ -132,7 +133,7 @@ test('public page shells provide search, related journeys and mobile navigation'
     assert.match(source, /mobile-dock/)
     assert.match(source, /Continue exploring/)
     assert.match(primaryNav, /<a href="\/topics"[^>]*>Topics<\/a>/)
-    assert.match(primaryNav, /<a href="\/you">You<\/a>/)
+    assert.match(primaryNav, /<a href="\/you"[^>]*>You<\/a>/)
     assert.match(primaryNav, /<a href="\/changes">News<\/a>/)
     assert.match(primaryNav, /<a href="\/methodology">About<\/a>/)
     assert.doesNotMatch(primaryNav, /href="\/(?:discover|learn)"/)
@@ -204,6 +205,32 @@ test('evidence features remain connected while retired learning and dashboard pa
   assert.match(routes, /"source": "\/discover", "destination": "\/you", "permanent": true/)
   assert.match(publicPages, /evidenceLadderHtml/)
   assert.match(publicPages, /trial-country-map/)
+})
+
+test('every topic builds a Living Evidence Dossier and connects to Longevity Watch', async () => {
+  const [build, portal, css, migration, delivery] = await Promise.all([
+    read('build.js'),
+    read('intelligence.js'),
+    read('intelligence.css'),
+    read('supabase/migrations/20260926000100_expand_living_evidence_dossiers.sql'),
+    read('supabase/functions/deliver-briefings/index.ts'),
+  ])
+  assert.match(build, /Living Evidence Dossier/)
+  assert.match(build, /id="topicDossierSnapshot"/)
+  assert.match(build, /data-watch-topic=/)
+  assert.match(build, /filename: 'you\.html'[\s\S]*?Longevity Watch/)
+  assert.match(portal, /il_longevity_watch/)
+  assert.match(portal, /function renderTopicEvidence/)
+  assert.match(portal, /human_evidence_total/)
+  assert.match(portal, /registered_enrollment/)
+  assert.match(portal, /integrity_total/)
+  assert.match(css, /\.dossier-snapshot/)
+  assert.match(css, /\.longevity-watch/)
+  assert.match(migration, /create or replace function public\.get_topic_evidence_snapshot/)
+  assert.match(migration, /'human_evidence_total'/)
+  assert.match(migration, /'last_meaningful_update'/)
+  assert.match(delivery, /topicChanges/)
+  assert.match(delivery, /paid_distribution_allowed/)
 })
 
 test('quality page exposes publication checks but no private traffic analytics or duplicate source directory', async () => {
