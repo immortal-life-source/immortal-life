@@ -20,6 +20,7 @@ test('permanent records, discovery feeds, API, and briefings have clean routes',
     assert.ok(sources.has(route), `missing ${route}`);
   }
   assert.match(read('build.js'), /path\.join\(outputDir, 'sitemap\.xml'\)/);
+  assert.match(read('api/sitemap.js'), /stale-if-error=604800/);
 });
 
 test('weekly public briefings and IndexNow notifications are scheduled', () => {
@@ -53,7 +54,7 @@ test('search-demand utility pages, segmented sitemaps, topic feeds, and datasets
   }
   const build = read('build.js');
   assert.match(build, /sitemapDirectory/);
-  assert.match(build, /sitemaps\/topics\.xml/);
+  assert.match(build, /sitemapPartitions = \['static', 'topics', 'research'/);
   const pages = read('supabase/functions/public-pages/index.ts');
   assert.match(pages, /noindex,follow/);
   assert.match(pages, /selectedTrials\.length >= 3/);

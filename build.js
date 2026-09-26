@@ -344,9 +344,7 @@ const staticRoutes = fs.readdirSync(outputDir)
 const topicRoutes = intelligenceTopics.map((topic) => `/topics/${topic.slug}`);
 fs.writeFileSync(path.join(sitemapDirectory, 'static.xml'), sitemapUrlset(staticRoutes));
 fs.writeFileSync(path.join(sitemapDirectory, 'topics.xml'), sitemapUrlset(topicRoutes));
-for (const name of ['research', 'trials', 'regulatory', 'integrity', 'universities', 'entities', 'briefings']) {
-  fs.writeFileSync(path.join(sitemapDirectory, `${name}.xml`), sitemapUrlset([]));
-}
-fs.writeFileSync(path.join(outputDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <sitemap><loc>${site}/sitemaps/static.xml</loc></sitemap>\n  <sitemap><loc>${site}/sitemaps/topics.xml</loc></sitemap>\n</sitemapindex>\n`);
+const sitemapPartitions = ['static', 'topics', 'research', 'trials', 'regulatory', 'integrity', 'briefings', 'universities', 'entities'];
+fs.writeFileSync(path.join(outputDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapPartitions.map((name) => `  <sitemap><loc>${site}/sitemaps/${name}.xml</loc></sitemap>`).join('\n')}\n</sitemapindex>\n`);
 
 console.log(`Static site written to ${outputDir}`);
