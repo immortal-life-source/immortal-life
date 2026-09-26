@@ -16,7 +16,7 @@ test('research and trial ingestion has resumable all-history streams without a t
   assert.match(sync, /next-cursor/)
   assert.match(sync, /runTimeBudgetMs = requestedSource === 'all' \? RUN_TIME_BUDGET_MS : 10_000/)
   assert.match(sync, /while \(Date\.now\(\) - runStartedAt < runTimeBudgetMs\)/)
-  assert.match(sync, /triggerKind !== 'schedule'/)
+  assert.doesNotMatch(sync, /refresh_intelligence_entities/)
   assert.doesNotMatch(sync, /MAX_JOBS_PER_RUN/)
   assert.match(migration, /sync_mode in \('incremental', 'history'\)/)
   assert.match(migration, /'retractions:history'/)

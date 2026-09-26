@@ -28,6 +28,17 @@ function clean(value: unknown, max = 500): string {
   return String(value ?? '').replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max)
 }
 
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return clean(error.message, 500) || error.name
+  if (error && typeof error === 'object') {
+    const value = error as Record<string, unknown>
+    return clean([value.message, value.details, value.hint, value.code].filter(Boolean).join(' · '), 500)
+      || clean(JSON.stringify(error), 500)
+      || 'unknown_university_sync_error'
+  }
+  return clean(String(error), 500) || 'unknown_university_sync_error'
+}
+
 function openAlexId(value: unknown, prefix = 'I'): string {
   const match = clean(value, 100).match(new RegExp(`(?:^|/)(${prefix}\\d+)$`))
   return match?.[1] ?? ''
@@ -35,7 +46,7 @@ function openAlexId(value: unknown, prefix = 'I'): string {
 
 function slugify(name: unknown, id: string): string {
   const base = clean(name, 180).toLocaleLowerCase('en').normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '').replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 88)
+    .replace(/[\u0300-\u036f]/g, '').replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 88).replace(/-+$/g, '')
   return `${base || 'university'}-${id.toLowerCase()}`
 }
 
@@ -282,9 +293,14 @@ Deno.serve(async (req) => {
       }
       await supabase.from('content_sources').update({ last_success_at: now, last_error: null, consecutive_failures: 0, updated_at: now }).eq('id', SOURCE_ID)
     }
+    if (pagesProcessed > 0) {
+      // A later successful upstream/database pass resolves earlier transient
+      // source errors without changing any cursor or progress state.
+      await supabase.from('university_topic_sync_state').update({ last_error: null }).not('last_error', 'is', null).lt('updated_at', startedAt)
+    }
     return jsonResponse(req, { ok: true, pages_processed: pagesProcessed, records_processed: recordsProcessed, completed_topics: completedTopics, runtime_ms: Date.now() - runStartedAt, method_version: METHOD_VERSION })
   } catch (error) {
-    const message = error instanceof Error ? error.message.slice(0, 500) : 'university_index_sync_failed'
+    const message = errorMessage(error)
     if (state) await supabase.from('university_topic_sync_state').update({ last_error: message, updated_at: new Date().toISOString() }).eq('topic_slug', state.topic_slug)
     const source = await supabase.from('content_sources').select('consecutive_failures').eq('id', SOURCE_ID).maybeSingle()
     await supabase.from('content_sources').update({ last_error: message, consecutive_failures: Number(source.data?.consecutive_failures ?? 0) + 1, updated_at: new Date().toISOString() }).eq('id', SOURCE_ID)

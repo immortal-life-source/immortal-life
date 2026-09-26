@@ -23,13 +23,13 @@
   <link rel="icon" href="/favicon.ico" type="image/x-icon" />
   <link rel="stylesheet" href="/intelligence.css?v=20260926-watch-dossier" />
 </head>
-<body data-view="{{PAGE_VIEW}}" data-topic="{{TOPIC_SLUG}}">
+<body data-view="{{PAGE_VIEW}}" data-topic="{{TOPIC_SLUG}}" style="{{BODY_STYLE}}">
   <header class="intel-header">
     <a class="intel-logo" href="/" aria-label="immortal.life home"><img src="/linkedin-app-logo.png?v=20260926-color" width="54" height="54" alt="" decoding="async" /><span>immortal.life</span></a>
     <button class="intel-nav-toggle" id="intelNavToggle" type="button" aria-expanded="false" aria-controls="intelNav">
       <span>Menu</span><i aria-hidden="true"></i>
     </button>
-    <nav class="intel-nav" id="intelNav" aria-label="Primary navigation"><a href="/changes">News</a><a href="/topics" data-nav="topics">Topics</a><a href="/trials" data-nav="trials">Trials</a><a href="/universities" data-nav="universities">Universities</a><a href="/research" data-nav="research">Research</a><a href="/you" data-nav="you">You</a><a href="/regulatory" data-nav="regulatory">Regulatory</a><a href="/resources" data-nav="resources">Resources</a><a href="/briefings">Briefings</a><a href="/methodology">About</a><form class="intel-nav-search" role="search"><input type="search" aria-label="Search longevity topics" placeholder="Search topics…" /><button type="submit">Search</button></form></nav>
+    <nav class="intel-nav" id="intelNav" aria-label="Primary navigation"><div class="intel-nav-top"><a href="/changes">News</a><a href="/topics" data-nav="topics">Topics</a><a href="/trials" data-nav="trials">Trials</a><a href="/universities" data-nav="universities">Universities</a><a href="/research" data-nav="research">Research</a><a href="/you" class="intel-nav-you" data-nav="you">You</a><a href="/regulatory" data-nav="regulatory">Regulatory</a><a href="/resources" data-nav="resources">Resources</a><a href="/briefings">Briefings</a><a href="/methodology">About</a></div><form class="intel-nav-search" role="search"><input type="search" aria-label="Search longevity topics" placeholder="Search topics…" /><button type="submit">Search</button></form></nav>
   </header>
 
   <main>
@@ -48,7 +48,7 @@
       <p class="intel-lede">{{PAGE_DESCRIPTION}}</p>
       <div class="freshness" id="freshness" role="status" aria-live="polite">
         <span class="freshness-dot" aria-hidden="true"></span>
-        <span id="freshnessText">Checking source freshness…</span>
+        <span id="freshnessText">{{FRESHNESS_TEXT}}</span>
       </div>
     </section>
 
@@ -222,12 +222,13 @@
       <div class="source-list" id="sourceList"></div>
     </section>
 
-    <div class="loading-state" id="loadingState" role="status">Loading the latest source records…</div>
+    <div class="loading-state" id="loadingState" role="status">Loading current evidence…</div>
     <div class="error-state" id="errorState" hidden>
       <h2>The intelligence feed is temporarily unavailable.</h2>
       <p>No uncited fallback content has been substituted. Please try again shortly.</p>
       <button type="button" id="retryButton">Retry</button>
     </div>
+    {{TOPIC_END_HTML}}
     <nav class="next-journey" id="relatedJourneys" aria-label="Continue exploring"><span>Continue exploring</span><a href="/changes">What changed today</a><a href="/topics">Choose a topic</a><a href="/trials">Open Trial Radar</a><a href="/universities">Compare universities</a></nav>
   </main>
 
@@ -245,7 +246,7 @@
     </div>
   </footer>
 
-  <nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/topics"><span aria-hidden="true">◇</span>Topics</a><a href="/trials"><span aria-hidden="true">＋</span>Trials</a><a href="/changes"><span aria-hidden="true">↻</span>News</a><button type="button" data-mobile-menu-open><span aria-hidden="true">☰</span>Menu</button></nav>
+  <nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/topics"><span aria-hidden="true">◇</span>Topics</a><a href="/trials"><span aria-hidden="true">＋</span>Trials</a><a href="/changes"><span aria-hidden="true">↻</span>News</a><a class="mobile-dock-you" href="/you"><span aria-hidden="true">✦</span>You</a></nav>
 
   <script src="/il-config.js"></script>
   <script src="/intelligence.js?v=20260926-watch-dossier"></script>

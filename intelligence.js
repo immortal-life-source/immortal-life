@@ -295,6 +295,14 @@
     sourceList: document.getElementById('sourceList'),
     topicDossierSnapshot: document.getElementById('topicDossierSnapshot'),
     topicDossierAnswers: document.getElementById('topicDossierAnswers'),
+    topicUniversitySummary: document.getElementById('topicUniversitySummary'),
+    topicTrialSummary: document.getElementById('topicTrialSummary'),
+    topicResearchSummary: document.getElementById('topicResearchSummary'),
+    topicTrendSummary: document.getElementById('topicTrendSummary'),
+    topicUniversityGrid: document.getElementById('topicUniversityGrid'),
+    topicTrendCallout: document.getElementById('topicTrendCallout'),
+    topicTrendChart: document.getElementById('topicTrendChart'),
+    topicSourceBasisList: document.getElementById('topicSourceBasisList'),
   };
 
   document.querySelector(`[data-nav="${view === 'overview' || view === 'topic' ? 'research' : view}"]`)?.setAttribute('aria-current', 'page');
@@ -1017,7 +1025,7 @@
     if (!elements.timelineSection || !elements.timelineList) return;
     elements.timelineList.replaceChildren();
     const events = Array.isArray(data.events) ? data.events : [];
-    if (!events.length) elements.timelineList.append(el('li', 'timeline-empty', 'No source-level change has been recorded for this topic yet. Monitoring continues automatically.'));
+    if (!events.length) elements.timelineList.append(el('li', 'timeline-empty', 'No source-level change is currently recorded for this topic.'));
     events.slice(0, 20).forEach((event) => {
       const item = el('li', `timeline-event timeline-event--${event.record_type || 'research'}`);
       item.append(el('time', '', formatTimestamp(event.occurred_at)), el('span', 'timeline-kind', readableStatus(event.event_type)));
@@ -1034,9 +1042,87 @@
     }
   }
 
+  function renderTopicReaderOverview(data) {
+    const overview = data?.overview || {};
+    const evidence = data?.evidence || {};
+    const universities = Array.isArray(overview.universities) ? overview.universities : [];
+    const research = Array.isArray(data?.research) ? data.research : [];
+    const trials = Array.isArray(data?.trials) ? data.trials : [];
+    const years = Array.isArray(overview.research_by_year) ? overview.research_by_year : [];
+    const researchTotal = Number(evidence.research_total || 0);
+    const trialTotal = Number(evidence.trial_total || 0);
+    const recruiting = Number(evidence.recruiting_trials || 0);
+    const humanTotal = Number(evidence.human_evidence_total || 0);
+    const trendLabels = { growing: 'Growing', steady: 'Broadly steady', slowing: 'Slower recently', limited: 'Too little data' };
+    const trendDirection = String(overview.trend_direction || 'limited');
+    const trendLabel = trendLabels[trendDirection] || 'Too little data';
+
+    if (elements.topicUniversitySummary) elements.topicUniversitySummary.textContent = universities.length
+      ? `${numberFormatter.format(universities.length)} leading institutions shown; open the full topic ranking.`
+      : 'No topic-specific university activity is available yet.';
+    if (elements.topicTrialSummary) elements.topicTrialSummary.textContent = `${numberFormatter.format(trialTotal)} registered · ${numberFormatter.format(recruiting)} recruiting or active.`;
+    if (elements.topicResearchSummary) elements.topicResearchSummary.textContent = `${numberFormatter.format(researchTotal)} records · ${numberFormatter.format(humanTotal)} classified as human evidence.`;
+    if (elements.topicTrendSummary) elements.topicTrendSummary.textContent = `${trendLabel} across the latest complete three-year period.`;
+
+    if (elements.topicUniversityGrid) {
+      elements.topicUniversityGrid.replaceChildren();
+      if (!universities.length) elements.topicUniversityGrid.append(el('p', 'empty-list', 'No university work is currently linked to this topic. Browse the global university index for adjacent fields.'));
+      universities.forEach((university, index) => {
+        const card = link('topic-university-card', '', `/universities/${encodeURIComponent(university.slug)}?topic=${encodeURIComponent(topicSlug)}`);
+        const location = [university.city, university.country_name || university.country_code].filter(Boolean).join(', ') || 'Location unavailable';
+        card.append(
+          el('span', 'topic-university-rank', String(index + 1).padStart(2, '0')),
+          el('h3', '', university.name),
+          el('p', '', location),
+          el('strong', '', numberFormatter.format(Number(university.works_all_time || 0))),
+          el('small', '', 'indexed topic work links'),
+        );
+        elements.topicUniversityGrid.append(card);
+      });
+    }
+
+    if (elements.topicTrendCallout) {
+      const recent = Number(overview.trend_recent_total || 0);
+      const prior = Number(overview.trend_prior_total || 0);
+      const change = prior ? Math.round(((recent - prior) / prior) * 100) : recent ? 100 : 0;
+      const explanation = trendDirection === 'growing' ? `The latest three complete years contain ${numberFormatter.format(recent)} indexed records, ${prior ? `${Math.abs(change)}% more than` : 'up from'} the preceding three years.`
+        : trendDirection === 'slowing' ? `The latest three complete years contain ${numberFormatter.format(recent)} indexed records, ${Math.abs(change)}% fewer than the preceding three years.`
+        : trendDirection === 'steady' ? `The latest three complete years contain ${numberFormatter.format(recent)} indexed records, close to ${numberFormatter.format(prior)} in the preceding period.`
+        : 'There are not yet enough dated records to infer a meaningful publication trend.';
+      elements.topicTrendCallout.replaceChildren(el('span', `topic-trend-status topic-trend-status--${trendDirection}`, trendLabel), el('strong', '', explanation), el('p', '', 'Publication activity measures indexed output, not whether findings are positive or clinically useful. The current year may be incomplete.'));
+    }
+    if (elements.topicTrendChart) {
+      elements.topicTrendChart.replaceChildren();
+      const maximum = Math.max(1, ...years.map((item) => Number(item.count || 0)));
+      years.forEach((item) => {
+        const bar = link('topic-trend-bar', '', `/research?topic=${encodeURIComponent(topicSlug)}`);
+        bar.style.setProperty('--bar', `${Math.max(4, Math.round((Number(item.count || 0) / maximum) * 100))}%`);
+        bar.setAttribute('aria-label', `${numberFormatter.format(Number(item.count || 0))} indexed research records published in ${item.year}; open topic research`);
+        bar.append(el('strong', '', numberFormatter.format(Number(item.count || 0))), el('i', ''), el('span', '', String(item.year)));
+        elements.topicTrendChart.append(bar);
+      });
+    }
+
+    if (elements.topicSourceBasisList) {
+      elements.topicSourceBasisList.replaceChildren();
+      const examples = [
+        ...research.slice(0, 2).map((record) => ({ title: record.title, url: record.source_url, type: record.content_sources?.name || 'Research source' })),
+        ...trials.slice(0, 1).map((record) => ({ title: record.title, url: record.source_url, type: record.content_sources?.name || 'Official trial registry' })),
+      ].filter((item) => item.title && item.url);
+      if (!examples.length) elements.topicSourceBasisList.append(el('li', '', 'No source-linked example is currently available.'));
+      examples.forEach((item) => {
+        const entry = el('li');
+        const source = link('', item.title, item.url); source.target = '_blank'; source.rel = 'noopener noreferrer';
+        entry.append(source, el('small', '', String(item.type)));
+        elements.topicSourceBasisList.append(entry);
+      });
+    }
+  }
+
   function renderTopicEvidence(data) {
     const evidence = data?.evidence || {};
     if (!elements.topicDossierSnapshot || !elements.topicDossierAnswers) return;
+    renderTopicReaderOverview(data);
     const events = Array.isArray(data?.timeline?.events) ? data.timeline.events : [];
     const research = Array.isArray(data?.research) ? data.research : [];
     const trials = Array.isArray(data?.trials) ? data.trials : [];
@@ -1055,12 +1141,11 @@
       return card;
     };
     elements.topicDossierSnapshot.replaceChildren(
-      metric('Human evidence', humanTotal, '#dossier-human-evidence', 'View evidence →'),
-      metric('Clinical trials', trialTotal, '#dossier-trials', 'View registrations →'),
+      metric('Research records', Number(evidence.research_total || 0), '#researchSection', 'Open research →'),
+      metric('Human evidence', humanTotal, '#dossier-human-evidence', 'Read context →'),
+      metric('Clinical trials', trialTotal, '#trialsSection', 'Open trials →'),
       metric('Recruiting or active', recruiting, `/trials?topic=${encodeURIComponent(topicSlug)}&status=Recruiting`, 'Filter trials →'),
       metric('Participants listed', enrollment, '#dossier-trials', 'Registry enrollment →'),
-      metric('Official notices', regulatory, '#dossier-regulation', 'Check context →'),
-      metric('Corrections or retractions', integrity, `/integrity?topic=${encodeURIComponent(topicSlug)}`, 'Inspect records →'),
       metric('Last meaningful update', lastUpdate ? formatTimestamp(lastUpdate) : 'None recorded', '#timelineSection', 'Open timeline →'),
     );
 
@@ -1102,7 +1187,7 @@
     const latest = events[0];
     answer('dossier-changes', '11', 'What changed recently?', latest
       ? `The latest recorded source-level event was “${latest.title}” on ${formatTimestamp(latest.occurred_at)}. The timeline distinguishes new records, trial changes, official notices, corrections, and retractions without treating every update as a change in the scientific conclusion.`
-      : 'No source-level change has yet been recorded for this topic. Monitoring continues automatically.', [['Open the evidence timeline', '#timelineSection']]);
+      : 'No source-level change has yet been recorded for this topic.', [['Open the evidence timeline', '#timelineSection']]);
     const gaps = [];
     if (!humanTotal) gaps.push('human evidence');
     if (!randomized) gaps.push('randomized human studies');

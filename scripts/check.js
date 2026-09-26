@@ -46,6 +46,7 @@ const edgeScripts = [
   'supabase/functions/sync-search-console/index.ts',
   'supabase/functions/subscribe-briefing/index.ts',
   'supabase/functions/deliver-briefings/index.ts',
+  'supabase/functions/daily-management-report/index.ts',
   'supabase/functions/record-utility-event/index.ts',
 ];
 

@@ -60,7 +60,9 @@ const SIX_HOURS_MS = 6 * 60 * 60 * 1000
 const RUN_TIME_BUDGET_MS = 15_000
 const PUBMED_PAGE_SIZE = 200
 const EUROPE_PMC_PAGE_SIZE = 1000
-const CLINICAL_TRIALS_PAGE_SIZE = 1000
+// Keep database writes comfortably below the hosted statement timeout while
+// retaining an uncapped, cursor-driven corpus traversal.
+const CLINICAL_TRIALS_PAGE_SIZE = 200
 const ISRCTN_PAGE_SIZE = 1000
 const DOAJ_PAGE_SIZE = 100
 const HISTORY_START = '1800-01-01'
@@ -130,6 +132,17 @@ async function fetchJson(url: URL): Promise<any> {
   } finally {
     clearTimeout(timeout)
   }
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return cleanText(error.message, 500) || error.name
+  if (error && typeof error === 'object') {
+    const value = error as Record<string, unknown>
+    return cleanText([value.message, value.details, value.hint, value.code].filter(Boolean).join(' · '), 500)
+      || cleanText(JSON.stringify(error), 500)
+      || 'unknown_ingestion_error'
+  }
+  return cleanText(String(error), 500) || 'unknown_ingestion_error'
 }
 
 async function fetchText(url: URL): Promise<string> {
@@ -263,15 +276,15 @@ const TOPIC_KEYWORDS: Record<string, RegExp> = {
   'regenerative-medicine': /\b(regenerative medicine|tissue engineering|organoid|biomaterial)\b/i,
 }
 
-async function allResearchDois(supabase: any): Promise<any[]> {
+async function researchItemsForDois(supabase: any, dois: string[]): Promise<any[]> {
   const rows: any[] = []
-  const pageSize = 1000
-  for (let offset = 0; ; offset += pageSize) {
-    const result = await supabase.from('research_items').select('id,doi,title,publication_state').not('doi', 'is', null).order('id').range(offset, offset + pageSize - 1)
+  const candidates = [...new Set(dois.flatMap((doi) => [doi, doi.toLowerCase()]).filter(Boolean))]
+  for (let offset = 0; offset < candidates.length; offset += 150) {
+    const result = await supabase.from('research_items').select('id,doi,title,publication_state').in('doi', candidates.slice(offset, offset + 150))
     if (result.error) throw result.error
     rows.push(...(result.data ?? []))
-    if ((result.data ?? []).length < pageSize) return rows
   }
+  return rows
 }
 
 async function syncCrossref(supabase: any, job: Job): Promise<SyncOutcome> {
@@ -285,7 +298,9 @@ async function syncCrossref(supabase: any, job: Job): Promise<SyncOutcome> {
   url.searchParams.set('cursor', typeof job.cursor_state?.cursor === 'string' && job.cursor_state.cursor ? String(job.cursor_state.cursor) : '*')
   const payload = await fetchJson(url)
   const notices = Array.isArray(payload?.message?.items) ? payload.message.items : []
-  const localItems = await allResearchDois(supabase)
+  const relatedDois = notices.flatMap((notice: any) => Array.isArray(notice?.['update-to']) ? notice['update-to'] : [])
+    .map((relation: any) => cleanText(relation?.DOI, 240)).filter(Boolean)
+  const localItems = await researchItemsForDois(supabase, relatedDois)
   const localByDoi = new Map(localItems.map((item: any) => [String(item.doi).toLowerCase(), item]))
   const events: any[] = []
   for (const notice of notices) {
@@ -320,7 +335,9 @@ async function syncCrossref(supabase: any, job: Job): Promise<SyncOutcome> {
     const { error } = await supabase.from('research_integrity_events').upsert(events, { onConflict: 'source_id,external_id', defaultToNull: false })
     if (error) throw error
   }
-  await supabase.from('research_items').update({ integrity_checked_at: new Date().toISOString() }).not('doi', 'is', null)
+  // Source-level freshness records the successful global pass. Updating every
+  // DOI-bearing research row after each cursor page caused a full-table write
+  // and statement timeouts without adding record-level information.
   const currentCursor = typeof job.cursor_state?.cursor === 'string' ? String(job.cursor_state.cursor) : '*'
   const cursor = cleanText(payload?.message?.['next-cursor'], 8000)
   const done = notices.length === 0 || !cursor || cursor === currentCursor
@@ -704,7 +721,11 @@ async function syncEuropePmc(supabase: any, topic: Topic, job: Job): Promise<Syn
 
 async function syncDoaj(supabase: any, topic: Topic, job: Job): Promise<SyncOutcome> {
   const page = Math.max(1, Math.trunc(Number(job.cursor_state?.page ?? 1)))
-  const url = new URL(`/api/search/articles/${encodeURIComponent(topic.literature_query)}`, 'https://doaj.org')
+  // DOAJ accepts Boolean expressions but rejects wildcard and other advanced
+  // Lucene operators. The downstream relevance check still applies the full
+  // controlled topic definition, so this only broadens candidate retrieval.
+  const doajQuery = topic.literature_query.replace(/[+*?~^\\]/g, ' ').replace(/\s+/g, ' ').trim()
+  const url = new URL(`/api/search/articles/${encodeURIComponent(doajQuery)}`, 'https://doaj.org')
   url.searchParams.set('page', String(page))
   url.searchParams.set('pageSize', String(DOAJ_PAGE_SIZE))
   url.searchParams.set('sort', 'created_date:desc')
@@ -1129,9 +1150,22 @@ Deno.serve(async (req) => {
         window_start: '1800-01-01T00:00:00.000Z',
         sync_mode: 'history',
       })))
+    // A rolling incremental job always looks back 31–45 days. Keeping several
+    // unresolved time-slot copies for the same topic adds IO without adding
+    // coverage, so retain one resumable job until it succeeds.
+    const { data: openIncrementalJobs, error: openIncrementalError } = await supabase
+      .from('ingestion_jobs')
+      .select('source_id,job_key')
+      .eq('sync_mode', 'incremental')
+      .in('status', ['pending', 'running', 'retry'])
+      .in('source_id', sources.map((source: { id: string }) => source.id))
+    if (openIncrementalError) throw openIncrementalError
+    const openIncrementalKeys = new Set((openIncrementalJobs ?? []).map((job: any) => `${job.source_id}|${job.job_key}`))
+    const freshQueued = queued.filter((job: any) => !openIncrementalKeys.has(`${job.source_id}|${job.job_key}`))
+
     const { error: queueError } = await supabase
       .from('ingestion_jobs')
-      .upsert([...queued, ...historical], { onConflict: 'source_id,job_key,window_start', ignoreDuplicates: true })
+      .upsert([...freshQueued, ...historical], { onConflict: 'source_id,job_key,window_start', ignoreDuplicates: true })
     if (queueError) throw queueError
 
     const abandonedBefore = new Date(Date.now() - 45 * 60 * 1000).toISOString()
@@ -1223,7 +1257,7 @@ Deno.serve(async (req) => {
         processed += 1
         errors += 1
         errorSources.add(job.source_id)
-        const message = cleanText(error instanceof Error ? error.message : String(error), 500)
+        const message = errorMessage(error)
         const isDead = attempt >= 5
         const retryDelayMs = Math.min(6 * 60 * 60 * 1000, 15 * 60 * 1000 * 2 ** Math.max(0, attempt - 1))
         await supabase.from('ingestion_jobs').update({
@@ -1256,13 +1290,8 @@ Deno.serve(async (req) => {
       }).eq('id', sourceId)
     }
 
-    // Full entity rebuilding is intentionally excluded from scheduled ingest.
-    // It has its own low-frequency database job; running it after every short
-    // source slice caused reader-facing queries to compete with maintenance.
-    if (triggerKind !== 'schedule') {
-      const { error: entityRefreshError } = await supabase.rpc('refresh_intelligence_entities')
-      if (entityRefreshError) throw entityRefreshError
-    }
+    // Full entity rebuilding has its own low-frequency database job. It is not
+    // coupled to either scheduled or recovery ingestion slices.
 
     const finalStatus = errors === 0 ? 'succeeded' : errors < processed ? 'partial' : 'failed'
     await supabase.from('ingestion_runs').update({

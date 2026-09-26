@@ -129,6 +129,8 @@ body::after {
   cursor: pointer;
 }
 
+.mobile-dock { display:none; }
+
 .m-member-nav a:hover,
 .m-member-nav button:hover { opacity: .78; }
 
@@ -961,15 +963,20 @@ details.dash-acc summary {
   }
 
   .m-member-nav {
-    grid-column: 1 / -1;
+    position:fixed;
+    top:68px;
+    left:12px;
+    right:12px;
+    z-index:10020;
     display: none;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    width: 100%;
+    width:auto;
     padding: 16px;
     border: 1px solid var(--border-mid);
-    background: rgba(9, 9, 7, .97);
-    box-shadow: 0 26px 70px rgba(0,0,0,.5);
+    border-radius:20px;
+    background: rgba(255,255,255,.985);
+    box-shadow: 0 22px 60px rgba(77,40,60,.18);
   }
 
   .m-member-nav[data-open="true"] {
@@ -986,7 +993,17 @@ details.dash-acc summary {
     border: 1px solid var(--border);
     box-sizing: border-box;
     text-align: left;
+    border-radius:999px;
+    background:#fff;
+    color:#3e343b;
   }
+  .m-member-nav a:nth-child(6) { border-color:rgba(205,158,49,.5);background:#fff5c8;color:#765210;box-shadow:0 0 24px rgba(219,169,47,.28); }
+  body { padding-bottom:calc(66px + env(safe-area-inset-bottom,0px)); }
+  .mobile-dock { position:fixed;display:grid;grid-template-columns:repeat(5,1fr);left:0;right:0;bottom:0;z-index:9000;min-height:66px;padding-bottom:env(safe-area-inset-bottom,0px);border-top:1px solid rgba(77,40,60,.16);background:rgba(255,250,253,.97);backdrop-filter:blur(18px); }
+  .mobile-dock a { min-width:0;min-height:66px;padding:7px 2px 5px;color:#766a72;text-decoration:none;font:400 8px var(--font-sans);letter-spacing:.07em;text-transform:uppercase;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px; }
+  .mobile-dock span { color:#dd477d;font-size:17px;line-height:1; }
+  .mobile-dock .mobile-dock-you { color:#765210;background:linear-gradient(180deg,rgba(255,247,199,.96),rgba(255,237,148,.9));box-shadow:inset 0 0 0 1px rgba(205,158,49,.25),0 0 24px rgba(219,169,47,.34); }
+  .mobile-dock .mobile-dock-you span { color:#c58a1e; }
 
   .dash-page {
     max-width: 100%;

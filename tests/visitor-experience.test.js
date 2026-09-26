@@ -8,7 +8,8 @@ test('homepage is a single-screen search entry with no below-the-fold portal dup
   const [html, js] = await Promise.all([read('index.html'), read('main.js')])
   assert.match(html, /What are you curious about/)
   assert.match(html, /id="homeSearch"/)
-  assert.doesNotMatch(html, /home-live|home-paths|home-explorer|home-global|home-personal|site-footer|mobile-dock/)
+  assert.doesNotMatch(html, /home-live|home-paths|home-explorer|home-global|home-personal|site-footer/)
+  assert.match(html, /mobile-dock-you[^>]*href="\/you"/)
   assert.doesNotMatch(html, /heroDiscoveriesList|Today in longevity|Choose your route/)
   assert.doesNotMatch(html, /You were not meant to expire/)
   assert.match(js, /il_last_visit/)
@@ -156,11 +157,47 @@ test('mobile hamburger navigation is identical on every public shell', async () 
   assert.deepEqual(menuLinks(privacy, 'intelNav'), expected)
   assert.deepEqual(menuLinks(confirmed, 'confirmedMemberNav'), expected)
   assert.deepEqual(menuLinks(unsubscribed, 'unsubscribedMemberNav'), expected)
-  const dock = (source) => source.match(/<nav class="mobile-dock"[\s\S]*?<\/nav>/)?.[0].replace(/\s+/g, ' ')
-  assert.equal(dock(home), undefined)
-  assert.equal(dock(content), dock(intelligence))
-  assert.equal(dock(privacy), dock(intelligence))
+  const dockLinks = (source) => [...(source.match(/<nav class="mobile-dock"[\s\S]*?<\/nav>/)?.[0] || '').matchAll(/<a[^>]+href="([^"]+)"[^>]*>[\s\S]*?([^<>]+)<\/a>/g)].map((match) => `${match[1]}:${match[2].trim()}`)
+  const expectedDock = dockLinks(intelligence)
+  assert.deepEqual(dockLinks(home), expectedDock)
+  assert.deepEqual(dockLinks(content), expectedDock)
+  assert.deepEqual(dockLinks(privacy), expectedDock)
+  for (const source of [home, intelligence, content, privacy]) {
+    const dock = source.match(/<nav class="mobile-dock"[\s\S]*?<\/nav>/)?.[0] || ''
+    assert.match(dock, /mobile-dock-you[^>]*href="\/you"/)
+    assert.doesNotMatch(dock, /<button/)
+  }
   assert.doesNotMatch(home, /Project News|href="\/dashboard"|href="\/join"/)
+})
+
+test('all topic pages share a reader-first living dossier structure', async () => {
+  const [build, portal, api, css, migration] = await Promise.all([
+    read('build.js'), read('intelligence.js'), read('supabase/functions/public-intelligence/index.ts'), read('intelligence.css'), read('supabase/migrations/20260926000300_reader_first_topic_dossiers.sql'),
+  ])
+  for (const id of ['topicUniversities', 'topicUniversityGrid', 'topicTrend', 'topicTrendChart', 'topicSourceBasisList', 'topicEvidenceContext', 'topicEndGuide']) assert.match(build, new RegExp(`id="${id}"`))
+  assert.match(build, /Reliable source basis/)
+  assert.match(build, /research-activity guide, not a ranking of teaching quality/)
+  assert.match(portal, /renderTopicReaderOverview/)
+  assert.match(portal, /trend_recent_total/)
+  assert.match(api, /get_topic_reader_overview/)
+  assert.match(migration, /research_by_year/)
+  assert.match(migration, /leading_universities/)
+  assert.match(css, /READER-FIRST TOPIC DOSSIERS/)
+  assert.match(css, /body\[data-view="topic"\] \.intel-hero/)
+})
+
+test('private daily management report covers traffic, new knowledge and operational health', async () => {
+  const [report, migration, config] = await Promise.all([
+    read('supabase/functions/daily-management-report/index.ts'), read('supabase/migrations/20260926000400_daily_management_report.sql'), read('supabase/config.toml'),
+  ])
+  assert.match(report, /hello@immortal\.life/)
+  assert.match(report, /Google Search Console/)
+  assert.match(report, /Knowledge added in the last 24 hours/)
+  assert.match(report, /Website health/)
+  assert.match(report, /RESEND_API_KEY/)
+  assert.match(migration, /0 17,18 \* \* \*/)
+  assert.match(migration, /daily_management_reports/)
+  assert.match(config, /\[functions\.daily-management-report\]/)
 })
 
 test('detail-level controls and their duplicate copy are removed', async () => {

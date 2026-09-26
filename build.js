@@ -112,12 +112,18 @@ function pageSchema(page) {
   }).replace(/</g, '\\u003c');
 }
 
-function intelligencePage(values, topicDossierHtml = '') {
-  const resolved = { SOCIAL_IMAGE_URL: `${site}/og-image.png`, ...values };
+function intelligencePage(values, topicDossierHtml = '', topicEndHtml = '') {
+  const resolved = { SOCIAL_IMAGE_URL: `${site}/og-image.png`, BODY_STYLE: '', FRESHNESS_TEXT: 'Checking source freshness…', ...values };
   return renderTemplate(intelligenceTemplate, resolved, {
     SCHEMA_JSON: pageSchema(resolved),
     TOPIC_DOSSIER_HTML: topicDossierHtml,
+    TOPIC_END_HTML: topicEndHtml,
   });
+}
+
+function topicVisualStyle(slug) {
+  const hash = [...slug].reduce((value, char) => ((value * 31) + char.charCodeAt(0)) >>> 0, 2166136261);
+  return `--topic-hue:${332 + (hash % 24)};--topic-x:${24 + (hash % 53)}%;--topic-y:${22 + ((hash >>> 7) % 45)}%;--topic-tilt:${-18 + ((hash >>> 13) % 36)}deg`;
 }
 
 fs.rmSync(outputDir, { recursive: true, force: true });
@@ -261,15 +267,16 @@ const topicOutputDir = path.join(outputDir, 'topics');
 fs.mkdirSync(topicOutputDir, { recursive: true });
 for (const topic of intelligenceTopics) {
   const dossier = `<section class="intel-section living-dossier" id="topicLivingDossier" aria-labelledby="topic-question" data-topic-name="${htmlEscape(topic.name)}">
-    <div class="living-dossier-heading"><div><a class="topic-domain-badge" href="/topics?domain=${encodeURIComponent(topic.domain.slug)}">${htmlEscape(topic.domain.name)}</a><span class="section-index">Living Evidence Dossier</span><h2 id="topic-question">${htmlEscape(topic.question)}</h2><p>${htmlEscape(topic.description)}</p></div><div class="topic-follow-actions"><button class="section-link save-topic-button" type="button" data-watch-topic="${topic.slug}" data-watch-name="${htmlEscape(topic.name)}" aria-pressed="false">Follow in Longevity Watch</button><a class="section-link" href="/feeds/topics/${topic.slug}.xml">RSS feed</a></div></div>
-    <div class="dossier-snapshot" id="topicDossierSnapshot" aria-live="polite"><p class="dossier-loading">Building the current evidence snapshot…</p></div>
-    <div class="living-dossier-answers" id="topicDossierAnswers">
-      <article id="dossier-definition"><span>01</span><h3>What is this topic?</h3><p>${htmlEscape(topic.state)}</p></article>
-      <article id="dossier-uncertainty"><span>02</span><h3>What is still uncertain?</h3><p>${htmlEscape(topic.limits)}</p></article>
-      <article id="dossier-regulatory-context"><span>03</span><h3>Regulatory context</h3><p>${htmlEscape(topic.regulatory)}</p></article>
-    </div>
-    <aside class="automation-notice living-dossier-notice"><strong>A maintained evidence map—not a systematic review</strong><p>This dossier updates from source-linked metadata and applies transparent, automated rules. No scientist or clinician reviews each update. Counts describe indexed records, not proof of benefit, safety, or agreement. Open consequential details at the original source.</p><a class="section-link" href="/methodology">See the methodology</a></aside>
+    <div class="living-dossier-heading"><div><a class="topic-domain-badge" href="/topics?domain=${encodeURIComponent(topic.domain.slug)}">${htmlEscape(topic.domain.name)}</a><span class="section-index">Living Evidence Dossier</span><h2 id="topic-question">${htmlEscape(topic.question)}</h2><p>${htmlEscape(topic.state)}</p></div><div class="topic-follow-actions"><button class="section-link save-topic-button" type="button" data-watch-topic="${topic.slug}" data-watch-name="${htmlEscape(topic.name)}" aria-pressed="false">Follow this topic</button><a class="section-link" href="/feeds/topics/${topic.slug}.xml">RSS feed</a></div></div>
+    <nav class="topic-contents" aria-label="On this page"><span>On this page</span><a href="#topicUniversities">Universities</a><a href="#trialsSection">Trials</a><a href="#researchSection">Research</a><a href="#topicTrend">Trend</a><a href="#topicEvidenceContext">Evidence context</a></nav>
+    <div class="dossier-snapshot" id="topicDossierSnapshot" aria-live="polite"><p class="dossier-loading">Loading the evidence overview…</p></div>
+    <section class="topic-reader-overview" aria-labelledby="topicOverviewTitle"><div class="topic-overview-heading"><span class="section-index">Start here</span><h2 id="topicOverviewTitle">Understand the landscape</h2><p>The most useful routes into this topic, with every figure connected to its underlying records.</p></div><div class="topic-overview-grid"><a href="#topicUniversities"><span>01</span><strong>Where it is studied</strong><small id="topicUniversitySummary">Loading leading research universities…</small></a><a href="#trialsSection"><span>02</span><strong>Clinical trials</strong><small id="topicTrialSummary">Loading registered studies…</small></a><a href="#researchSection"><span>03</span><strong>Research</strong><small id="topicResearchSummary">Loading published evidence…</small></a><a href="#topicTrend"><span>04</span><strong>Research trend</strong><small id="topicTrendSummary">Comparing recent publication activity…</small></a></div></section>
+    <section class="topic-universities" id="topicUniversities" aria-labelledby="topicUniversitiesTitle"><div class="section-heading"><div><span class="section-index">Leading research activity</span><h2 id="topicUniversitiesTitle">Universities active in ${htmlEscape(topic.name)}</h2></div><a class="section-link" href="/universities?topic=${encodeURIComponent(topic.slug)}">Explore the complete university view</a></div><p class="topic-section-intro">Ordered by indexed work linked to this topic. This is a research-activity guide, not a ranking of teaching quality or programme suitability.</p><div class="topic-university-grid" id="topicUniversityGrid"><p class="dossier-loading">Loading university activity…</p></div></section>
+    <section class="topic-trend" id="topicTrend" aria-labelledby="topicTrendTitle"><div class="section-heading"><div><span class="section-index">Publication activity</span><h2 id="topicTrendTitle">Is interest in this topic growing?</h2></div><a class="section-link" href="/research?topic=${encodeURIComponent(topic.slug)}">Open all research</a></div><div class="topic-trend-layout"><div class="topic-trend-callout" id="topicTrendCallout"><strong>Loading trend…</strong><p>Comparing complete recent years with the preceding period.</p></div><div class="topic-trend-chart" id="topicTrendChart" role="img" aria-label="Research records by publication year"></div></div></section>
+    <section class="topic-source-basis" id="topicSourceBasis" aria-labelledby="topicSourceBasisTitle"><div><span class="section-index">Reliable source basis</span><h2 id="topicSourceBasisTitle">Where the description and evidence come from</h2><p>The scope summary is checked against source-linked research databases and official trial registrations. Open the examples to read the original record.</p></div><ol id="topicSourceBasisList"><li>Loading source-linked examples…</li></ol></section>
+    <details class="topic-evidence-context" id="topicEvidenceContext"><summary><span><span class="section-index">Evidence context</span><strong>What the records can—and cannot—show</strong></span><small>Open guide</small></summary><div class="living-dossier-answers" id="topicDossierAnswers"><article id="dossier-definition"><span>01</span><h3>What is this topic?</h3><p>${htmlEscape(topic.description)}</p></article><article id="dossier-uncertainty"><span>02</span><h3>What remains uncertain?</h3><p>${htmlEscape(topic.limits)}</p></article><article id="dossier-regulatory-context"><span>03</span><h3>Regulatory context</h3><p>${htmlEscape(topic.regulatory)}</p></article></div></details>
   </section>`;
+  const endGuide = `<aside class="topic-end-guide" id="topicEndGuide"><div><span class="section-index">How to use this dossier</span><h2>Read the evidence, then open the source.</h2></div><p>This is a maintained discovery dossier, not a formal systematic review and not personal medical advice. Counts describe records in the index, not proof of benefit, safety, or scientific agreement. Trial registration is not a result, and university activity is not a teaching-quality ranking.</p><a class="section-link" href="/methodology">Methodology and limitations</a></aside>`;
   fs.writeFileSync(
     path.join(topicOutputDir, `${topic.slug}.html`),
     intelligencePage({
@@ -278,10 +285,12 @@ for (const topic of intelligenceTopics) {
       CANONICAL_URL: `${site}/topics/${topic.slug}`,
       PAGE_VIEW: 'topic',
       TOPIC_SLUG: topic.slug,
+      BODY_STYLE: topicVisualStyle(topic.slug),
+      FRESHNESS_TEXT: 'Current evidence overview',
       PAGE_KICKER: 'Living Evidence Dossier',
       PAGE_HEADING: topic.name,
       SOCIAL_IMAGE_URL: `${site}/social-card/entity/topic-${topic.slug}.png`,
-    }, dossier)
+    }, dossier, endGuide)
   );
 }
 
