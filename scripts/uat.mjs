@@ -11,8 +11,8 @@ const artifacts = join(tmpdir(), 'immortal-life-uat-artifacts');
 mkdirSync(artifacts, { recursive: true });
 
 const defaultRoutes = [
-  '/', '/learn', '/research', '/trials', '/topics', '/topics/rapamycin',
-  '/discover', '/changes', '/discover/recruiting-trials', '/discover/regulatory-status', '/discover/research-integrity', '/reports',
+  '/', '/you', '/research', '/trials', '/topics', '/topics/rapamycin',
+  '/changes', '/discover/recruiting-trials', '/reports',
   '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/methodology',
   '/resources', '/universities', '/entities', '/entities/topic/rapamycin', '/quality', '/automation', '/publication-policy', '/corrections', '/data', '/dashboard', '/join',
   '/privacy', '/confirmed', '/unsubscribed',
@@ -186,7 +186,7 @@ async function runViewport(cdp, profileName, width, height, mobile) {
       ,legacyMapCount: document.querySelectorAll('.resource-map,.university-map').length
       ,qualityPrivateText: /Google impressions|Google visits|Search pages to improve|Weekly briefing delivery/.test(document.body?.innerText || '')
       ,qualitySourceDirectory: (() => { const el=document.getElementById('sourceSection'); return el ? !el.hidden : false; })()
-      ,completePrimaryNav: (() => { const nav=${navLookupExpression}; if (!nav) return false; const expected=['/changes','/topics','/trials','/universities','/research','/discover','/learn','/regulatory','/resources','/briefings','/methodology']; const hrefs=[...nav.querySelectorAll('a')].map(a => a.getAttribute('href')); return expected.every(href => hrefs.includes(href)) && !nav.querySelector('.s1-nav-more-toggle,.intel-nav-more'); })()
+      ,completePrimaryNav: (() => { const nav=${navLookupExpression}; if (!nav) return false; const expected=['/changes','/topics','/trials','/universities','/research','/you','/regulatory','/resources','/briefings','/methodology']; const hrefs=[...nav.querySelectorAll('a')].map(a => a.getAttribute('href')); return expected.every(href => hrefs.includes(href)) && !hrefs.includes('/discover') && !hrefs.includes('/learn') && !nav.querySelector('.s1-nav-more-toggle,.intel-nav-more'); })()
     }))()`);
     const recentEvents = cdp.events.slice(eventStart);
     const exceptions = recentEvents.filter((event) => event.method === 'Runtime.exceptionThrown').map((event) => event.params?.exceptionDetails?.text || 'runtime exception');
@@ -206,7 +206,7 @@ async function runViewport(cdp, profileName, width, height, mobile) {
     if (route === '/' && !mobile && state.menuButtonVisible !== false) failures.push('desktop menu button visible');
     if (route === '/' && !state.homeSearch) failures.push('homepage search is missing');
     if (route === '/' && state.homeExtraSections) failures.push(`homepage still has ${state.homeExtraSections} below-the-fold sections`);
-    if (!mobile && ['/research','/trials','/universities','/discover','/changes','/regulatory'].includes(route) && state.portalIntroBottom > 390) failures.push(`portal introduction ends too low at ${state.portalIntroBottom}px`);
+    if (!mobile && ['/research','/trials','/universities','/you','/changes','/regulatory'].includes(route) && state.portalIntroBottom > 390) failures.push(`portal introduction ends too low at ${state.portalIntroBottom}px`);
     if (route === '/regulatory' && state.regulatoryGuides < 20) failures.push(`regulatory library has only ${state.regulatoryGuides} guides`);
     if (route === '/regulatory' && state.plainCopies < 3) failures.push('regulatory plain-language explanations did not render');
     if ((route === '/dashboard' || route === '/join') && !state.url.endsWith('/topics')) failures.push(`${route} did not redirect to /topics`);

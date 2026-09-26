@@ -2330,11 +2330,17 @@ footer { background: var(--bg); color: var(--white); }
     padding: clamp(34px, 6vh, 54px) 0 clamp(28px, 5vh, 46px);
   }
   .hero-question {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
     font-size: clamp(34px, 10vw, 42px);
     line-height: 1.02;
     letter-spacing: -.05em;
   }
-  .s1-center > .hero-question { width: min(100%, 620px); }
+  .s1-center > .hero-question { width: min(100%, 620px); padding-inline: 2px; }
+  .hero-question-lead,
+  .hero-question-future,
+  .hero-question-accent { grid-column: auto; justify-self: auto; }
   .hero-you::after { height: 2px; }
   .hero-actions { width: min(100%, 600px); margin-bottom: 56px; }
   .home-search,

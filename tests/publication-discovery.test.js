@@ -46,12 +46,16 @@ test('record cards link to indexable first-party detail pages', () => {
   assert.match(script, /`\/integrity\/\$\{encodeURIComponent\(record\.id\)\}`/);
 });
 
-test('search-demand utility pages, segmented sitemaps, topic feeds, and datasets are routed', () => {
+test('task-first utility page, retired route redirects, segmented sitemaps, topic feeds, and datasets are routed', () => {
   const config = JSON.parse(read('vercel.json'));
   const sources = new Set(config.rewrites.map((rewrite) => rewrite.source));
-  for (const route of ['/discover', '/discover/regulatory-status', '/discover/research-integrity', '/reports', '/feeds/topics/:topic.xml', '/datasets/:kind.csv', '/api/subscribe']) {
+  for (const route of ['/reports', '/feeds/topics/:topic.xml', '/datasets/:kind.csv', '/api/subscribe']) {
     assert.ok(sources.has(route), `missing ${route}`);
   }
+  assert.ok(!sources.has('/discover'));
+  const redirects = new Map(config.redirects.map(({ source, destination }) => [source, destination]));
+  assert.equal(redirects.get('/discover'), '/you');
+  assert.equal(redirects.get('/learn'), '/methodology');
   const build = read('build.js');
   assert.match(build, /sitemapDirectory/);
   assert.match(build, /sitemapPartitions = \['static', 'topics', 'research'/);

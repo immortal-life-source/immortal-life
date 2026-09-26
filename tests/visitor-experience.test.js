@@ -77,9 +77,11 @@ test('desktop homepage exposes the complete navigation and keeps motion clear of
   assert.match(css, /width: min\(760px, 52vw\)/)
   assert.match(css, /--orbit-size: clamp\(380px, 31vw, 480px\)/)
   assert.match(html, /<a href="\/topics" class="s1-nav-link">Topics<\/a>/)
-  assert.match(html, /<a href="\/discover" class="s1-nav-link">Explore<\/a>/)
-  assert.match(html, /href="\/universities" class="s1-nav-link">Universities<\/a>[\s\S]*?href="\/research" class="s1-nav-link">Research<\/a>[\s\S]*?href="\/discover" class="s1-nav-link">Explore<\/a>/)
-  for (const href of ['/changes', '/topics', '/trials', '/universities', '/research', '/discover', '/learn', '/regulatory', '/resources', '/briefings', '/methodology']) assert.match(html, new RegExp(`href="${href}"`))
+  assert.match(html, /<a href="\/changes" class="s1-nav-link">News<\/a>/)
+  assert.match(html, /href="\/universities" class="s1-nav-link">Universities<\/a>[\s\S]*?href="\/research" class="s1-nav-link">Research<\/a>[\s\S]*?href="\/you" class="s1-nav-link">You<\/a>/)
+  for (const href of ['/changes', '/topics', '/trials', '/universities', '/research', '/you', '/regulatory', '/resources', '/briefings', '/methodology']) assert.match(html, new RegExp(`href="${href}"`))
+  assert.match(html, /<a href="\/methodology" class="s1-nav-link">About<\/a>/)
+  assert.doesNotMatch(html, /href="\/(?:discover|learn)"/)
   assert.doesNotMatch(html, /Newsreader/)
   assert.match(css, /\.hl \{[\s\S]*?font-family: var\(--font-serif\)/)
   assert.match(css, /font-size: clamp\(50px, 5\.25vw, 81px\)/)
@@ -124,12 +126,16 @@ test('public page shells provide search, related journeys and mobile navigation'
     read('supabase/functions/public-pages/index.ts'),
   ])
   for (const source of files) {
+    const primaryNav = source.match(/<nav class="intel-nav"[\s\S]*?<\/nav>/)?.[0] || source
     assert.match(source, /intel-nav-search/)
     assert.doesNotMatch(source, /intel-nav-more/)
     assert.match(source, /mobile-dock/)
     assert.match(source, /Continue exploring/)
-    assert.match(source, /<a href="\/topics"[^>]*>Topics<\/a>/)
-    assert.match(source, /<a href="\/discover">Explore<\/a>/)
+    assert.match(primaryNav, /<a href="\/topics"[^>]*>Topics<\/a>/)
+    assert.match(primaryNav, /<a href="\/you">You<\/a>/)
+    assert.match(primaryNav, /<a href="\/changes">News<\/a>/)
+    assert.match(primaryNav, /<a href="\/methodology">About<\/a>/)
+    assert.doesNotMatch(primaryNav, /href="\/(?:discover|learn)"/)
   }
   assert.doesNotMatch(files[0], /reader-mode/)
   assert.doesNotMatch(files[2], /reader-mode/)
@@ -180,11 +186,12 @@ test('topic journeys produce a visibly topic-specific university ranking', async
   assert.match(template, /id="universityHeading"/)
 })
 
-test('learning and evidence features remain connected without the retired dashboard', async () => {
+test('evidence features remain connected while retired learning and dashboard pages redirect', async () => {
   const [build, portal, routes, publicPages] = await Promise.all([
     read('build.js'), read('intelligence.js'), read('vercel.json'), read('supabase/functions/public-pages/index.ts'),
   ])
-  assert.match(build, /learning-quiz/)
+  assert.match(build, /filename: 'you\.html'/)
+  assert.match(build, /page\.filename !== 'learn\.html'/)
   assert.match(portal, /evidenceLadder/)
   assert.match(portal, /trialLadder/)
   assert.match(portal, /includes\('PHASE3'\) \? 2/)
@@ -193,6 +200,8 @@ test('learning and evidence features remain connected without the retired dashbo
   assert.doesNotMatch(build, /'dashboard\.html'|'join\.html'/)
   assert.match(routes, /"source": "\/dashboard", "destination": "\/topics"/)
   assert.match(routes, /"source": "\/join", "destination": "\/topics"/)
+  assert.match(routes, /"source": "\/learn", "destination": "\/methodology", "permanent": true/)
+  assert.match(routes, /"source": "\/discover", "destination": "\/you", "permanent": true/)
   assert.match(publicPages, /evidenceLadderHtml/)
   assert.match(publicPages, /trial-country-map/)
 })

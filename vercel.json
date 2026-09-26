@@ -6,6 +6,10 @@
   "installCommand": "",
   "redirects": [
     { "source": "/how-it-works", "destination": "/methodology", "permanent": true },
+    { "source": "/learn", "destination": "/methodology", "permanent": true },
+    { "source": "/discover", "destination": "/you", "permanent": true },
+    { "source": "/discover/regulatory-status", "destination": "/regulatory", "permanent": true },
+    { "source": "/discover/research-integrity", "destination": "/integrity", "permanent": true },
     { "source": "/interventions/:slug", "destination": "/topics/:slug", "permanent": true },
     { "source": "/discover/recruiting-trials", "destination": "/trials", "permanent": true },
     { "source": "/discover/recruiting-trials/:country", "destination": "/trials", "permanent": true },
@@ -61,20 +65,6 @@
     },
     {
       "source": "/briefings/:path*",
-      "headers": [
-        { "key": "Content-Type", "value": "text/html; charset=utf-8" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://nifbuyoghesveotugday.supabase.co; frame-ancestors 'none';" }
-      ]
-    },
-    {
-      "source": "/discover/:path*",
-      "headers": [
-        { "key": "Content-Type", "value": "text/html; charset=utf-8" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://nifbuyoghesveotugday.supabase.co; frame-ancestors 'none';" }
-      ]
-    },
-    {
-      "source": "/discover",
       "headers": [
         { "key": "Content-Type", "value": "text/html; charset=utf-8" },
         { "key": "Content-Security-Policy", "value": "default-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://nifbuyoghesveotugday.supabase.co; frame-ancestors 'none';" }
@@ -166,9 +156,6 @@
     { "source": "/changes", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=changes" },
     { "source": "/changes/feed.xml", "destination": "/api/feed?format=rss" },
     { "source": "/changes/feed.json", "destination": "/api/feed?format=json" },
-    { "source": "/discover", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=discover&view=index" },
-    { "source": "/discover/regulatory-status", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=discover&view=regulatory-status" },
-    { "source": "/discover/research-integrity", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=discover&view=research-integrity" },
     { "source": "/reports", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=reports" },
     { "source": "/api/subscribe", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/subscribe-briefing" },
     { "source": "/entities/:kind/:slug", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=entity&kind=:kind&slug=:slug" },
