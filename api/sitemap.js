@@ -19,7 +19,7 @@ module.exports = async function sitemapProxy(request, response) {
   // Sitemaps traverse thousands of retained records. They refresh behind the CDN,
   // so a slower crawler-only origin budget preserves completeness without
   // affecting visitor-facing page latency.
-  const timeout = setTimeout(() => controller.abort(), 8000);
+  const timeout = setTimeout(() => controller.abort(), 20_000);
   try {
     const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
     const result = await fetch(upstream, {
@@ -29,8 +29,8 @@ module.exports = async function sitemapProxy(request, response) {
     if (!result.ok) throw new Error(`sitemap_${result.status}`);
     const body = await result.text();
     response.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    response.setHeader('Cache-Control', 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400, stale-if-error=604800');
-    response.setHeader('CDN-Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400, stale-if-error=604800');
+    response.setHeader('Cache-Control', 'public, max-age=300, s-maxage=21600, stale-while-revalidate=86400, stale-if-error=604800');
+    response.setHeader('CDN-Cache-Control', 'public, s-maxage=21600, stale-while-revalidate=86400, stale-if-error=604800');
     return response.status(200).send(body);
   } catch (_) {
     response.setHeader('Content-Type', 'application/xml; charset=utf-8');
