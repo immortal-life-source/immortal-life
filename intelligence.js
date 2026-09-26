@@ -1402,7 +1402,7 @@
   }
 
   const publicCacheName = 'immortal-life-public-intelligence-v1';
-  const publicCacheMaxAgeMs = 24 * 60 * 60 * 1000;
+  const publicCacheMaxAgeMs = 15 * 60 * 1000;
 
   async function readCachedRequest(url) {
     if (!('caches' in window)) return null;
