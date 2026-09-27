@@ -296,6 +296,11 @@
     sourceList: document.getElementById('sourceList'),
     topicDossierSnapshot: document.getElementById('topicDossierSnapshot'),
     topicDossierAnswers: document.getElementById('topicDossierAnswers'),
+    topicInterpretationVersion: document.getElementById('topicInterpretationVersion'),
+    topicInterpretationDate: document.getElementById('topicInterpretationDate'),
+    topicMaterialChange: document.getElementById('topicMaterialChange'),
+    topicClaimLedger: document.getElementById('topicClaimLedger'),
+    topicInterpretationMethod: document.getElementById('topicInterpretationMethod'),
     topicUniversitySummary: document.getElementById('topicUniversitySummary'),
     topicTrialSummary: document.getElementById('topicTrialSummary'),
     topicResearchSummary: document.getElementById('topicResearchSummary'),
@@ -1159,6 +1164,7 @@
     const evidence = data?.evidence || {};
     if (!elements.topicDossierSnapshot || !elements.topicDossierAnswers) return;
     renderTopicReaderOverview(data);
+    renderTopicPilot(data?.pilot);
     const events = Array.isArray(data?.timeline?.events) ? data.timeline.events : [];
     const research = Array.isArray(data?.research) ? data.research : [];
     const trials = Array.isArray(data?.trials) ? data.trials : [];
@@ -1235,6 +1241,52 @@
       ? `The present index has clear gaps in ${gaps.join(', ')}. Further questions include whether observed effects reproduce across populations, persist over meaningful follow-up, improve health outcomes rather than only biomarkers, and have an acceptable safety profile.`
       : 'Records exist across the main evidence layers, but important questions remain: reproducibility, effect size, long-term outcomes, population differences, clinically meaningful endpoints, and safety. Record counts alone cannot resolve them.', [['See how records are selected', '/methodology']]);
     elements.topicDossierAnswers.append(dynamic);
+  }
+
+  function renderTopicPilot(pilot) {
+    if (!elements.topicClaimLedger) return;
+    const version = pilot?.version || {};
+    const conclusions = Array.isArray(version.conclusions) ? version.conclusions : [];
+    const pending = Array.isArray(pilot?.pending_changes) ? pilot.pending_changes : [];
+    if (!pilot?.enabled || !conclusions.length) {
+      elements.topicClaimLedger.replaceChildren(el('p', 'dossier-loading', 'The cautious interpretation is temporarily unavailable. The source-linked records below remain accessible.'));
+      return;
+    }
+    if (elements.topicInterpretationVersion) elements.topicInterpretationVersion.textContent = `Evidence interpretation · version ${Number(version.version_number || 1)}`;
+    if (elements.topicInterpretationDate) elements.topicInterpretationDate.textContent = version.published_at ? `Assessed ${formatTimestamp(version.published_at)}` : '';
+    if (elements.topicInterpretationMethod && pilot.method) elements.topicInterpretationMethod.textContent = pilot.method;
+    if (elements.topicMaterialChange) {
+      elements.topicMaterialChange.hidden = pending.length === 0;
+      elements.topicMaterialChange.replaceChildren();
+      if (pending.length) {
+        elements.topicMaterialChange.append(
+          el('strong', '', pending.some((change) => change.materiality === 'critical') ? 'Important new evidence detected' : 'New material evidence detected'),
+          el('p', '', 'The live records and counts have updated. The interpretation below remains the last published version while the new evidence is assessed, so a single incoming record cannot silently reverse the conclusion.'),
+        );
+        const list = el('ul');
+        pending.slice(0, 3).forEach((change) => {
+          const item = el('li');
+          const href = change.record_type && change.record_id ? `/${encodeURIComponent(change.record_type)}/${encodeURIComponent(change.record_id)}` : change.source_url;
+          item.append(href ? link('', change.title || 'Open material evidence', href) : el('span', '', change.title || 'Material evidence event'), el('small', '', change.reason || 'This event may affect the evidence boundary.'));
+          list.append(item);
+        });
+        elements.topicMaterialChange.append(list);
+      }
+    }
+    elements.topicClaimLedger.replaceChildren();
+    conclusions.forEach((claim) => {
+      const card = el('article', 'topic-claim-card');
+      const heading = el('div', 'topic-claim-heading');
+      heading.append(el('span', '', claim.label || 'Evidence statement'), el('strong', '', claim.state || 'Current boundary'));
+      const assessment = el('p', 'topic-claim-assessment', claim.assessment || 'No interpretation is available.');
+      const boundary = el('dl', 'topic-claim-boundary');
+      const basis = el('div'); basis.append(el('dt', '', 'Why this is cautious'), el('dd', '', claim.basis || 'Open the underlying records.'));
+      const changes = el('div'); changes.append(el('dt', '', 'What could change it'), el('dd', '', claim.changes_if || 'New higher-quality evidence.'));
+      boundary.append(basis, changes);
+      card.append(heading, assessment, boundary);
+      if (claim.href) card.append(link('section-link', 'Inspect supporting evidence', claim.href));
+      elements.topicClaimLedger.append(card);
+    });
   }
 
   function renderSources(sources, showList) {
@@ -1722,7 +1774,7 @@
   // Cache Storage survives ordinary reloads. Bump this contract whenever a
   // repaired public aggregation would otherwise remain hidden by an older
   // zero-value response in a visitor's browser.
-  const publicCacheName = 'immortal-life-public-intelligence-v3';
+  const publicCacheName = 'immortal-life-public-intelligence-v4';
   const publicCacheMaxAgeMs = 15 * 60 * 1000;
 
   async function readCachedRequest(url) {
@@ -1763,7 +1815,7 @@
 
   async function request(viewName, limit, params = {}) {
     const url = new URL(endpoint, window.location.origin);
-    url.searchParams.set('quality_rules', '20260927-scored-records');
+    url.searchParams.set('quality_rules', '20260927-versioned-dossiers');
     url.searchParams.set('view', viewName);
     url.searchParams.set('limit', String(limit));
     Object.entries(params).forEach(([key, value]) => {

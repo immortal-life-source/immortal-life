@@ -118,7 +118,7 @@ test('research and trials use complete searchable filter systems', async () => {
 test('public data views recover from brief Edge Function saturation', async () => {
   const [portal, proxy, vercel] = await Promise.all([read('intelligence.js'), read('api/intelligence.js'), read('vercel.json')])
   assert.match(portal, /fetchWithDeadline/)
-  assert.match(portal, /immortal-life-public-intelligence-v3/)
+  assert.match(portal, /immortal-life-public-intelligence-v4/)
   assert.match(portal, /const endpoint = '\/api\/intelligence'/)
   assert.match(portal, /new URL\(endpoint, window\.location\.origin\)/)
   assert.match(portal, /timeoutMs = 6500/)
@@ -292,6 +292,25 @@ test('every topic builds a Living Evidence Dossier and connects to Longevity Wat
   assert.match(migration, /'last_meaningful_update'/)
   assert.match(delivery, /topicChanges/)
   assert.match(delivery, /paid_distribution_allowed/)
+})
+
+test('senolytics pilots versioned cautious conclusions without silently rewriting them', async () => {
+  const [build, portal, api, migration] = await Promise.all([
+    read('build.js'),
+    read('intelligence.js'),
+    read('supabase/functions/public-intelligence/index.ts'),
+    read('supabase/migrations/20260927000700_senolytics_living_conclusions_pilot.sql'),
+  ])
+  assert.match(build, /topic\.slug === 'senolytics'/)
+  assert.match(build, /What the evidence supports today/)
+  assert.match(portal, /renderTopicPilot/)
+  assert.match(portal, /cannot silently reverse the conclusion/)
+  assert.match(portal, /20260927-versioned-dossiers/)
+  assert.match(api, /get_topic_dossier_pilot/)
+  assert.match(migration, /topic_dossier_versions/)
+  assert.match(migration, /topic_dossier_change_candidates/)
+  assert.match(migration, /publish_topic_dossier_version/)
+  assert.match(migration, /A general safety conclusion is not supported/)
 })
 
 test('quality page exposes publication checks but no private traffic analytics or duplicate source directory', async () => {
