@@ -122,6 +122,11 @@ async function persistResearchPage(
     p_links: links,
   })
   if (linked.error) throw linked.error
+  const reindexed = await supabase.rpc('reindex_research_source_records', {
+    p_source_id: sourceId,
+    p_external_ids: records.map((record: any) => record.external_id),
+  })
+  if (reindexed.error) throw reindexed.error
 }
 
 async function persistTrialPage(
@@ -152,6 +157,11 @@ async function persistTrialPage(
     p_links: links,
   })
   if (linked.error) throw linked.error
+  const reindexed = await supabase.rpc('reindex_trial_source_records', {
+    p_source_id: sourceId,
+    p_external_ids: records.map((record: any) => record.external_id),
+  })
+  if (reindexed.error) throw reindexed.error
 }
 
 function constantTimeSecretMatch(supplied: string, expected: string): boolean {

@@ -118,7 +118,7 @@ test('research and trials use complete searchable filter systems', async () => {
 test('public data views recover from brief Edge Function saturation', async () => {
   const [portal, proxy, vercel] = await Promise.all([read('intelligence.js'), read('api/intelligence.js'), read('vercel.json')])
   assert.match(portal, /fetchWithDeadline/)
-  assert.match(portal, /immortal-life-public-intelligence-v4/)
+  assert.match(portal, /immortal-life-public-intelligence-v5/)
   assert.match(portal, /const endpoint = '\/api\/intelligence'/)
   assert.match(portal, /new URL\(endpoint, window\.location\.origin\)/)
   assert.match(portal, /timeoutMs = 6500/)
@@ -305,7 +305,7 @@ test('senolytics pilots versioned cautious conclusions without silently rewritin
   assert.match(build, /What the evidence supports today/)
   assert.match(portal, /renderTopicPilot/)
   assert.match(portal, /cannot silently reverse the conclusion/)
-  assert.match(portal, /20260927-versioned-dossiers/)
+  assert.match(portal, /20260927-readiness-gated-dossiers/)
   assert.match(api, /get_topic_dossier_pilot/)
   assert.match(migration, /topic_dossier_versions/)
   assert.match(migration, /topic_dossier_change_candidates/)

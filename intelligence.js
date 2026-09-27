@@ -1774,7 +1774,7 @@
   // Cache Storage survives ordinary reloads. Bump this contract whenever a
   // repaired public aggregation would otherwise remain hidden by an older
   // zero-value response in a visitor's browser.
-  const publicCacheName = 'immortal-life-public-intelligence-v4';
+  const publicCacheName = 'immortal-life-public-intelligence-v5';
   const publicCacheMaxAgeMs = 15 * 60 * 1000;
 
   async function readCachedRequest(url) {
@@ -1815,7 +1815,7 @@
 
   async function request(viewName, limit, params = {}) {
     const url = new URL(endpoint, window.location.origin);
-    url.searchParams.set('quality_rules', '20260927-versioned-dossiers');
+    url.searchParams.set('quality_rules', '20260927-readiness-gated-dossiers');
     url.searchParams.set('view', viewName);
     url.searchParams.set('limit', String(limit));
     Object.entries(params).forEach(([key, value]) => {
