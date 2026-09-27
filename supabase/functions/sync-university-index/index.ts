@@ -8,6 +8,7 @@ const OPENALEX = 'https://api.openalex.org'
 const OPENALEX_MIN_INTERVAL_MS = 450
 const OPENALEX_PAGE_SIZE = 200
 const RUN_TIME_BUDGET_MS = 20_000
+const HISTORY_RUN_TIME_BUDGET_MS = 50_000
 let openAlexGate = Promise.resolve()
 let lastOpenAlexRequestAt = 0
 
@@ -185,14 +186,18 @@ async function processWorksPage(supabase: any, topic: any, state: SyncState): Pr
     doi: clean(work?.doi, 300) || null, source_url: workLink(work), source_name: clean(work?.primary_location?.source?.display_name, 200) || null, updated_at: new Date().toISOString() })).filter((work: any) => work.openalex_work_id && work.title)
   if (workRows.length) {
     let result = await supabase.from('university_research_works').upsert(workRows, { onConflict: 'openalex_work_id', defaultToNull: false }); if (result.error) throw result.error
-    result = await supabase.from('university_research_work_topics').upsert(workRows.map((work: any) => ({ openalex_work_id: work.openalex_work_id, topic_slug: topic.slug })), { onConflict: 'openalex_work_id,topic_slug', ignoreDuplicates: true }); if (result.error) throw result.error
     const knownWorks = new Set(workRows.map((work: any) => work.openalex_work_id))
     const links = works.flatMap((work: any) => {
       const workId = openAlexId(work?.id, 'W'); if (!knownWorks.has(workId)) return []
       const ids = new Set<string>(); for (const authorship of work?.authorships ?? []) for (const institution of authorship?.institutions ?? []) { const id = openAlexId(institution?.id); if (allowed.has(id)) ids.add(id) }
       return [...ids].map((openalex_id) => ({ openalex_work_id: workId, openalex_id }))
     })
-    if (links.length) { const linkResult = await supabase.from('university_research_work_institutions').upsert(links, { onConflict: 'openalex_work_id,openalex_id', ignoreDuplicates: true }); if (linkResult.error) throw linkResult.error }
+    const linked = await supabase.rpc('link_university_ingestion_page', {
+      p_topic_slug: topic.slug,
+      p_work_ids: workRows.map((work: any) => work.openalex_work_id),
+      p_institution_links: links,
+    })
+    if (linked.error) throw linked.error
 
     // OpenAlex expands the public research corpus beyond the biomedical-only
     // sources while reusing the same relevance quarantine and deduplication
@@ -230,24 +235,20 @@ async function processWorksPage(supabase: any, topic: any, state: SyncState): Pr
       }
     }).filter(Boolean)
     if (researchRows.length) {
-      const imported = await supabase.from('research_items').upsert(researchRows, { onConflict: 'source_id,external_id', defaultToNull: false }).select('id,external_id')
+      const imported = await supabase.from('research_items').upsert(researchRows, { onConflict: 'source_id,external_id', defaultToNull: false })
       if (imported.error) throw imported.error
-      const topicLinks = (imported.data ?? []).map((record: any) => {
+      const topicLinks = researchRows.map((record: any) => {
         const assessment = assessments.get(record.external_id)
-        return { research_item_id: record.id, topic_slug: topic.slug, matched_by: 'source-query', relevance_score: assessment?.relevanceScore ?? 0, match_reasons: assessment?.reasons ?? [], matched_fields: assessment?.matchedFields ?? [], is_published: Boolean(assessment?.publish), evaluated_at: now }
+        return { external_id: record.external_id, relevance_score: assessment?.relevanceScore ?? 0, match_reasons: assessment?.reasons ?? [], matched_fields: assessment?.matchedFields ?? [], is_published: Boolean(assessment?.publish), evaluated_at: now }
       })
-      if (topicLinks.length) {
-        const linked = await supabase.from('research_item_topics').upsert(topicLinks, { onConflict: 'research_item_id,topic_slug', defaultToNull: false }); if (linked.error) throw linked.error
-        const quality = await supabase.rpc('refresh_research_quality', { record_ids: topicLinks.map((link: any) => link.research_item_id) }); if (quality.error) throw quality.error
-      }
+      const researchLinked = await supabase.rpc('link_research_ingestion_page', { p_source_id: SOURCE_ID, p_topic_slug: topic.slug, p_links: topicLinks })
+      if (researchLinked.error) throw researchLinked.error
     }
   }
   return { next: nextCursor(payload, state.cursor), count: works.length }
 }
 
 async function prepareState(supabase: any): Promise<SyncState | null> {
-  const topics = await supabase.from('intelligence_topics').select('slug').eq('enabled', true); if (topics.error) throw topics.error
-  if (topics.data?.length) { const seeded = await supabase.from('university_topic_sync_state').upsert(topics.data.map((topic: any) => ({ topic_slug: topic.slug })), { onConflict: 'topic_slug', ignoreDuplicates: true }); if (seeded.error) throw seeded.error }
   let selected = await supabase.from('university_topic_sync_state').select('topic_slug,phase,cursor,pages_processed,records_processed').neq('phase', 'complete').order('updated_at').limit(1).maybeSingle()
   if (selected.error) throw selected.error; if (selected.data) return selected.data as SyncState
   const staleBefore = new Date(Date.now() - 7 * 86400000).toISOString()
@@ -270,17 +271,24 @@ Deno.serve(async (req) => {
   const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', serviceRoleKey(), { auth: { persistSession: false, autoRefreshToken: false } })
   if (!(await authorized(req, supabase))) return jsonResponse(req, { error: 'Unauthorized' }, 401, 'POST')
   const runStartedAt = Date.now()
+  const runTimeBudgetMs = requestBody?.trigger === 'schedule-history' ? HISTORY_RUN_TIME_BUDGET_MS : RUN_TIME_BUDGET_MS
   const startedAt = new Date().toISOString(); await supabase.from('content_sources').update({ last_attempt_at: startedAt, updated_at: startedAt }).eq('id', SOURCE_ID)
   let state: SyncState | null = null
   try {
+    const topics = await supabase.from('intelligence_topics').select('slug,literature_query,matching_terms,requires_ageing_context').eq('enabled', true)
+    if (topics.error) throw topics.error
+    const seeded = await supabase.from('university_topic_sync_state').upsert((topics.data ?? []).map((topic: any) => ({ topic_slug: topic.slug })), { onConflict: 'topic_slug', ignoreDuplicates: true })
+    if (seeded.error) throw seeded.error
+    const topicBySlug = new Map((topics.data ?? []).map((topic: any) => [topic.slug, topic]))
     let pagesProcessed = 0
     let recordsProcessed = 0
     let completedTopics = 0
-    while (Date.now() - runStartedAt < RUN_TIME_BUDGET_MS) {
+    while (Date.now() - runStartedAt < runTimeBudgetMs) {
       state = await prepareState(supabase)
       if (!state) break
-      const topic = await supabase.from('intelligence_topics').select('slug,literature_query,matching_terms,requires_ageing_context').eq('slug', state.topic_slug).eq('enabled', true).single(); if (topic.error) throw topic.error
-      const result = state.phase === 'works' ? await processWorksPage(supabase, topic.data, state) : await processGroupPage(supabase, topic.data, state)
+      const topic = topicBySlug.get(state.topic_slug)
+      if (!topic) throw new Error(`Enabled topic not found: ${state.topic_slug}`)
+      const result = state.phase === 'works' ? await processWorksPage(supabase, topic, state) : await processGroupPage(supabase, topic, state)
       const phases: Record<string, SyncState['phase']> = { all: 'five', five: 'two', two: 'works', works: 'complete' }
       const finished = !result.next; const nextPhase = finished ? phases[state.phase] : state.phase; const now = new Date().toISOString()
       const update = { phase: nextPhase, cursor: finished ? '*' : result.next, pages_processed: state.pages_processed + 1, records_processed: Number(state.records_processed) + result.count, completed_at: nextPhase === 'complete' ? now : null, last_error: null, updated_at: now }
@@ -289,14 +297,14 @@ Deno.serve(async (req) => {
       recordsProcessed += result.count
       if (nextPhase === 'complete') {
         completedTopics += 1
-        const scored = await supabase.rpc('refresh_university_research_scores'); if (scored.error) throw scored.error
       }
-      await supabase.from('content_sources').update({ last_success_at: now, last_error: null, consecutive_failures: 0, updated_at: now }).eq('id', SOURCE_ID)
     }
     if (pagesProcessed > 0) {
       // A later successful upstream/database pass resolves earlier transient
       // source errors without changing any cursor or progress state.
       await supabase.from('university_topic_sync_state').update({ last_error: null }).not('last_error', 'is', null).lt('updated_at', startedAt)
+      const finishedAt = new Date().toISOString()
+      await supabase.from('content_sources').update({ last_success_at: finishedAt, last_error: null, consecutive_failures: 0, updated_at: finishedAt }).eq('id', SOURCE_ID)
     }
     return jsonResponse(req, { ok: true, pages_processed: pagesProcessed, records_processed: recordsProcessed, completed_topics: completedTopics, runtime_ms: Date.now() - runStartedAt, method_version: METHOD_VERSION })
   } catch (error) {

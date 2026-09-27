@@ -57,7 +57,7 @@ test('ISRCTN and DOAJ are explicit, commercially-cleared live feeds', async () =
   assert.match(migration, /CC0 waiver/)
   assert.match(migration, /excludes abstracts, full text and publisher media/)
   assert.doesNotMatch(sync, /source_id: 'doaj'[\s\S]{0,1600}abstract_text: cleanText/)
-  assert.match(sync, /requestedSource !== 'all'\) jobsQuery = jobsQuery\.eq\('source_id', requestedSource\)/)
+  assert.match(sync, /requestedSource !== 'all'\) query = query\.eq\('source_id', requestedSource\)/)
   assert.match(sync, /last_success_at: completedAt/)
   assert.match(workers, /immortal-life-doaj-sync/)
   assert.match(workers, /immortal-life-isrctn-sync/)

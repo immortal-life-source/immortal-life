@@ -92,6 +92,68 @@ type SyncOutcome = {
   totalAvailable?: number | null
 }
 
+type TopicAssessment = ReturnType<typeof assessTopicMatch>
+
+async function persistResearchPage(
+  supabase: any,
+  records: any[],
+  sourceId: string,
+  topic: Topic,
+  assessments: Map<string, TopicAssessment>,
+  evaluatedAt: string,
+): Promise<void> {
+  const imported = await supabase.from('research_items')
+    .upsert(records, { onConflict: 'source_id,external_id', defaultToNull: false })
+  if (imported.error) throw imported.error
+  const links = records.map((record: any) => {
+    const assessment = assessments.get(record.external_id) ?? assessTopic(topic, { title: '', sourceId })
+    return {
+      external_id: record.external_id,
+      relevance_score: assessment.relevanceScore,
+      match_reasons: assessment.reasons,
+      matched_fields: assessment.matchedFields,
+      is_published: assessment.publish,
+      evaluated_at: evaluatedAt,
+    }
+  })
+  const linked = await supabase.rpc('link_research_ingestion_page', {
+    p_source_id: sourceId,
+    p_topic_slug: topic.slug,
+    p_links: links,
+  })
+  if (linked.error) throw linked.error
+}
+
+async function persistTrialPage(
+  supabase: any,
+  records: any[],
+  sourceId: string,
+  topic: Topic,
+  assessments: Map<string, TopicAssessment>,
+  evaluatedAt: string,
+): Promise<void> {
+  const imported = await supabase.from('clinical_trials')
+    .upsert(records, { onConflict: 'source_id,external_id', defaultToNull: false })
+  if (imported.error) throw imported.error
+  const links = records.map((record: any) => {
+    const assessment = assessments.get(record.external_id) ?? assessTopic(topic, { title: '', sourceId })
+    return {
+      external_id: record.external_id,
+      relevance_score: assessment.relevanceScore,
+      match_reasons: assessment.reasons,
+      matched_fields: assessment.matchedFields,
+      is_published: assessment.publish,
+      evaluated_at: evaluatedAt,
+    }
+  })
+  const linked = await supabase.rpc('link_trial_ingestion_page', {
+    p_source_id: sourceId,
+    p_topic_slug: topic.slug,
+    p_links: links,
+  })
+  if (linked.error) throw linked.error
+}
+
 function constantTimeSecretMatch(supplied: string, expected: string): boolean {
   if (!expected || supplied.length !== expected.length) return false
   let mismatch = 0
@@ -564,31 +626,7 @@ async function syncPubMed(supabase: any, topic: Topic, job: Job): Promise<SyncOu
     const done = rangeDone && state.ranges.length === 0
     return { seen: articles.length, written: 0, done, cursorState: done ? {} : { ranges: state.ranges, current: rangeDone ? null : range, offset: rangeDone ? 0 : nextOffset }, totalAvailable: total }
   }
-  const { data, error } = await supabase
-    .from('research_items')
-    .upsert(records, { onConflict: 'source_id,external_id', defaultToNull: false })
-    .select('id,external_id')
-  if (error) throw error
-  const topicLinks = (data ?? []).map((record: { id: number; external_id: string }) => {
-    const assessment = assessments.get(record.external_id) ?? assessTopic(topic, { title: '', sourceId: 'pubmed' })
-    return {
-      research_item_id: record.id,
-      topic_slug: topic.slug,
-      matched_by: 'source-query',
-      relevance_score: assessment.relevanceScore,
-      match_reasons: assessment.reasons,
-      matched_fields: assessment.matchedFields,
-      is_published: assessment.publish,
-      evaluated_at: now,
-    }
-  })
-  if (topicLinks.length) {
-    const { error: linkError } = await supabase.from('research_item_topics')
-      .upsert(topicLinks, { onConflict: 'research_item_id,topic_slug', defaultToNull: false })
-    if (linkError) throw linkError
-    const { error: qualityError } = await supabase.rpc('refresh_research_quality', { record_ids: topicLinks.map((link) => link.research_item_id) })
-    if (qualityError) throw qualityError
-  }
+  await persistResearchPage(supabase, records, 'pubmed', topic, assessments, now)
   const nextOffset = state.offset + ids.length
   const rangeDone = nextOffset >= total
   const done = rangeDone && state.ranges.length === 0
@@ -689,33 +727,7 @@ async function syncEuropePmc(supabase: any, topic: Topic, job: Job): Promise<Syn
   const total = Math.max(0, Math.trunc(Number(payload?.hitCount ?? 0)))
   const done = results.length === 0 || !nextCursor || nextCursor === cursor
   if (!records.length) return { seen: results.length, written: 0, done, cursorState: done ? {} : { cursor: nextCursor }, totalAvailable: total }
-  const { data, error } = await supabase
-    .from('research_items')
-    .upsert(records, { onConflict: 'source_id,external_id', defaultToNull: false })
-    .select('id,external_id')
-  if (error) throw error
-
-  const topicLinks = (data ?? []).map((record: { id: number; external_id: string }) => {
-    const assessment = assessments.get(record.external_id) ?? assessTopic(topic, { title: '', sourceId: 'europe-pmc' })
-    return {
-      research_item_id: record.id,
-      topic_slug: topic.slug,
-      matched_by: 'source-query',
-      relevance_score: assessment.relevanceScore,
-      match_reasons: assessment.reasons,
-      matched_fields: assessment.matchedFields,
-      is_published: assessment.publish,
-      evaluated_at: now,
-    }
-  })
-  if (topicLinks.length) {
-    const { error: linkError } = await supabase
-      .from('research_item_topics')
-      .upsert(topicLinks, { onConflict: 'research_item_id,topic_slug', defaultToNull: false })
-    if (linkError) throw linkError
-    const { error: qualityError } = await supabase.rpc('refresh_research_quality', { record_ids: topicLinks.map((link) => link.research_item_id) })
-    if (qualityError) throw qualityError
-  }
+  await persistResearchPage(supabase, records, 'europe-pmc', topic, assessments, now)
   return { seen: results.length, written: records.length, done, cursorState: done ? {} : { cursor: nextCursor }, totalAvailable: total }
 }
 
@@ -791,30 +803,7 @@ async function syncDoaj(supabase: any, topic: Topic, job: Job): Promise<SyncOutc
   const reachedIncrementalFloor = job.sync_mode === 'incremental' && oldestCreated && oldestCreated < incrementalFloor
   const done = !results.length || page * DOAJ_PAGE_SIZE >= total || Boolean(reachedIncrementalFloor)
   if (!records.length) return { seen: results.length, written: 0, done, cursorState: done ? {} : { page: page + 1 }, totalAvailable: total }
-  const { data, error } = await supabase.from('research_items')
-    .upsert(records, { onConflict: 'source_id,external_id', defaultToNull: false })
-    .select('id,external_id')
-  if (error) throw error
-  const topicLinks = (data ?? []).map((record: { id: number; external_id: string }) => {
-    const assessment = assessments.get(record.external_id) ?? assessTopic(topic, { title: '', sourceId: 'doaj' })
-    return {
-      research_item_id: record.id,
-      topic_slug: topic.slug,
-      matched_by: 'source-query',
-      relevance_score: assessment.relevanceScore,
-      match_reasons: assessment.reasons,
-      matched_fields: assessment.matchedFields,
-      is_published: assessment.publish,
-      evaluated_at: now,
-    }
-  })
-  if (topicLinks.length) {
-    const { error: linkError } = await supabase.from('research_item_topics')
-      .upsert(topicLinks, { onConflict: 'research_item_id,topic_slug', defaultToNull: false })
-    if (linkError) throw linkError
-    const { error: qualityError } = await supabase.rpc('refresh_research_quality', { record_ids: topicLinks.map((link) => link.research_item_id) })
-    if (qualityError) throw qualityError
-  }
+  await persistResearchPage(supabase, records, 'doaj', topic, assessments, now)
   return { seen: results.length, written: records.length, done, cursorState: done ? {} : { page: page + 1 }, totalAvailable: total }
 }
 
@@ -911,20 +900,7 @@ async function syncIsrctn(supabase: any, topic: Topic, job: Job): Promise<SyncOu
   }).filter(Boolean)
   const done = state.ranges.length === 0
   if (!records.length) return { seen: blocks.length, written: 0, done, cursorState: done ? {} : { ranges: state.ranges, current: null }, totalAvailable: total }
-  const { data, error } = await supabase.from('clinical_trials')
-    .upsert(records, { onConflict: 'source_id,external_id', defaultToNull: false })
-    .select('id,external_id')
-  if (error) throw error
-  const topicLinks = (data ?? []).map((record: { id: number; external_id: string }) => {
-    const assessment = assessments.get(record.external_id) ?? assessTopic(topic, { title: '', sourceId: 'isrctn' })
-    return { clinical_trial_id: record.id, topic_slug: topic.slug, matched_by: 'source-query', relevance_score: assessment.relevanceScore, match_reasons: assessment.reasons, matched_fields: assessment.matchedFields, is_published: assessment.publish, evaluated_at: now }
-  })
-  if (topicLinks.length) {
-    const { error: linkError } = await supabase.from('clinical_trial_topics').upsert(topicLinks, { onConflict: 'clinical_trial_id,topic_slug', defaultToNull: false })
-    if (linkError) throw linkError
-    const { error: qualityError } = await supabase.rpc('refresh_trial_quality', { record_ids: topicLinks.map((link) => link.clinical_trial_id) })
-    if (qualityError) throw qualityError
-  }
+  await persistTrialPage(supabase, records, 'isrctn', topic, assessments, now)
   return { seen: blocks.length, written: records.length, done, cursorState: done ? {} : { ranges: state.ranges, current: null }, totalAvailable: total }
 }
 
@@ -1045,33 +1021,7 @@ async function syncClinicalTrials(supabase: any, topic: Topic, job: Job): Promis
   const reachedIncrementalFloor = job.sync_mode === 'incremental' && oldestUpdate && oldestUpdate < incrementalFloor
   const done = !nextPageToken || studies.length === 0 || Boolean(reachedIncrementalFloor)
   if (!records.length) return { seen: studies.length, written: 0, done, cursorState: done ? {} : { pageToken: nextPageToken }, totalAvailable: total }
-  const { data, error } = await supabase
-    .from('clinical_trials')
-    .upsert(records, { onConflict: 'source_id,external_id', defaultToNull: false })
-    .select('id,external_id')
-  if (error) throw error
-
-  const topicLinks = (data ?? []).map((record: { id: number; external_id: string }) => {
-    const assessment = assessments.get(record.external_id) ?? assessTopic(topic, { title: '', sourceId: 'clinicaltrials-gov' })
-    return {
-      clinical_trial_id: record.id,
-      topic_slug: topic.slug,
-      matched_by: 'source-query',
-      relevance_score: assessment.relevanceScore,
-      match_reasons: assessment.reasons,
-      matched_fields: assessment.matchedFields,
-      is_published: assessment.publish,
-      evaluated_at: now,
-    }
-  })
-  if (topicLinks.length) {
-    const { error: linkError } = await supabase
-      .from('clinical_trial_topics')
-      .upsert(topicLinks, { onConflict: 'clinical_trial_id,topic_slug', defaultToNull: false })
-    if (linkError) throw linkError
-    const { error: qualityError } = await supabase.rpc('refresh_trial_quality', { record_ids: topicLinks.map((link) => link.clinical_trial_id) })
-    if (qualityError) throw qualityError
-  }
+  await persistTrialPage(supabase, records, 'clinicaltrials-gov', topic, assessments, now)
   return { seen: studies.length, written: records.length, done, cursorState: done ? {} : { pageToken: nextPageToken }, totalAvailable: total }
 }
 
@@ -1180,22 +1130,34 @@ Deno.serve(async (req) => {
     let written = 0
     let errors = 0
     let processed = 0
+    let historyPagesProcessed = 0
+    let incrementalPagesProcessed = 0
     const errorSources = new Set<string>()
     const successfulSources = new Set<string>()
 
     while (Date.now() - runStartedAt < runTimeBudgetMs) {
-      let jobsQuery = supabase
-        .from('ingestion_jobs')
-        .select('id,source_id,topic_slug,job_key,attempts,sync_mode,cursor_state,pages_processed,items_seen,items_written,window_start')
-        .in('status', ['pending', 'retry'])
-        .lte('available_at', new Date().toISOString())
-        .order('sync_mode', { ascending: false })
-        .order('updated_at')
-        .order('created_at')
-        .limit(1)
-      if (requestedSource !== 'all') jobsQuery = jobsQuery.eq('source_id', requestedSource)
-      const { data: jobs, error: jobsError } = await jobsQuery
-      if (jobsError) throw jobsError
+      // Reserve three of every four page slots for the historical corpus. A
+      // missing preferred mode falls back immediately, so current updates are
+      // never blocked and history can no longer be starved by fresh jobs.
+      const preferredMode: Job['sync_mode'] = processed % 4 === 3 ? 'incremental' : 'history'
+      const selectJob = async (mode: Job['sync_mode']) => {
+        let query = supabase
+          .from('ingestion_jobs')
+          .select('id,source_id,topic_slug,job_key,attempts,sync_mode,cursor_state,pages_processed,items_seen,items_written,window_start')
+          .in('status', ['pending', 'retry'])
+          .eq('sync_mode', mode)
+          .lte('available_at', new Date().toISOString())
+          .order('updated_at')
+          .order('created_at')
+          .limit(1)
+        if (requestedSource !== 'all') query = query.eq('source_id', requestedSource)
+        return await query
+      }
+      let selected = await selectJob(preferredMode)
+      if (selected.error) throw selected.error
+      if (!selected.data?.length) selected = await selectJob(preferredMode === 'history' ? 'incremental' : 'history')
+      if (selected.error) throw selected.error
+      const jobs = selected.data
       if (!jobs?.length) break
       const job = jobs[0] as Job
       const topic = job.topic_slug ? topicBySlug.get(job.topic_slug) : null
@@ -1228,6 +1190,8 @@ Deno.serve(async (req) => {
         seen += outcome.seen
         written += outcome.written
         processed += 1
+        if (job.sync_mode === 'history') historyPagesProcessed += 1
+        else incrementalPagesProcessed += 1
         successfulSources.add(job.source_id)
         const completedAt = new Date().toISOString()
         await supabase.from('ingestion_jobs').update({
@@ -1301,7 +1265,13 @@ Deno.serve(async (req) => {
       items_seen: seen,
       items_written: written,
       errors,
-      details: { requested_source: requestedSource, error_sources: [...errorSources] },
+      details: {
+        requested_source: requestedSource,
+        error_sources: [...errorSources],
+        fairness_policy: 'three_history_pages_per_incremental_page',
+        history_pages_processed: historyPagesProcessed,
+        incremental_pages_processed: incrementalPagesProcessed,
+      },
     }).eq('id', run.id)
 
     return jsonResponse(req, {
@@ -1312,6 +1282,8 @@ Deno.serve(async (req) => {
       items_seen: seen,
       items_written: written,
       errors,
+      history_pages_processed: historyPagesProcessed,
+      incremental_pages_processed: incrementalPagesProcessed,
     }, finalStatus === 'failed' ? 502 : 200, 'POST')
   } catch (error) {
     const message = cleanText(error instanceof Error ? error.message : String(error), 500)
