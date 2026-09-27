@@ -108,9 +108,11 @@ async function universitiesFallback(query, limit) {
     };
   });
   return {
-    generated_at: new Date().toISOString(), total_matching: universities.length, next_offset: null, universities,
-    coverage: { universities: universities.length, countries: 0, continents: 0, indexed_works_five_year: universities.reduce((sum, item) => sum + item.indexed_works_five_year, 0), last_updated_at: new Date().toISOString() },
+    generated_at: new Date().toISOString(), total_matching: null, next_offset: null, universities,
+    coverage: { universities: null, countries: null, continents: null, indexed_topic_links: null, indexed_works_five_year: null, last_updated_at: null },
     topics: [], countries: [], sources: [{ id: 'openalex', name: 'OpenAlex', health: 'healthy', homepage_url: 'https://openalex.org/' }],
+    fallback: true,
+    notice: 'The complete university index is temporarily unavailable. These live OpenAlex results are a temporary sample, not index totals.',
   };
 }
 
@@ -184,7 +186,12 @@ module.exports = async function intelligenceProxy(request, response) {
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 1800);
+  // University coverage combines the ranked page, global facets and topic
+  // directory. A cold Edge Function regularly needs more than 1.8 seconds;
+  // aborting that early cached a 100-row OpenAlex sample as if it were the
+  // complete index. Keep the proxy responsive, but allow the authoritative
+  // aggregate enough time to answer.
+  const timeout = setTimeout(() => controller.abort(), request.query?.view === 'universities' ? 8000 : 3500);
   try {
     const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
     const upstreamResponse = await fetch(upstream, {

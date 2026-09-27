@@ -194,6 +194,18 @@ test('all topic pages share a reader-first living dossier structure', async () =
   assert.match(css, /body\[data-view="topic"\] \.intel-hero/)
 })
 
+test('university fallbacks never present a 100-row sample as complete global coverage', async () => {
+  const [proxy, portal, api] = await Promise.all([
+    read('api/intelligence.js'), read('intelligence.js'), read('supabase/functions/public-intelligence/index.ts'),
+  ])
+  assert.match(proxy, /total_matching: null/)
+  assert.match(proxy, /temporary sample, not index totals/)
+  assert.match(proxy, /view === 'universities' \? 8000 : 3500/)
+  assert.match(api, /country_name\.ilike/)
+  assert.match(portal, /Load 100 more/)
+  assert.match(portal, /complete university index is reconnecting/i)
+})
+
 test('private daily management report covers traffic, new knowledge and operational health', async () => {
   const [report, migration, config] = await Promise.all([
     read('supabase/functions/daily-management-report/index.ts'), read('supabase/migrations/20260926000400_daily_management_report.sql'), read('supabase/config.toml'),
@@ -262,12 +274,14 @@ test('every topic builds a Living Evidence Dossier and connects to Longevity Wat
   ])
   assert.match(build, /Living Evidence Dossier/)
   assert.match(build, /id="topicDossierSnapshot"/)
+  assert.match(build, /id="topicHeroTimelineList"/)
   assert.match(build, /data-watch-topic=/)
   assert.match(build, /filename: 'you\.html'[\s\S]*?Longevity Watch/)
   assert.match(portal, /il_longevity_watch/)
   assert.match(portal, /function renderTopicEvidence/)
   assert.match(portal, /human_evidence_total/)
   assert.match(portal, /registered_enrollment/)
+  assert.match(portal, /topicHeroTimelineList/)
   assert.match(portal, /integrity_total/)
   assert.match(css, /\.dossier-snapshot/)
   assert.match(css, /\.longevity-watch/)

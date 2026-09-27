@@ -202,6 +202,7 @@ Deno.serve(async (req) => {
       const country = cleanText(url.searchParams.get('country') ?? '', 2).toUpperCase()
       const continent = cleanText(url.searchParams.get('continent') ?? '', 40)
       const sort = cleanText(url.searchParams.get('sort') ?? 'index', 20)
+      const search = publicSearchTerm(url.searchParams.get('q'))
       const universityLimit = Math.min(Math.max(parsedLimit || 100, 1), 500)
       const relation = topic
         ? ',university_research_topic_metrics!inner(topic_slug,works_all_time,works_five_year,works_two_year,representative_citations,representative_open_access_count,representative_work_count)'
@@ -213,6 +214,7 @@ Deno.serve(async (req) => {
       if (topic) query = query.eq('university_research_topic_metrics.topic_slug', topic)
       if (/^[A-Z]{2}$/.test(country)) query = query.eq('country_code', country)
       if (continent) query = query.eq('continent', continent)
+      if (search) query = query.or(`name.ilike.%${search}%,city.ilike.%${search}%,country_name.ilike.%${search}%`)
       if (sort === 'activity') query = query.order('indexed_works_five_year', { ascending: false }).order('research_index_score', { ascending: false })
       else if (sort === 'momentum') query = query.order('momentum_score', { ascending: false }).order('indexed_works_two_year', { ascending: false })
       else if (sort === 'breadth') query = query.order('indexed_topic_count', { ascending: false }).order('indexed_works_five_year', { ascending: false })
@@ -242,7 +244,7 @@ Deno.serve(async (req) => {
         offset,
         next_offset: offset + universities.length < Number(count ?? 0) ? offset + universities.length : null,
         coverage: coverage.data ?? {},
-        filters: { topic: topic || null, country: country || null, continent: continent || null, sort },
+        filters: { topic: topic || null, country: country || null, continent: continent || null, search: search || null, sort },
         topics: topicsResult.data ?? [],
         countries: countryDirectory,
         universities,

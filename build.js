@@ -119,6 +119,9 @@ function intelligencePage(values, topicDossierHtml = '', topicEndHtml = '') {
     HERO_ACTION_HTML: resolved.PAGE_VIEW === 'topics'
       ? '<a class="intel-hero-action" href="/resources">Open global sources <span aria-hidden="true">→</span></a>'
       : '',
+    HERO_SUPPLEMENT_HTML: resolved.PAGE_VIEW === 'topic'
+      ? '<aside class="topic-hero-timeline" aria-labelledby="topicHeroTimelineTitle"><div class="topic-hero-timeline-heading"><div><span class="section-index">Latest evidence activity</span><h2 id="topicHeroTimelineTitle">Evidence timeline</h2></div><a href="#timelineSection">Full timeline →</a></div><ol id="topicHeroTimelineList" aria-live="polite"><li class="topic-hero-timeline-loading">Loading recent source-linked changes…</li></ol></aside>'
+      : '',
     TOPIC_DOSSIER_HTML: topicDossierHtml,
     TOPIC_END_HTML: topicEndHtml,
   });

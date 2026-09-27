@@ -258,6 +258,7 @@
     graphTopicList: document.getElementById('graphTopicList'),
     timelineSection: document.getElementById('timelineSection'),
     timelineList: document.getElementById('evidenceTimeline'),
+    topicHeroTimelineList: document.getElementById('topicHeroTimelineList'),
     relatedJourneys: document.getElementById('relatedJourneys'),
     entitiesSection: document.getElementById('entitiesSection'),
     entityGrid: document.getElementById('entityGrid'),
@@ -305,7 +306,7 @@
     topicSourceBasisList: document.getElementById('topicSourceBasisList'),
   };
 
-  document.querySelector(`[data-nav="${view === 'overview' || view === 'topic' ? 'research' : view}"]`)?.setAttribute('aria-current', 'page');
+  document.querySelector(`[data-nav="${view === 'overview' ? 'research' : view === 'topic' ? 'topics' : view}"]`)?.setAttribute('aria-current', 'page');
   if (view === 'you') return;
 
   function setNavigation(open) {
@@ -1031,14 +1032,32 @@
     if (!elements.timelineSection || !elements.timelineList) return;
     elements.timelineList.replaceChildren();
     const events = Array.isArray(data.events) ? data.events : [];
+    const eventHref = (event) => event.source_fallback
+      ? event.source_url
+      : event.record_type && event.record_id
+        ? `/${event.record_type === 'trials' ? 'trials' : event.record_type}/${encodeURIComponent(event.record_id)}`
+        : event.source_url || '/changes';
     if (!events.length) elements.timelineList.append(el('li', 'timeline-empty', 'No source-level change is currently recorded for this topic.'));
     events.slice(0, 20).forEach((event) => {
       const item = el('li', `timeline-event timeline-event--${event.record_type || 'research'}`);
       item.append(el('time', '', formatTimestamp(event.occurred_at)), el('span', 'timeline-kind', readableStatus(event.event_type)));
-      const heading = el('h3'); heading.append(link('', event.title, event.source_fallback ? event.source_url : event.record_type && event.record_id ? `/${event.record_type === 'trials' ? 'trials' : event.record_type}/${encodeURIComponent(event.record_id)}` : event.source_url || '/changes'));
+      const heading = el('h3'); heading.append(link('', event.title, eventHref(event)));
       item.append(heading, el('p', '', event.importance === 'important' ? 'Meaningful source change.' : 'New or updated source record. Open it to inspect the evidence and limitations.'));
       elements.timelineList.append(item);
     });
+    if (elements.topicHeroTimelineList) {
+      elements.topicHeroTimelineList.replaceChildren();
+      if (!events.length) {
+        elements.topicHeroTimelineList.append(el('li', 'topic-hero-timeline-empty', 'No source-level change is recorded yet.'));
+      }
+      events.slice(0, 3).forEach((event) => {
+        const item = el('li', 'topic-hero-timeline-event');
+        const meta = el('div', 'topic-hero-timeline-meta');
+        meta.append(el('time', '', formatTimestamp(event.occurred_at)), el('span', '', readableStatus(event.event_type)));
+        item.append(meta, link('', event.title, eventHref(event)));
+        elements.topicHeroTimelineList.append(item);
+      });
+    }
     elements.timelineSection.hidden = false;
     if (elements.relatedJourneys) {
       elements.relatedJourneys.replaceChildren(el('span', '', 'Related discoveries'));
@@ -1298,8 +1317,10 @@
       ['Five-year work links', coverage?.indexed_works_five_year || 0, 'activity'],
     ].forEach(([label, value, action]) => {
       const card = el('button', 'atlas-stat atlas-stat--action'); card.type = 'button';
-      card.setAttribute('aria-label', `${numberFormatter.format(Number(value))} ${label}. Show what this represents.`);
-      card.append(el('strong', '', numberFormatter.format(Number(value))), el('span', '', label), el('small', '', 'View details →'));
+      const available = value !== null && value !== undefined && Number.isFinite(Number(value));
+      const display = available ? numberFormatter.format(Number(value)) : 'Updating…';
+      card.setAttribute('aria-label', `${display} ${label}. Show what this represents.`);
+      card.append(el('strong', '', display), el('span', '', label), el('small', '', available ? 'View details →' : 'Complete index reconnecting'));
       card.onclick = () => {
         if (action === 'topics') elements.universityTopic.focus();
         else if (action === 'countries') elements.universityCountry.focus();
@@ -1435,6 +1456,7 @@
     elements.universityResult.textContent = 'Updating the university view…';
     const data = await request('universities', 100, {
       offset: append ? universityNextOffset || 0 : 0,
+      q: elements.universitySearch?.value,
       topic: elements.universityTopic?.value,
       country: elements.universityCountry?.value,
       continent: elements.universityContinent?.value,
@@ -1446,14 +1468,19 @@
       universityRows.push(...incoming.filter((university) => !known.has(university.openalex_id)));
     } else universityRows = incoming;
     universityNextOffset = data.next_offset;
-    universityTotal = Number(data.total_matching || universityRows.length);
+    universityTotal = Number.isFinite(Number(data.total_matching)) ? Number(data.total_matching) : universityRows.length;
     elements.universityLoadMore.hidden = universityNextOffset == null;
+    if (!elements.universityLoadMore.hidden) elements.universityLoadMore.textContent = `Load 100 more · ${numberFormatter.format(universityRows.length)} of ${numberFormatter.format(universityTotal)} shown`;
     renderUniversityStats(data.coverage || {});
     if (!universityControlsReady) {
       (data.topics || []).forEach((topic) => elements.universityTopic.append(new Option(topic.name, topic.slug)));
       (data.countries || []).forEach((country) => elements.universityCountry.append(new Option(`${country.name} · ${country.universities}`, country.code)));
       [...new Set((data.countries || []).map((country) => country.continent).filter(Boolean))].sort().forEach((continent) => elements.universityContinent.append(new Option(continent, continent)));
-      elements.universitySearch.addEventListener('input', renderUniversityRows);
+      let universitySearchTimer;
+      elements.universitySearch.addEventListener('input', () => {
+        clearTimeout(universitySearchTimer);
+        universitySearchTimer = setTimeout(() => fetchUniversityIndex(false).catch(showUniversityError), 260);
+      });
       [elements.universityTopic, elements.universityCountry, elements.universityContinent, elements.universitySort].forEach((control) => control.addEventListener('change', () => {
         if (control === elements.universityTopic) {
           const nextUrl = new URL(location.href);
@@ -1478,8 +1505,10 @@
       }
     }
     renderUniversityRows();
-    elements.freshness.dataset.health = data.sources?.[0]?.health || 'pending';
-    elements.freshnessText.textContent = data.coverage?.last_updated_at ? `University index refreshed ${formatTimestamp(data.coverage.last_updated_at)} from OpenAlex affiliation data.` : 'The first automated OpenAlex university refresh is pending.';
+    elements.freshness.dataset.health = data.fallback ? 'stale' : data.sources?.[0]?.health || 'pending';
+    elements.freshnessText.textContent = data.fallback
+      ? 'The complete university index is reconnecting; temporary results are not shown as global totals.'
+      : data.coverage?.last_updated_at ? `University index refreshed ${formatTimestamp(data.coverage.last_updated_at)} from OpenAlex affiliation data.` : 'The first automated OpenAlex university refresh is pending.';
     elements.universitiesSection.hidden = false;
   }
 
