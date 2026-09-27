@@ -118,7 +118,7 @@ test('research and trials use complete searchable filter systems', async () => {
 test('public data views recover from brief Edge Function saturation', async () => {
   const [portal, proxy, vercel] = await Promise.all([read('intelligence.js'), read('api/intelligence.js'), read('vercel.json')])
   assert.match(portal, /fetchWithDeadline/)
-  assert.match(portal, /immortal-life-public-intelligence-v2/)
+  assert.match(portal, /immortal-life-public-intelligence-v3/)
   assert.match(portal, /const endpoint = '\/api\/intelligence'/)
   assert.match(portal, /new URL\(endpoint, window\.location\.origin\)/)
   assert.match(portal, /timeoutMs = 6500/)
@@ -200,7 +200,8 @@ test('university fallbacks never present a 100-row sample as complete global cov
   ])
   assert.match(proxy, /total_matching: null/)
   assert.match(proxy, /temporary sample, not index totals/)
-  assert.match(proxy, /view === 'universities' \? 8000 : 3500/)
+  assert.match(proxy, /view === 'universities' \|\| request\.query\?\.view === 'topic-dossier'/)
+  assert.match(proxy, /slowAggregate \? 9000 : 3500/)
   assert.match(api, /country_name\.ilike/)
   assert.match(api, /count: 'exact'/)
   assert.match(portal, /Load 100 more/)

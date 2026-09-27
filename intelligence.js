@@ -354,10 +354,21 @@
 
   function appendQualityExplanation(container, record, relationName) {
     const details = el('details', 'quality-explanation');
-    const confidence = numberFormatter.format(Number(record.relevance_confidence || 0));
+    const relations = Array.isArray(record?.[relationName]) ? record[relationName].filter((item) => item?.is_published !== false) : [];
+    if (record.source_fallback) {
+      const summary = el('summary', '', 'Why this source result appears · match score unavailable');
+      details.append(
+        summary,
+        el('p', '', 'The verified immortal.life index is temporarily reconnecting, so this item came from a direct source search. It has not received the normal topic-match score and must not be read as a validated index match.'),
+        el('p', 'quality-signal-note', 'Open the source and verify relevance directly. This temporary result is not included in Living Evidence Dossier counts.'),
+      );
+      container.append(details);
+      return;
+    }
+    const relationConfidence = relations.reduce((highest, relation) => Math.max(highest, Number(relation?.relevance_score || 0)), 0);
+    const confidence = numberFormatter.format(Math.max(Number(record.relevance_confidence || 0), relationConfidence));
     const summary = el('summary', '', `Why this record appears here · ${confidence}% topic match`);
     details.append(summary, el('p', '', 'The title, summary, or source keywords matched one or more topics followed by immortal.life. A higher percentage means a stronger topic match; it does not rate safety, effectiveness, or study quality.'));
-    const relations = Array.isArray(record?.[relationName]) ? record[relationName].filter((item) => item?.is_published !== false) : [];
     relations.forEach((relation) => {
       const topic = relation?.intelligence_topics?.name || relation?.topic_slug || 'Tracked topic';
       details.append(el('p', 'quality-reason', `${topic}: ${Number(relation?.relevance_score || 0)}% topic match`));
@@ -1711,7 +1722,7 @@
   // Cache Storage survives ordinary reloads. Bump this contract whenever a
   // repaired public aggregation would otherwise remain hidden by an older
   // zero-value response in a visitor's browser.
-  const publicCacheName = 'immortal-life-public-intelligence-v2';
+  const publicCacheName = 'immortal-life-public-intelligence-v3';
   const publicCacheMaxAgeMs = 15 * 60 * 1000;
 
   async function readCachedRequest(url) {
@@ -1752,7 +1763,7 @@
 
   async function request(viewName, limit, params = {}) {
     const url = new URL(endpoint, window.location.origin);
-    url.searchParams.set('quality_rules', '20260927-university-coverage');
+    url.searchParams.set('quality_rules', '20260927-scored-records');
     url.searchParams.set('view', viewName);
     url.searchParams.set('limit', String(limit));
     Object.entries(params).forEach(([key, value]) => {
@@ -1762,7 +1773,7 @@
     if (topicSlug) url.searchParams.set('topic', topicSlug);
     const cached = await readCachedRequest(url);
     if (cached) return cached;
-    const res = await fetchWithDeadline(url);
+    const res = await fetchWithDeadline(url, viewName === 'topic-dossier' ? 10000 : 6500);
     if (res.ok) {
       const data = await res.json();
       await writeCachedRequest(url, data);
@@ -1809,6 +1820,16 @@
         elements.freshnessText.textContent = `${numberFormatter.format(data.topic_count || data.topics?.length || 0)} topics organized across ${numberFormatter.format(data.domain_count || 0)} domains.`;
       } else if (view === 'topic') {
         const dossier = await request('topic-dossier', 12);
+        if (dossier.fallback) {
+          drawResearch([], 'The verified topic index is temporarily reconnecting. Unscored source-search results are not shown as dossier evidence.');
+          drawTrials([], 'The verified trial index is temporarily reconnecting. Unscored registry-search results are not shown as dossier evidence.');
+          if (elements.topicDossierSnapshot) elements.topicDossierSnapshot.replaceChildren(el('p', 'dossier-loading', 'The verified evidence snapshot is temporarily unavailable. Please try again shortly; no zero counts or unscored records are substituted.'));
+          if (elements.topicUniversitySummary) elements.topicUniversitySummary.textContent = 'Verified university activity is temporarily unavailable.';
+          if (elements.topicTrialSummary) elements.topicTrialSummary.textContent = 'Verified trial counts are temporarily unavailable.';
+          if (elements.topicResearchSummary) elements.topicResearchSummary.textContent = 'Verified research counts are temporarily unavailable.';
+          if (elements.topicTrendSummary) elements.topicTrendSummary.textContent = 'Verified trend data is temporarily unavailable.';
+          return;
+        }
         renderResearch(dossier.research || []);
         renderTrials(dossier.trials || []);
         renderSources(dossier.sources || [], false);

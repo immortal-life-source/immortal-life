@@ -24,6 +24,10 @@ const TOPIC_MECHANISMS: Record<string, string> = {
 function publicRelations(record: any, field: string): any[] {
   return (record?.[field] ?? []).filter((relation: any) => {
     if (relation?.is_published === false) return false
+    // is_published is a denormalized convenience flag. Enforce the actual
+    // public threshold here as defense in depth so a stale or legacy flag can
+    // never expose a zero-scored topic relation.
+    if (Number(relation?.relevance_score ?? 0) < 60) return false
     if (!STRICT_TITLE_CONTEXT_TOPICS.has(relation?.topic_slug)) return true
     const fields = Array.isArray(relation?.matched_fields) ? relation.matched_fields : []
     return fields.includes('title') && fields.includes('title context')

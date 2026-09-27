@@ -50,8 +50,8 @@ async function researchFallback(query, limit) {
     source_url: `https://europepmc.org/article/${encodeURIComponent(item.source || 'MED')}/${encodeURIComponent(item.id || item.pmid || item.doi)}`,
     is_open_access: item.isOpenAccess === 'Y',
     cited_by_count: Number(item.citedByCount || 0),
-    status: 'indexed', relevance_confidence: 0, source_quality_score: 0, freshness_score: 0,
-    research_item_topics: topicSlug ? [{ topic_slug: topicSlug, is_published: true, intelligence_topics: { slug: topicSlug, name: topicName } }] : [], source_fallback: true,
+    status: 'source-search-unscored', relevance_confidence: null, source_quality_score: null, freshness_score: null,
+    research_item_topics: topicSlug ? [{ topic_slug: topicSlug, relevance_score: null, is_published: false, intelligence_topics: { slug: topicSlug, name: topicName } }] : [], source_fallback: true,
   }));
   return { generated_at: new Date().toISOString(), total_matching: Number(data?.hitCount || research.length), next_offset: null, research, sources: [{ id: 'europe-pmc', name: 'Europe PMC', health: 'healthy', homepage_url: 'https://europepmc.org/' }] };
 }
@@ -81,8 +81,8 @@ async function trialsFallback(query, limit) {
       start_date: status.startDateStruct?.date || null, completion_date: status.completionDateStruct?.date || null,
       last_update_date: status.lastUpdatePostDateStruct?.date || null,
       source_url: `https://clinicaltrials.gov/study/${encodeURIComponent(nctId)}`,
-      relevance_confidence: 0, source_quality_score: 0, freshness_score: 0,
-      clinical_trial_topics: topicSlug ? [{ topic_slug: topicSlug, is_published: true, intelligence_topics: { slug: topicSlug, name: topicName } }] : [], source_fallback: true,
+      relevance_confidence: null, source_quality_score: null, freshness_score: null,
+      clinical_trial_topics: topicSlug ? [{ topic_slug: topicSlug, relevance_score: null, is_published: false, intelligence_topics: { slug: topicSlug, name: topicName } }] : [], source_fallback: true,
     };
   }).filter((trial) => trial.external_id && trial.title);
   return { generated_at: new Date().toISOString(), total_matching: Number(data?.totalCount || trials.length), next_offset: null, trials, sources: [{ id: 'clinicaltrials-gov', name: 'ClinicalTrials.gov', health: 'healthy', homepage_url: 'https://clinicaltrials.gov/' }] };
@@ -117,40 +117,17 @@ async function universitiesFallback(query, limit) {
 }
 
 async function topicDossierFallback(query, limit) {
-  const topic = String(query.topic || '').replace(/-/g, ' ').trim() || 'longevity';
-  const scoped = { ...query, q: topic };
-  const [researchResult, trialsResult] = await Promise.allSettled([
-    researchFallback(scoped, limit),
-    trialsFallback(scoped, limit),
-  ]);
-  const researchData = researchResult.status === 'fulfilled' ? researchResult.value : { research: [], sources: [] };
-  const trialData = trialsResult.status === 'fulfilled' ? trialsResult.value : { trials: [], sources: [] };
-  const research = researchData.research || [];
-  const trials = trialData.trials || [];
+  // Living Evidence Dossiers only contain records that passed the normal
+  // publication-quality rules. A direct source search is useful as a recovery
+  // aid on generic search pages, but mixing its unscored results into a dossier
+  // would bypass the 60% topic threshold and manufacture zero-valued metrics.
   return {
     generated_at: new Date().toISOString(),
-    research,
-    trials,
-    sources: [...(researchData.sources || []), ...(trialData.sources || [])],
-    evidence: {
-      research_total: Number(researchData.total_matching || research.length),
-      trial_total: Number(trialData.total_matching || trials.length),
-      recruiting_trials: trials.filter((trial) => /RECRUIT|ACTIVE/i.test(String(trial.overall_status || ''))).length,
-      trials_with_results: 0,
-      source_count: (researchData.sources || []).length + (trialData.sources || []).length,
-      research_by_stage: research.reduce((counts, record) => {
-        const stage = record.evidence_level || 'research-record';
-        counts[stage] = Number(counts[stage] || 0) + 1;
-        return counts;
-      }, {}),
-    },
-    timeline: {
-      events: [
-        ...research.slice(0, 6).map((record) => ({ event_type: 'new research', title: record.title, occurred_at: record.published_on, source_url: record.source_url, source_fallback: true })),
-        ...trials.slice(0, 6).map((record) => ({ event_type: 'registered trial', title: record.title, occurred_at: record.last_update_date || record.start_date, source_url: record.source_url, source_fallback: true })),
-      ].filter((event) => event.title && event.source_url).sort((left, right) => String(right.occurred_at || '').localeCompare(String(left.occurred_at || ''))),
-      related_topics: [],
-    },
+    research: [], trials: [], sources: [], evidence: {}, overview: {},
+    timeline: { events: [], related_topics: [] },
+    fallback: true,
+    unavailable: true,
+    notice: 'The verified topic dossier is temporarily unavailable. Unscored source-search results are not substituted.',
   };
 }
 
@@ -191,7 +168,8 @@ module.exports = async function intelligenceProxy(request, response) {
   // aborting that early cached a 100-row OpenAlex sample as if it were the
   // complete index. Keep the proxy responsive, but allow the authoritative
   // aggregate enough time to answer.
-  const timeout = setTimeout(() => controller.abort(), request.query?.view === 'universities' ? 8000 : 3500);
+  const slowAggregate = request.query?.view === 'universities' || request.query?.view === 'topic-dossier';
+  const timeout = setTimeout(() => controller.abort(), slowAggregate ? 9000 : 3500);
   try {
     const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
     const upstreamResponse = await fetch(upstream, {
@@ -207,16 +185,16 @@ module.exports = async function intelligenceProxy(request, response) {
     }
     const fallback = await sourceFallback(request.query || {});
     if (!fallback) return response.status(upstreamResponse.status).send(body);
-    response.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400, stale-if-error=604800');
-    response.setHeader('CDN-Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400, stale-if-error=604800');
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader('CDN-Cache-Control', 'no-store');
     response.setHeader('X-Immortal-Source', 'official-source-fallback');
     return response.status(200).json(fallback);
   } catch (_) {
     try {
       const fallback = await sourceFallback(request.query || {});
       if (!fallback) throw new Error('no_fallback');
-      response.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400, stale-if-error=604800');
-      response.setHeader('CDN-Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400, stale-if-error=604800');
+      response.setHeader('Cache-Control', 'no-store');
+      response.setHeader('CDN-Cache-Control', 'no-store');
       response.setHeader('X-Immortal-Source', 'official-source-fallback');
       return response.status(200).json(fallback);
     } catch {

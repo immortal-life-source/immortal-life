@@ -104,6 +104,7 @@ const requiredFiles = [
   'supabase/migrations/20260926000200_optimize_living_evidence_dossiers.sql',
   'supabase/migrations/20260927000300_accelerate_history_and_enforce_source_policy.sql',
   'supabase/migrations/20260927000400_quarantine_expired_source_records.sql',
+  'supabase/migrations/20260927000500_enforce_published_topic_scores.sql',
   'supabase/audits/membership-integrity.sql',
   'intelligence-template.html',
   'institutional-pilot.html',
