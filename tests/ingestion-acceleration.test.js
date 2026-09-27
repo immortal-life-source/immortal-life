@@ -35,12 +35,17 @@ test('university history is isolated off peak and expensive score rebuild is dai
 })
 
 test('source reuse is fail-closed, auditable, expiring, and excluded from paid delivery by default', async () => {
-  const migration = await read('supabase/migrations/20260927000300_accelerate_history_and_enforce_source_policy.sql')
+  const [migration, expiry] = await Promise.all([
+    read('supabase/migrations/20260927000300_accelerate_history_and_enforce_source_policy.sql'),
+    read('supabase/migrations/20260927000400_quarantine_expired_source_records.sql'),
+  ])
   assert.match(migration, /source_rights_decisions/)
   assert.match(migration, /validate_source_rights_activation/)
   assert.match(migration, /rights_review_due_at < current_date/)
   assert.match(migration, /expire_unreviewed_source_rights/)
   assert.match(migration, /paid_distribution_allowed = false/)
+  assert.match(expiry, /publication_state = 'quarantined'/)
+  assert.match(expiry, /delete from public\.intelligence_change_events/)
 })
 
 test('72-hour ingestion telemetry is collected privately and included in management reporting', async () => {
