@@ -27,7 +27,7 @@ test('changes-page totals are direct links to their relevant indexes', async () 
   assert.match(css, /\.report-metric:hover/)
 })
 
-test('topic catalogue is compact, searchable, and does not bury research or trials', async () => {
+test('topic catalogue is compact, searchable, visual, and does not bury research or trials', async () => {
   const [template, portal, css, build] = await Promise.all([read('intelligence-template.html'), read('intelligence.js'), read('intelligence.css'), read('build.js')])
   assert.match(template, /id="topicSearch"/)
   assert.match(template, /id="topicDomain"/)
@@ -38,8 +38,12 @@ test('topic catalogue is compact, searchable, and does not bury research or tria
   assert.match(portal, /view === 'trials'[\s\S]*?renderTrials\(data\.trials \|\| \[\], topicEntries\);[\s\S]*?view === 'topics'/)
   assert.doesNotMatch(portal, /view === 'trials'[\s\S]*?renderTopics\(topicsData/)
   assert.match(portal, /allLink\.href = compact \? '\/topics' : '\/resources'/)
-  assert.match(css, /grid-template-columns: repeat\(4, minmax\(0,1fr\)\)/)
-  assert.match(css, /min-height: 158px/)
+  assert.match(build, /Open global sources/)
+  assert.match(template, /HERO_ACTION_HTML/)
+  assert.match(css, /body\[data-view="topics"\] #topicsSection > \.section-heading \{ display:none; \}/)
+  assert.match(css, /\.topic-domain-grid \{[^}]*repeat\(6, minmax\(0, 1fr\)\)/)
+  assert.match(css, /\.topic-domain-grid \.topic-card \{[^}]*min-height:142px/)
+  assert.match(portal, /--card-hue/)
 })
 
 test('Trial Radar has one canonical visitor route', async () => {
@@ -88,6 +92,10 @@ test('desktop homepage exposes the complete navigation and keeps motion clear of
   assert.match(css, /\.hl \{[\s\S]*?font-family: var\(--font-serif\)/)
   assert.match(css, /font-size: clamp\(50px, 5\.25vw, 81px\)/)
   assert.match(css, /\.brand-mark \{[\s\S]*?width: 57px;/)
+  assert.match(css, /\.brand-lockup span \{[\s\S]*?color: #c73572/)
+  assert.match(css, /\.hero-question-accent \{[\s\S]*?color: #c73572/)
+  assert.match(css, /\.home-search button \{[\s\S]*?background: #c73572/)
+  assert.doesNotMatch(css.match(/\.s1-nav-you,[\s\S]*?\n\}/)?.[0] || '', /255, 238, 155|219, 169, 47/)
 })
 
 test('research and trials use complete searchable filter systems', async () => {

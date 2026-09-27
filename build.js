@@ -116,6 +116,9 @@ function intelligencePage(values, topicDossierHtml = '', topicEndHtml = '') {
   const resolved = { SOCIAL_IMAGE_URL: `${site}/og-image.png`, BODY_STYLE: '', FRESHNESS_TEXT: 'Checking source freshness…', ...values };
   return renderTemplate(intelligenceTemplate, resolved, {
     SCHEMA_JSON: pageSchema(resolved),
+    HERO_ACTION_HTML: resolved.PAGE_VIEW === 'topics'
+      ? '<a class="intel-hero-action" href="/resources">Open global sources <span aria-hidden="true">→</span></a>'
+      : '',
     TOPIC_DOSSIER_HTML: topicDossierHtml,
     TOPIC_END_HTML: topicEndHtml,
   });

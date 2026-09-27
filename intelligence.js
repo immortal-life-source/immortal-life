@@ -417,6 +417,12 @@
     }
     const topicCard = (topic, index) => {
       const card = link('topic-card', '', `/topics/${encodeURIComponent(topic.slug)}`);
+      const visualHash = [...String(topic.slug || topic.name)].reduce((value, character) => ((value * 33) ^ character.charCodeAt(0)) >>> 0, 5381);
+      card.style.setProperty('--card-hue', String(326 + (visualHash % 52)));
+      card.style.setProperty('--card-hue-two', String(18 + ((visualHash >>> 5) % 34)));
+      card.style.setProperty('--card-x', `${18 + ((visualHash >>> 10) % 68)}%`);
+      card.style.setProperty('--card-y', `${12 + ((visualHash >>> 17) % 70)}%`);
+      card.style.setProperty('--card-tilt', `${-24 + ((visualHash >>> 23) % 48)}deg`);
       card.append(el('span', 'topic-card-number', String(index + 1).padStart(2, '0')));
       card.append(el('h3', '', topic.name));
       card.append(el('p', '', topic.description));

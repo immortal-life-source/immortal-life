@@ -2028,21 +2028,19 @@ body::after { display: none; }
   background: transparent;
 }
 .brand-lockup {
-  color: #33232d;
+  color: #c73572;
   font-weight: 550;
   font-size: 13px;
   letter-spacing: .01em;
 }
 .brand-lockup span {
-  background: linear-gradient(105deg, #bf3e76 18%, #dc7152 58%, #b88635 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  background: none;
+  color: #c73572;
 }
 .brand-mark {
   width: 52px;
   height: 52px;
-  filter: saturate(1.08) drop-shadow(0 5px 12px rgba(205, 62, 117, .20));
+  filter: brightness(0) saturate(100%) invert(31%) sepia(46%) saturate(3108%) hue-rotate(308deg) brightness(88%) contrast(91%) drop-shadow(0 5px 12px rgba(199, 53, 114, .22));
 }
 .s1-nav { width: 100%; gap: 0; }
 .s1-nav-top {
@@ -2069,17 +2067,17 @@ body::after { display: none; }
 .s1-header .s1-nav .s1-nav-you:visited,
 .s1-header .s1-nav .s1-nav-you:link {
   padding: 10px 16px;
-  border: 1px solid rgba(205, 158, 49, .42);
+  border: 1px solid rgba(199, 53, 114, .38);
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(255, 238, 155, .74), rgba(255, 249, 219, .9));
-  color: #765210 !important;
-  box-shadow: 0 0 0 1px rgba(255, 222, 99, .12), 0 0 26px rgba(219, 169, 47, .32), 0 6px 18px rgba(173, 120, 22, .12);
+  background: rgba(199, 53, 114, .09);
+  color: #a92960 !important;
+  box-shadow: 0 0 0 1px rgba(199, 53, 114, .06), 0 0 26px rgba(199, 53, 114, .24), 0 6px 18px rgba(151, 31, 83, .1);
 }
 .s1-nav-you:hover,
 .s1-nav-you:focus-visible {
-  background: linear-gradient(135deg, rgba(255, 227, 109, .92), #fff8d0);
-  color: #5f3f07 !important;
-  box-shadow: 0 0 0 1px rgba(221, 166, 37, .26), 0 0 34px rgba(219, 169, 47, .44), 0 8px 22px rgba(173, 120, 22, .16);
+  background: rgba(199, 53, 114, .15);
+  color: #941f53 !important;
+  box-shadow: 0 0 0 1px rgba(199, 53, 114, .14), 0 0 34px rgba(199, 53, 114, .34), 0 8px 22px rgba(151, 31, 83, .14);
 }
 .s1-center {
   min-height: calc(100vh - 92px);
@@ -2108,10 +2106,8 @@ body::after { display: none; }
 .hero-question-accent {
   grid-column: 2;
   justify-self: start;
-  background: linear-gradient(105deg, #c73572 8%, #e86d43 58%, #c59a4b 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  background: none;
+  color: #c73572;
 }
 .hero-you {
   position: relative;
@@ -2125,7 +2121,7 @@ body::after { display: none; }
   bottom: -.19em;
   height: 3px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #c73572, #ed8a60, #c59a4b);
+  background: #c73572;
   opacity: .72;
 }
 .hero-question::after {
@@ -2245,7 +2241,7 @@ body::after { display: none; }
   padding: 0 24px;
   border: 0;
   border-radius: 999px;
-  background: linear-gradient(135deg, #d83f78, #e86d43);
+  background: #c73572;
   color: #fff;
   font: 500 11px var(--font-sans);
   letter-spacing: .04em;
@@ -2297,11 +2293,11 @@ footer { background: var(--bg); color: var(--white); }
 .mobile-dock button { color: #766a72 !important; }
 .mobile-dock a[aria-current='page'] { color: var(--gold) !important; background: var(--gold-faint) !important; }
 .mobile-dock .mobile-dock-you {
-  color:#765210 !important;
-  background:linear-gradient(180deg,rgba(255,247,199,.96),rgba(255,237,148,.9)) !important;
-  box-shadow:inset 0 0 0 1px rgba(205,158,49,.25),0 0 24px rgba(219,169,47,.34);
+  color:#a92960 !important;
+  background:rgba(199,53,114,.1) !important;
+  box-shadow:inset 0 0 0 1px rgba(199,53,114,.28),0 0 24px rgba(199,53,114,.3);
 }
-.mobile-dock .mobile-dock-you span { color:#c58a1e !important; }
+.mobile-dock .mobile-dock-you span { color:#c73572 !important; }
 
 @media (max-width: 768px) {
   body { padding-bottom:calc(66px + env(safe-area-inset-bottom,0px)); }
@@ -2345,7 +2341,7 @@ footer { background: var(--bg); color: var(--white); }
   .s1-nav-link:hover,
   .s1-nav-link:focus-visible { background: var(--gold-faint); border-color: var(--gold-mid) !important; }
   .s1-nav-you,
-  .s1-header .s1-nav .s1-nav-you { border-color: rgba(205, 158, 49, .5) !important; background: #fff5c8; box-shadow: 0 0 24px rgba(219, 169, 47, .28); }
+  .s1-header .s1-nav .s1-nav-you { border-color:rgba(199,53,114,.4) !important; background:rgba(199,53,114,.1); color:#a92960 !important; box-shadow:0 0 24px rgba(199,53,114,.28); }
   .home-nav-search { border-color: var(--border); }
   .home-nav-search input { background: #fff; color: #241d23; border-color: var(--border-mid); border-radius: 999px; }
   .home-nav-search button { border: 0; border-radius: 999px; background: var(--gold); color: #fff; }
