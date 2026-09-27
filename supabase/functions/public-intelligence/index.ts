@@ -208,7 +208,7 @@ Deno.serve(async (req) => {
         ? ',university_research_topic_metrics!inner(topic_slug,works_all_time,works_five_year,works_two_year,representative_citations,representative_open_access_count,representative_work_count)'
         : ''
       let query = supabase.from('university_research_institutions')
-        .select(`openalex_id,slug,name,ror_id,country_code,country_name,continent,region,city,latitude,longitude,homepage_url,openalex_url,indexed_works_all_time,indexed_works_five_year,indexed_works_two_year,indexed_topic_count,representative_citations,representative_open_access_share,activity_score,breadth_score,momentum_score,citation_context_score,research_index_score,ranking_method_version,updated_at${relation}`, { count: 'planned' })
+        .select(`openalex_id,slug,name,ror_id,country_code,country_name,continent,region,city,latitude,longitude,homepage_url,openalex_url,indexed_works_all_time,indexed_works_five_year,indexed_works_two_year,indexed_topic_count,representative_citations,representative_open_access_share,activity_score,breadth_score,momentum_score,citation_context_score,research_index_score,ranking_method_version,updated_at${relation}`, { count: 'exact' })
         .eq('is_eligible', true)
         .range(offset, offset + universityLimit - 1)
       if (topic) query = query.eq('university_research_topic_metrics.topic_slug', topic)

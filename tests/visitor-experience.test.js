@@ -202,6 +202,7 @@ test('university fallbacks never present a 100-row sample as complete global cov
   assert.match(proxy, /temporary sample, not index totals/)
   assert.match(proxy, /view === 'universities' \? 8000 : 3500/)
   assert.match(api, /country_name\.ilike/)
+  assert.match(api, /count: 'exact'/)
   assert.match(portal, /Load 100 more/)
   assert.match(portal, /complete university index is reconnecting/i)
 })
