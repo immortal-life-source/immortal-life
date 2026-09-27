@@ -1708,7 +1708,10 @@
     elements.qualitySection.hidden = false;
   }
 
-  const publicCacheName = 'immortal-life-public-intelligence-v1';
+  // Cache Storage survives ordinary reloads. Bump this contract whenever a
+  // repaired public aggregation would otherwise remain hidden by an older
+  // zero-value response in a visitor's browser.
+  const publicCacheName = 'immortal-life-public-intelligence-v2';
   const publicCacheMaxAgeMs = 15 * 60 * 1000;
 
   async function readCachedRequest(url) {
@@ -1749,7 +1752,7 @@
 
   async function request(viewName, limit, params = {}) {
     const url = new URL(endpoint, window.location.origin);
-    url.searchParams.set('quality_rules', '20260916b');
+    url.searchParams.set('quality_rules', '20260927-university-coverage');
     url.searchParams.set('view', viewName);
     url.searchParams.set('limit', String(limit));
     Object.entries(params).forEach(([key, value]) => {

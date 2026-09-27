@@ -79,3 +79,11 @@ test('public interface explains the ranking and provides global comparison contr
   assert.match(script, /universityCompare\.scrollIntoView/)
   assert.doesNotMatch(`${template}\n${script}`, /forum|comments section/i)
 })
+
+test('university page invalidates incomplete cached coverage snapshots', () => {
+  const script = read('intelligence.js')
+  const template = read('intelligence-template.html')
+  assert.match(script, /immortal-life-public-intelligence-v2/)
+  assert.match(script, /20260927-university-coverage/)
+  assert.match(template, /intelligence\.js\?v=20260927-university-coverage/)
+})

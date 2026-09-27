@@ -45,7 +45,7 @@
       ]
     },
     {
-      "source": "/(style.css|main.js|intelligence.css|intelligence.js)",
+      "source": "/(style.css|main.js|intelligence.css|intelligence.js|institutional-pilot.css|institutional-pilot.js)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800" }
       ]
