@@ -104,14 +104,58 @@ function pageSchema(page) {
       })),
     }).replace(/</g, '\\u003c');
   }
+  const canonicalPath = new URL(page.CANONICAL_URL).pathname;
+  const crumbs = canonicalPath === '/'
+    ? [{ name: 'Home', item: site }]
+    : [
+        { name: 'Home', item: site },
+        ...canonicalPath.split('/').filter(Boolean).map((part, index, parts) => ({
+          name: index === parts.length - 1
+            ? String(page.PAGE_HEADING || page.PAGE_TITLE).replace(/\s+—\s+immortal\.life$/, '')
+            : part.replace(/-/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()),
+          item: `${site}/${parts.slice(0, index + 1).join('/')}`,
+        })),
+      ];
   return JSON.stringify({
     '@context': 'https://schema.org',
-    '@type': page.PAGE_VIEW === 'topic' ? 'CollectionPage' : 'WebPage',
-    name: page.PAGE_TITLE,
-    description: page.PAGE_DESCRIPTION,
-    url: page.CANONICAL_URL,
-    publisher: { '@type': 'Organization', name: 'immortal.life', url: site },
-    isAccessibleForFree: true,
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${site}/#organization`,
+        name: 'immortal.life',
+        url: site,
+        logo: { '@type': 'ImageObject', url: `${site}/linkedin-app-logo.png` },
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${site}/#website`,
+        name: 'immortal.life',
+        alternateName: 'Immortal Life',
+        url: site,
+        publisher: { '@id': `${site}/#organization` },
+      },
+      {
+        '@type': page.PAGE_VIEW === 'topic' ? 'CollectionPage' : 'WebPage',
+        '@id': `${page.CANONICAL_URL}#webpage`,
+        name: page.PAGE_TITLE,
+        description: page.PAGE_DESCRIPTION,
+        url: page.CANONICAL_URL,
+        isPartOf: { '@id': `${site}/#website` },
+        publisher: { '@id': `${site}/#organization` },
+        breadcrumb: { '@id': `${page.CANONICAL_URL}#breadcrumb` },
+        isAccessibleForFree: true,
+      },
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${page.CANONICAL_URL}#breadcrumb`,
+        itemListElement: crumbs.map((crumb, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          name: crumb.name,
+          item: crumb.item,
+        })),
+      },
+    ],
   }).replace(/</g, '\\u003c');
 }
 

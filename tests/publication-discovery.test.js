@@ -21,6 +21,9 @@ test('permanent records, discovery feeds, API, and briefings have clean routes',
   }
   assert.match(read('build.js'), /path\.join\(outputDir, 'sitemap\.xml'\)/);
   assert.match(read('api/sitemap.js'), /stale-if-error=604800/);
+  assert.match(read('api/sitemap.js'), /60_000/);
+  assert.match(read('build.js'), /BreadcrumbList/);
+  assert.match(read('supabase\/functions\/public-pages\/index.ts'), /BreadcrumbList/);
 });
 
 test('weekly public briefings and IndexNow notifications are scheduled', () => {
@@ -44,6 +47,15 @@ test('record cards link to indexable first-party detail pages', () => {
   assert.match(script, /`\/trials\/\$\{encodeURIComponent\(record\.id\)\}`/);
   assert.match(script, /`\/regulatory\/\$\{encodeURIComponent\(record\.id\)\}`/);
   assert.match(script, /`\/integrity\/\$\{encodeURIComponent\(record\.id\)\}`/);
+});
+
+test('search metadata identifies the site accurately without mislabelling catalogue records as authored articles', () => {
+  const home = read('index.html');
+  const pages = read('supabase/functions/public-pages/index.ts');
+  assert.match(home, /"@type": "WebSite"/);
+  assert.match(home, /"alternateName": "Immortal Life"/);
+  assert.match(pages, /type: 'WebPage'/);
+  assert.doesNotMatch(pages, /body, type: 'Article'/);
 });
 
 test('task-first utility page, retired route redirects, segmented sitemaps, topic feeds, and datasets are routed', () => {

@@ -55,16 +55,60 @@ function readablePhases(phases: unknown): string {
 }
 
 function pageShell(input: { title: string; description: string; canonical: string; kicker: string; heading: string; body: string; type?: string; date?: string; socialImage?: string; indexable?: boolean; journeys?: Array<{ href: string; label: string }> }): string {
+  const canonicalPath = new URL(input.canonical).pathname
+  const crumbs = canonicalPath === '/'
+    ? [{ name: 'Home', item: SITE }]
+    : [
+        { name: 'Home', item: SITE },
+        ...canonicalPath.split('/').filter(Boolean).map((part, index, parts) => ({
+          name: index === parts.length - 1 ? input.heading : readableLabel(part.replace(/-/g, ' ')),
+          item: `${SITE}/${parts.slice(0, index + 1).join('/')}`,
+        })),
+      ]
+  const pageType = input.type === 'Article' ? 'Article' : 'WebPage'
   const schema = {
     '@context': 'https://schema.org',
-    '@type': input.type === 'Article' ? 'Article' : 'WebPage',
-    headline: input.title,
-    description: input.description,
-    url: input.canonical,
-    datePublished: input.date || undefined,
-    dateModified: input.date || undefined,
-    publisher: { '@type': 'Organization', name: 'immortal.life', url: SITE },
-    isAccessibleForFree: true,
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${SITE}/#organization`,
+        name: 'immortal.life',
+        url: SITE,
+        logo: { '@type': 'ImageObject', url: `${SITE}/linkedin-app-logo.png` },
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${SITE}/#website`,
+        name: 'immortal.life',
+        alternateName: 'Immortal Life',
+        url: SITE,
+        publisher: { '@id': `${SITE}/#organization` },
+      },
+      {
+        '@type': pageType,
+        '@id': `${input.canonical}#webpage`,
+        headline: input.title,
+        name: input.title,
+        description: input.description,
+        url: input.canonical,
+        datePublished: input.date || undefined,
+        dateModified: input.date || undefined,
+        isPartOf: { '@id': `${SITE}/#website` },
+        publisher: { '@id': `${SITE}/#organization` },
+        breadcrumb: { '@id': `${input.canonical}#breadcrumb` },
+        isAccessibleForFree: true,
+      },
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${input.canonical}#breadcrumb`,
+        itemListElement: crumbs.map((crumb, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          name: crumb.name,
+          item: crumb.item,
+        })),
+      },
+    ],
   }
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(input.title)}</title><meta name="description" content="${escapeHtml(input.description)}"><meta name="robots" content="${input.indexable === false ? 'noindex,follow' : 'index,follow,max-image-preview:large'}">
@@ -218,7 +262,10 @@ function renderRecord(kind: string, record: any): string {
   const body = recordBody(rows, record.editorial_summary || record.summary, record.source_url, topics, `/api/intelligence/${kind}/${id}`, exports, guide)
   const firstTopic = topics[0]
   const journeys = firstTopic ? [{ href: `/topics/${firstTopic}`, label: `Open the ${firstTopic.replace(/-/g, ' ')} guide` }, { href: `/topics/${firstTopic}#researchSection`, label: 'See related research' }, { href: `/topics/${firstTopic}#trialsSection`, label: 'See related trials' }, { href: `/universities?topic=${firstTopic}`, label: 'Find university activity' }] : undefined
-  return pageShell({ title: `${title} — immortal.life`, description, canonical, kicker, heading: title, body, type: 'Article', date, socialImage: `${SITE}/social-card/${kind}/${id}.png`, journeys })
+  // These are source-linked catalogue records, not articles authored by
+  // immortal.life. WebPage is intentionally more accurate than claiming
+  // Article rich-result eligibility for registry and metadata pages.
+  return pageShell({ title: `${title} — immortal.life`, description, canonical, kicker, heading: title, body, type: 'WebPage', date, socialImage: `${SITE}/social-card/${kind}/${id}.png`, journeys })
 }
 
 async function loadRecent(supabase: any, limit = 30): Promise<any[]> {

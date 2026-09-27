@@ -19,7 +19,11 @@ module.exports = async function sitemapProxy(request, response) {
   // Sitemaps traverse thousands of retained records. They refresh behind the CDN,
   // so a slower crawler-only origin budget preserves completeness without
   // affecting visitor-facing page latency.
-  const timeout = setTimeout(() => controller.abort(), 20_000);
+  // A cold sitemap may need to traverse several thousand public records. The
+  // database indexes keep this normally well below the limit; the larger
+  // crawler-only budget prevents a transient cold start from being converted
+  // into a misleading empty sitemap.
+  const timeout = setTimeout(() => controller.abort(), 60_000);
   try {
     const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
     const result = await fetch(upstream, {
