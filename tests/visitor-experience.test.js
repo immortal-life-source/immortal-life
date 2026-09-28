@@ -137,6 +137,7 @@ test('funder profiles are source-backed, conservative, searchable, and indexable
   assert.match(pages, /immortal\.life is not affiliated with this organization/)
   assert.match(script, /funderProfilePath/)
   assert.match(config, /funders\/:slug/)
+  assert.match(config, /"source": "\/funders\/:path\*"/)
   assert.match(config, /sitemaps\/funders\.xml/)
   assert.match(sitemapProxy, /'funders'/)
 })
