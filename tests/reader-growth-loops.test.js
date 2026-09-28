@@ -65,10 +65,19 @@ test('datasets are described for discovery and widgets accept useful filters', (
 
 test('utility measurement is aggregate and identifier-free', () => {
   const migration = read('supabase/migrations/20260916000100_reader_growth_loops.sql');
+  const expansion = read('supabase/migrations/20260928000600_privacy_preserving_visitor_analytics.sql');
   const endpoint = read('supabase/functions/record-utility-event/index.ts');
+  const client = read('telemetry.js');
   assert.match(migration, /utility_event_daily/);
+  for (const event of ['page_view', 'site_search', 'filter_used', 'dossier_opened', 'comparison_started', 'comparison_completed']) {
+    assert.match(expansion, new RegExp(`'${event}'`));
+    assert.match(endpoint, new RegExp(`'${event}'`));
+  }
   assert.match(endpoint, /increment_utility_event/);
+  assert.match(client, /sendOnce\('page_view'\)/);
+  assert.match(client, /form\[role="search"\]/);
   assert.doesNotMatch(endpoint, /cookie|user_agent|ip_address|member_id/i);
+  assert.doesNotMatch(client, /URLSearchParams|document\.referrer|navigator\.userAgent|document\.cookie|localStorage/i);
 });
 
 test('EU regulatory directory covers every member state with official national sources', () => {

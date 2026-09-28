@@ -1496,6 +1496,8 @@
           if (comparedUniversities.size >= 3) { checkbox.checked = false; return; }
           comparedUniversities.set(university.openalex_id, university);
         } else comparedUniversities.delete(university.openalex_id);
+        if (checkbox.checked && previousCount === 0) window.ilTrackUtility?.('comparison_started');
+        if (checkbox.checked && previousCount === 1) window.ilTrackUtility?.('comparison_completed');
         renderUniversityComparison();
         if (checkbox.checked && previousCount >= 1) requestAnimationFrame(() => {
           const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;

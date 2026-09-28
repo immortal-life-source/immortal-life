@@ -3,7 +3,12 @@ import { cleanText } from '../_shared/intelligence.ts'
 import { corsHeaders, isAllowedOrigin, jsonResponse, serviceRoleKey } from '../_shared/security.ts'
 
 const METHODS = 'POST, OPTIONS'
-const EVENTS = new Set(['open_source', 'create_watch', 'remove_watch', 'open_change', 'download_dataset', 'copy_embed', 'subscribe_briefing', 'share_record'])
+const EVENTS = new Set([
+  'page_view', 'site_search', 'filter_used', 'dossier_opened',
+  'comparison_started', 'comparison_completed',
+  'open_source', 'create_watch', 'remove_watch', 'open_change',
+  'download_dataset', 'copy_embed', 'subscribe_briefing', 'share_record',
+])
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
