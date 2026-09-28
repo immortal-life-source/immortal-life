@@ -11,6 +11,7 @@ supabase/.temp/
 backup/
 backups/
 recovery/
+docs/strategic-sale/
 *.sql.gz
 *.sql.gz.enc
 *.tar.gz.enc
