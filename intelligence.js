@@ -141,9 +141,10 @@
         const actions = node('div', 'watch-saved-actions');
         const open = node('a', 'section-link', 'Open dossier'); open.href = `/topics/${encodeURIComponent(topic.slug)}`;
         const changes = node('a', 'section-link', 'Recent changes'); changes.href = `/changes?topic=${encodeURIComponent(topic.slug)}`;
+        const funding = node('a', 'section-link', 'Funding'); funding.href = `/funding?topic=${encodeURIComponent(topic.slug)}`;
         const feed = node('a', 'section-link', 'RSS'); feed.href = `/feeds/topics/${encodeURIComponent(topic.slug)}.xml`;
         const remove = node('button', 'section-link watch-remove', 'Remove'); remove.type = 'button'; remove.dataset.watchTopic = topic.slug; remove.dataset.watchName = topic.name;
-        actions.append(open, changes, feed, remove); card.append(copy, actions); savedGrid.append(card);
+        actions.append(open, changes, funding, feed, remove); card.append(copy, actions); savedGrid.append(card);
         emailTopic.append(new Option(topic.name, topic.slug));
       });
       if (!saved.length) savedGrid.append(node('p', 'watch-empty', 'Your watchlist is empty. Follow topics above or use the Follow button on any evidence dossier.'));
@@ -239,6 +240,21 @@
     researchClear: document.getElementById('researchClear'),
     researchResult: document.getElementById('researchResult'),
     researchLoadMore: document.getElementById('researchLoadMore'),
+    fundingSection: document.getElementById('fundingSection'),
+    fundingStats: document.getElementById('fundingStats'),
+    fundingLandscape: document.getElementById('fundingLandscape'),
+    fundingYears: document.getElementById('fundingYears'),
+    fundingFunders: document.getElementById('fundingFunders'),
+    fundingTopics: document.getElementById('fundingTopics'),
+    fundingControls: document.getElementById('fundingControls'),
+    fundingSearch: document.getElementById('fundingSearch'),
+    fundingTopic: document.getElementById('fundingTopic'),
+    fundingCountry: document.getElementById('fundingCountry'),
+    fundingSort: document.getElementById('fundingSort'),
+    fundingClear: document.getElementById('fundingClear'),
+    fundingResult: document.getElementById('fundingResult'),
+    fundingList: document.getElementById('fundingList'),
+    fundingLoadMore: document.getElementById('fundingLoadMore'),
     trialsSection: document.getElementById('trialsSection'),
     trialList: document.getElementById('trialList'),
     trialControls: document.getElementById('trialControls'),
@@ -328,6 +344,7 @@
     topicUniversitySummary: document.getElementById('topicUniversitySummary'),
     topicTrialSummary: document.getElementById('topicTrialSummary'),
     topicResearchSummary: document.getElementById('topicResearchSummary'),
+    topicFundingSummary: document.getElementById('topicFundingSummary'),
     topicTrendSummary: document.getElementById('topicTrendSummary'),
     topicUniversityGrid: document.getElementById('topicUniversityGrid'),
     topicTrendCallout: document.getElementById('topicTrendCallout'),
@@ -335,7 +352,7 @@
     topicSourceBasisList: document.getElementById('topicSourceBasisList'),
   };
 
-  document.querySelector(`[data-nav="${view === 'overview' ? 'research' : ['topic', 'compare'].includes(view) ? 'topics' : view === 'trial-results-gap' ? 'trials' : view}"]`)?.setAttribute('aria-current', 'page');
+  document.querySelector(`[data-nav="${view === 'overview' || view === 'funding' ? 'research' : ['topic', 'compare'].includes(view) ? 'topics' : view === 'trial-results-gap' ? 'trials' : view}"]`)?.setAttribute('aria-current', 'page');
   if (view === 'you') return;
 
   function setNavigation(open) {
@@ -849,6 +866,12 @@
   let trialRequestVersion = 0;
   let researchSearchTimer = 0;
   let trialSearchTimer = 0;
+  let fundingRows = [];
+  let fundingNextOffset = null;
+  let fundingTotal = 0;
+  let fundingRequestVersion = 0;
+  let fundingSearchTimer = 0;
+  const FUNDING_PAGE_SIZE = 30;
   let catalogueTopicEntriesPromise;
   let catalogueTopicsPromise;
 
@@ -1083,6 +1106,158 @@
       elements.trialLoadMore.disabled = false;
       elements.trialLoadMore.textContent = 'Load more trials';
     }
+  }
+
+  function fundingQueryParams(offset = 0) {
+    return {
+      offset,
+      q: elements.fundingSearch?.value.trim() || '',
+      topic: elements.fundingTopic?.value || '',
+      country: elements.fundingCountry?.value || '',
+      institution: new URLSearchParams(location.search).get('institution')?.trim() || '',
+      sort: elements.fundingSort?.value || 'recent',
+    };
+  }
+
+  function awardInstitutions(award) {
+    return (award.funding_award_institutions || []).map((relation) => relation.university_research_institutions).filter(Boolean);
+  }
+
+  function drawFundingAwards() {
+    elements.fundingList.replaceChildren();
+    if (!fundingRows.length) {
+      elements.fundingList.append(el('p', 'empty-list', fundingTotal
+        ? 'No funding record matches these filters. Try a broader search or clear the filters.'
+        : 'Funding relationships are being assembled from retained publications. New source-linked awards will appear here automatically.'));
+    }
+    fundingRows.forEach((award) => {
+      const card = el('article', 'funding-card');
+      const meta = el('div', 'funding-card-meta');
+      meta.append(el('span', 'funding-funder', award.funder_name || 'Funder unavailable'));
+      meta.append(el('strong', '', award.award_identifier || award.openalex_award_id || 'Award identifier unavailable'));
+      if (award.latest_publication_date) meta.append(el('small', '', `Latest linked research ${formatDate(award.latest_publication_date)}`));
+
+      const main = el('div', 'funding-card-main');
+      const heading = el('h3', '', award.title || (award.award_identifier ? `Award ${award.award_identifier}` : 'Source-linked funding acknowledgement'));
+      const institutions = awardInstitutions(award);
+      const institutionLine = institutions.slice(0, 3).map((item) => item.name).join(' · ');
+      main.append(heading, el('p', 'funding-card-context', institutionLine || 'No eligible university affiliation is linked in the retained metadata.'));
+      const tags = el('div', 'record-tags');
+      topicLinks(award, 'funding_award_topics').slice(0, 6).forEach((item) => tags.append(link('record-tag', item.name, `/topics/${encodeURIComponent(item.slug)}`)));
+      institutions.slice(0, 3).forEach((item) => tags.append(link('record-tag', item.country_name || item.country_code || item.name, `/universities/${encodeURIComponent(item.slug)}`)));
+      main.append(tags);
+      const works = (award.funding_award_works || []).map((relation) => relation.university_research_works).filter(Boolean)
+        .sort((left, right) => String(right.publication_date || '').localeCompare(String(left.publication_date || '')));
+      const linkedWorks = el('div', 'funding-linked-works');
+      works.slice(0, 3).forEach((work) => {
+        const item = link('', work.title || 'Linked publication', work.source_url || '/research');
+        item.target = '_blank'; item.rel = 'noopener noreferrer';
+        linkedWorks.append(item);
+      });
+      if (linkedWorks.childElementCount) main.append(linkedWorks);
+
+      const action = el('div', 'funding-card-action');
+      action.append(el('span', '', `${numberFormatter.format(works.length)} linked publication${works.length === 1 ? '' : 's'}`));
+      const source = link('source-link', 'Verify in OpenAlex', award.source_url);
+      source.target = '_blank'; source.rel = 'noopener noreferrer'; source.dataset.ilEvent = 'open_source';
+      action.append(source);
+      card.append(meta, main, action);
+      elements.fundingList.append(card);
+    });
+    elements.fundingResult.textContent = `Showing ${numberFormatter.format(fundingRows.length)} of ${numberFormatter.format(fundingTotal)} matching funding records.`;
+    elements.fundingLoadMore.hidden = fundingNextOffset == null;
+  }
+
+  function renderFundingOverview(data) {
+    const overview = data.overview || {};
+    const summary = overview.summary || {};
+    elements.fundingStats.replaceChildren();
+    [
+      [summary.awards, 'Award entities', 'Open source-linked award records'],
+      [summary.identified_awards, 'Award identifiers', 'Records carrying a disclosed funder award reference'],
+      [summary.funders, 'Funders', 'Distinct OpenAlex funder identities'],
+      [summary.institutions, 'Universities', 'Eligible institutions connected through publications'],
+      [summary.linked_publications, 'Linked publications', 'Retained longevity works carrying award metadata'],
+    ].forEach(([value, label, note], index) => {
+      const button = el('button', `funding-stat${index === 0 ? ' is-primary' : ''}`); button.type = 'button';
+      button.append(el('strong', '', numberFormatter.format(Number(value || 0))), el('span', '', label), el('small', '', note));
+      button.onclick = () => (index === 3 ? location.assign('/universities') : elements.fundingList.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+      elements.fundingStats.append(button);
+    });
+
+    elements.fundingYears.replaceChildren();
+    const cohorts = Array.isArray(overview.cohorts) ? overview.cohorts.slice(0, 10) : [];
+    const maximum = Math.max(1, ...cohorts.map((item) => Number(item.publications || 0)));
+    cohorts.forEach((cohort) => {
+      const row = el('div', 'funding-year');
+      const bar = el('i', ''); bar.style.setProperty('--funding-year-width', `${Math.max(4, Math.round((Number(cohort.publications || 0) / maximum) * 100))}%`);
+      row.append(el('strong', '', cohort.year), bar, el('span', '', `${numberFormatter.format(cohort.awards)} awards · ${numberFormatter.format(cohort.publications)} publications`));
+      elements.fundingYears.append(row);
+    });
+    const drawLeaders = (target, rows, label, handler) => {
+      target.replaceChildren();
+      rows.slice(0, 8).forEach((item) => {
+        const button = el('button', 'funding-leader'); button.type = 'button';
+        button.append(el('span', '', label(item)), el('strong', '', numberFormatter.format(Number(item.awards || 0))));
+        button.onclick = () => handler(item);
+        const entry = el('li'); entry.append(button); target.append(entry);
+      });
+    };
+    drawLeaders(elements.fundingFunders, overview.leading_funders || [], (item) => item.funder_name, (item) => {
+      elements.fundingSearch.value = item.funder_name; reloadFunding().catch((error) => console.error('Funding filter failed:', error));
+    });
+    drawLeaders(elements.fundingTopics, overview.leading_topics || [], (item) => item.name, (item) => {
+      elements.fundingTopic.value = item.slug; reloadFunding().catch((error) => console.error('Funding filter failed:', error));
+    });
+    elements.fundingLandscape.hidden = !cohorts.length && !(overview.leading_funders || []).length;
+  }
+
+  function setupFundingControls(topicEntries, data) {
+    if (elements.fundingControls.dataset.ready) return;
+    replaceFilterOptions(elements.fundingTopic, 'All topics', topicEntries);
+    const countries = new Map();
+    (data.overview?.leading_institutions || []).forEach((item) => { if (item.country_code) countries.set(item.country_code, item.country_name || item.country_code); });
+    (data.awards || []).flatMap(awardInstitutions).forEach((item) => { if (item.country_code) countries.set(item.country_code, item.country_name || item.country_code); });
+    replaceFilterOptions(elements.fundingCountry, 'All countries', [...countries.entries()].sort((a, b) => a[1].localeCompare(b[1])));
+    const params = new URLSearchParams(location.search);
+    const requestedCountry = params.get('country')?.trim() || '';
+    if (requestedCountry && ![...elements.fundingCountry.options].some((option) => option.value === requestedCountry)) elements.fundingCountry.append(new Option(requestedCountry, requestedCountry));
+    elements.fundingSearch.value = params.get('search')?.trim() || '';
+    elements.fundingTopic.value = params.get('topic')?.trim() || '';
+    elements.fundingCountry.value = requestedCountry;
+    elements.fundingSort.value = params.get('sort')?.trim() || 'recent';
+    elements.fundingControls.addEventListener('input', () => {
+      window.clearTimeout(fundingSearchTimer);
+      fundingSearchTimer = window.setTimeout(() => reloadFunding().catch((error) => console.error('Funding search failed:', error)), 300);
+    });
+    elements.fundingControls.addEventListener('change', () => reloadFunding().catch((error) => console.error('Funding filter failed:', error)));
+    elements.fundingClear.onclick = () => {
+      elements.fundingSearch.value = ''; elements.fundingTopic.value = ''; elements.fundingCountry.value = ''; elements.fundingSort.value = 'recent';
+      reloadFunding().catch((error) => console.error('Funding search failed:', error)); elements.fundingSearch.focus();
+    };
+    elements.fundingControls.dataset.ready = 'true';
+  }
+
+  async function reloadFunding() {
+    const version = ++fundingRequestVersion;
+    const data = await request('funding', FUNDING_PAGE_SIZE, fundingQueryParams(0));
+    if (version !== fundingRequestVersion) return;
+    fundingRows = data.awards || []; fundingNextOffset = data.next_offset; fundingTotal = Number(data.total_matching || fundingRows.length);
+    const url = new URL(location.href);
+    [['search', elements.fundingSearch.value.trim()], ['topic', elements.fundingTopic.value], ['country', elements.fundingCountry.value], ['sort', elements.fundingSort.value]].forEach(([key, value]) => value && !(key === 'sort' && value === 'recent') ? url.searchParams.set(key, value) : url.searchParams.delete(key));
+    history.replaceState({}, '', `${url.pathname}${url.search}`);
+    drawFundingAwards(); renderFundingOverview(data);
+  }
+
+  async function loadMoreFunding() {
+    if (fundingNextOffset == null) return;
+    elements.fundingLoadMore.disabled = true; elements.fundingLoadMore.textContent = 'Loading…';
+    try {
+      const data = await request('funding', FUNDING_PAGE_SIZE, fundingQueryParams(fundingNextOffset));
+      const known = new Set(fundingRows.map((item) => item.openalex_award_id));
+      fundingRows.push(...(data.awards || []).filter((item) => !known.has(item.openalex_award_id)));
+      fundingNextOffset = data.next_offset; fundingTotal = Number(data.total_matching || fundingRows.length); drawFundingAwards();
+    } finally { elements.fundingLoadMore.disabled = false; elements.fundingLoadMore.textContent = 'Load more funding records'; }
   }
 
   function resultsGapStateLabel(state) {
@@ -1452,6 +1627,7 @@
       elements.relatedJourneys.append(link('', 'See all changes for this topic', `/changes?topic=${encodeURIComponent(topicSlug)}`));
       (data.related_topics || []).slice(0, 3).forEach((topic) => elements.relatedJourneys.append(link('', `Compare with ${topic.name}`, `/compare/${encodeURIComponent(topicSlug)}-vs-${encodeURIComponent(topic.slug)}`)));
       elements.relatedJourneys.append(link('', 'Find related university activity', `/universities?topic=${encodeURIComponent(topicSlug)}`));
+      elements.relatedJourneys.append(link('', 'Explore source-linked funding', `/funding?topic=${encodeURIComponent(topicSlug)}`));
     }
   }
 
@@ -1466,6 +1642,7 @@
     const trialTotal = Number(evidence.trial_total || 0);
     const recruiting = Number(evidence.recruiting_trials || 0);
     const humanTotal = Number(evidence.human_evidence_total || 0);
+    const fundingTotal = Number(data?.funding?.award_count || 0);
     const trendLabels = { growing: 'Growing', steady: 'Broadly steady', slowing: 'Slower recently', limited: 'Too little data' };
     const trendDirection = String(overview.trend_direction || 'limited');
     const trendLabel = trendLabels[trendDirection] || 'Too little data';
@@ -1475,6 +1652,9 @@
       : 'No topic-specific university activity is available yet.';
     if (elements.topicTrialSummary) elements.topicTrialSummary.textContent = `${numberFormatter.format(trialTotal)} registered · ${numberFormatter.format(recruiting)} recruiting or active.`;
     if (elements.topicResearchSummary) elements.topicResearchSummary.textContent = `${numberFormatter.format(researchTotal)} records · ${numberFormatter.format(humanTotal)} classified as human evidence.`;
+    if (elements.topicFundingSummary) elements.topicFundingSummary.textContent = fundingTotal
+      ? `${numberFormatter.format(fundingTotal)} source-linked award ${fundingTotal === 1 ? 'record' : 'records'} currently identified.`
+      : 'Funding relationships are still being assembled for this topic.';
     if (elements.topicTrendSummary) elements.topicTrendSummary.textContent = `${trendLabel} across the latest complete three-year period.`;
 
     if (elements.topicUniversityGrid) {
@@ -1559,6 +1739,7 @@
       metric('Human evidence', humanTotal, '#dossier-human-evidence', 'Read context →'),
       metric('Clinical trials', trialTotal, '#trialsSection', 'Open trials →'),
       metric('Recruiting or active', recruiting, `/trials?topic=${encodeURIComponent(topicSlug)}&status=Recruiting`, 'Filter trials →'),
+      metric('Funding awards', Number(data?.funding?.award_count || 0), `/funding?topic=${encodeURIComponent(topicSlug)}`, 'Open Funding Radar →'),
       metric('Participants listed', enrollment, '#dossier-trials', 'Registry enrollment →'),
       metric('Last meaningful update', lastUpdate ? formatTimestamp(lastUpdate) : 'None recorded', '#timelineSection', 'Open timeline →'),
     );
@@ -2148,7 +2329,7 @@
   // Cache Storage survives ordinary reloads. Bump this contract whenever a
   // repaired public aggregation would otherwise remain hidden by an older
   // zero-value response in a visitor's browser.
-  const publicCacheName = 'immortal-life-public-intelligence-v6';
+  const publicCacheName = 'immortal-life-public-intelligence-v7';
   const publicCacheMaxAgeMs = 15 * 60 * 1000;
 
   async function readCachedRequest(url) {
@@ -2199,7 +2380,7 @@
     if (topicSlug) url.searchParams.set('topic', topicSlug);
     const cached = await readCachedRequest(url);
     if (cached) return cached;
-    const res = await fetchWithDeadline(url, ['topic-dossier', 'trial-results-gap'].includes(viewName) ? 10000 : 6500);
+    const res = await fetchWithDeadline(url, ['topic-dossier', 'trial-results-gap', 'funding'].includes(viewName) ? 10000 : 6500);
     if (res.ok) {
       const data = await res.json();
       await writeCachedRequest(url, data);
@@ -2240,6 +2421,22 @@
       } else if (view === 'trial-results-gap') {
         const data = await request('trial-results-gap', 500);
         renderResultsGapMonitor(data);
+        renderSources(data.sources || [], false);
+      } else if (view === 'funding') {
+        const params = new URLSearchParams(location.search);
+        const [data, topicEntries] = await Promise.all([request('funding', FUNDING_PAGE_SIZE, {
+          q: params.get('search')?.trim() || '', topic: params.get('topic')?.trim() || '', country: params.get('country')?.trim() || '', institution: params.get('institution')?.trim() || '', sort: params.get('sort')?.trim() || 'recent',
+        }), catalogueTopicEntries()]);
+        fundingRows = data.awards || []; fundingNextOffset = data.next_offset; fundingTotal = Number(data.total_matching || fundingRows.length);
+        setupFundingControls(topicEntries, data); drawFundingAwards(); renderFundingOverview(data);
+        elements.fundingSection.hidden = false; elements.fundingLoadMore.onclick = () => loadMoreFunding().catch((error) => console.error('Funding page request failed:', error));
+        const fundingHistoryComplete = Boolean(data.coverage_status?.historical_cycle_complete);
+        elements.freshness.dataset.health = data.fallback ? 'delayed' : fundingHistoryComplete ? 'healthy' : 'pending';
+        elements.freshnessText.textContent = data.fallback
+          ? data.notice
+          : fundingHistoryComplete
+            ? `${numberFormatter.format(Number(data.overview?.summary?.awards || 0))} source-linked awards currently indexed.`
+            : `Funding history is still expanding; ${numberFormatter.format(Number(data.overview?.summary?.awards || 0))} source-linked awards are searchable so far.`;
         renderSources(data.sources || [], false);
       } else if (view === 'topics') {
         const response = await fetch('/topics-directory.json', { headers: { Accept: 'application/json' } });

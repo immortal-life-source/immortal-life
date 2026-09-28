@@ -3,7 +3,7 @@
 const upstreamBase = 'https://nifbuyoghesveotugday.supabase.co/functions/v1/public-intelligence';
 const allowedParameters = new Set([
   'view', 'limit', 'offset', 'topic', 'q', 'country', 'continent', 'sort',
-  'status', 'phase', 'region', 'quality_rules', 'directory_contract',
+  'status', 'phase', 'region', 'funder', 'institution', 'quality_rules', 'directory_contract',
 ]);
 
 async function fetchJson(url, timeoutMs = 2500) {
@@ -123,7 +123,7 @@ async function topicDossierFallback(query, limit) {
   // would bypass the 60% topic threshold and manufacture zero-valued metrics.
   return {
     generated_at: new Date().toISOString(),
-    research: [], trials: [], sources: [], evidence: {}, overview: {},
+    research: [], trials: [], sources: [], evidence: {}, overview: {}, funding: { award_count: 0 },
     timeline: { events: [], related_topics: [] },
     fallback: true,
     unavailable: true,
@@ -138,6 +138,7 @@ async function sourceFallback(query) {
   if (view === 'trials') return trialsFallback(query, limit);
   if (view === 'universities') return universitiesFallback(query, limit);
   if (view === 'topic-dossier') return topicDossierFallback(query, limit);
+  if (view === 'funding') return { generated_at: new Date().toISOString(), total_matching: 0, next_offset: null, awards: [], overview: { summary: {}, cohorts: [], leading_funders: [], leading_topics: [], leading_institutions: [] }, coverage_status: { historical_cycle_complete: false, completed_cycles: 0 }, sources: [], fallback: true, notice: 'The verified funding index is temporarily unavailable; no unverified substitute is shown.' };
   if (view === 'regulatory') return { regulatory: [], regulatory_guides: [], regulatory_coverage: {}, sources: [], fallback: true };
   if (view === 'integrity') return { integrity: [], sources: [], fallback: true };
   if (view === 'graph') return { topics: [], sources: [], fallback: true };
@@ -168,7 +169,7 @@ module.exports = async function intelligenceProxy(request, response) {
   // aborting that early cached a 100-row OpenAlex sample as if it were the
   // complete index. Keep the proxy responsive, but allow the authoritative
   // aggregate enough time to answer.
-  const slowAggregate = ['universities', 'topic-dossier', 'trial-results-gap'].includes(request.query?.view);
+  const slowAggregate = ['universities', 'topic-dossier', 'trial-results-gap', 'funding'].includes(request.query?.view);
   const timeout = setTimeout(() => controller.abort(), slowAggregate ? 9000 : 3500);
   try {
     const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';

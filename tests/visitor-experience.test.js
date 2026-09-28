@@ -91,6 +91,34 @@ test('Trial Results Gap Monitor is source-linked, complete, and avoids misconduc
   assert.match(css, /\.results-gap-card--possible-gap/)
 })
 
+test('Funding Radar is source-linked, paginated, and does not invent financial totals', async () => {
+  const [template, portal, css, build, api, worker, migration, proxy, pages, config] = await Promise.all([
+    read('intelligence-template.html'), read('intelligence.js'), read('intelligence.css'), read('build.js'),
+    read('supabase/functions/public-intelligence/index.ts'), read('supabase/functions/sync-funding-radar/index.ts'),
+    read('supabase/migrations/20260928000700_funding_radar.sql'), read('api/intelligence.js'),
+    read('supabase/functions/public-pages/index.ts'), read('supabase/config.toml'),
+  ])
+  for (const id of ['fundingSection', 'fundingStats', 'fundingYears', 'fundingFunders', 'fundingTopics', 'fundingControls', 'fundingList']) assert.match(template, new RegExp(`id="${id}"`))
+  assert.match(build, /filename: 'funding\.html'/)
+  assert.match(build, /href="\/funding">Open Funding Radar/)
+  assert.match(build, /href="\/funding\?topic=/)
+  assert.match(api, /if \(view === 'funding'\)/)
+  assert.match(api, /next_offset/)
+  assert.match(api, /historical_cycle_complete/)
+  assert.match(worker, /select', 'id,title,publication_date,awards,funders'/)
+  assert.match(worker, /upsert_funding_award_page/)
+  assert.match(migration, /create table if not exists public\.funding_awards/)
+  assert.match(migration, /get_funding_radar_overview/)
+  assert.match(migration, /revoke all on table public\.funding_awards/)
+  assert.match(migration, /immortal-life-funding-radar/)
+  assert.match(proxy, /'institution'/)
+  assert.match(pages, /Funding acknowledgements/)
+  assert.match(config, /\[functions\.sync-funding-radar\]/)
+  assert.match(build, /does not measure total spending/i)
+  assert.match(template, /does not infer award amounts/i)
+  assert.match(css, /FUNDING RADAR/)
+})
+
 test('Trial Radar has one canonical visitor route', async () => {
   const [routes, home, template] = await Promise.all([read('vercel.json'), read('index.html'), read('intelligence-template.html')])
   assert.match(routes, /"source": "\/discover\/recruiting-trials", "destination": "\/trials", "permanent": true/)
@@ -163,7 +191,7 @@ test('research and trials use complete searchable filter systems', async () => {
 test('public data views recover from brief Edge Function saturation', async () => {
   const [portal, proxy, vercel] = await Promise.all([read('intelligence.js'), read('api/intelligence.js'), read('vercel.json')])
   assert.match(portal, /fetchWithDeadline/)
-  assert.match(portal, /immortal-life-public-intelligence-v6/)
+  assert.match(portal, /immortal-life-public-intelligence-v7/)
   assert.match(portal, /const endpoint = '\/api\/intelligence'/)
   assert.match(portal, /new URL\(endpoint, window\.location\.origin\)/)
   assert.match(portal, /timeoutMs = 6500/)
@@ -245,7 +273,7 @@ test('university fallbacks never present a 100-row sample as complete global cov
   ])
   assert.match(proxy, /total_matching: null/)
   assert.match(proxy, /temporary sample, not index totals/)
-  assert.match(proxy, /\['universities', 'topic-dossier', 'trial-results-gap'\]\.includes\(request\.query\?\.view\)/)
+  assert.match(proxy, /\['universities', 'topic-dossier', 'trial-results-gap', 'funding'\]\.includes\(request\.query\?\.view\)/)
   assert.match(proxy, /slowAggregate \? 9000 : 3500/)
   assert.match(api, /country_name\.ilike/)
   assert.match(api, /count: 'exact'/)

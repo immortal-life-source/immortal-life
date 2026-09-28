@@ -263,6 +263,61 @@ Deno.serve(async (req) => {
       })
     }
 
+    if (view === 'funding') {
+      const country = cleanText(url.searchParams.get('country') ?? '', 2).toUpperCase()
+      const funder = cleanText(url.searchParams.get('funder') ?? '', 120)
+      const institution = cleanText(url.searchParams.get('institution') ?? '', 120)
+      const sort = cleanText(url.searchParams.get('sort') ?? 'recent', 24)
+      const search = publicSearchTerm(url.searchParams.get('q'))
+      const topicRelation = topic
+        ? 'funding_award_topics!inner(topic_slug,intelligence_topics(name,slug))'
+        : 'funding_award_topics(topic_slug,intelligence_topics(name,slug))'
+      const institutionRelation = country || institution
+        ? 'funding_award_institutions!inner(openalex_id,university_research_institutions!inner(slug,name,country_code,country_name,city))'
+        : 'funding_award_institutions(openalex_id,university_research_institutions(slug,name,country_code,country_name,city))'
+      let fundingQuery = supabase.from('funding_awards').select(
+        `openalex_award_id,award_identifier,title,funder_id,funder_name,funder_ror,source_url,first_publication_date,latest_publication_date,${topicRelation},${institutionRelation},funding_award_works(openalex_work_id,university_research_works(title,publication_date,source_url,source_name))`,
+        { count: 'exact' },
+      ).range(offset, offset + limit - 1)
+      if (topic) fundingQuery = fundingQuery.eq('funding_award_topics.topic_slug', topic)
+      if (/^[A-Z]{2}$/.test(country)) fundingQuery = fundingQuery.eq('funding_award_institutions.university_research_institutions.country_code', country)
+      if (institution && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(institution)) fundingQuery = fundingQuery.eq('funding_award_institutions.university_research_institutions.slug', institution)
+      if (funder) fundingQuery = fundingQuery.eq('funder_id', funder)
+      if (search) fundingQuery = fundingQuery.or(`award_identifier.ilike.%${search}%,title.ilike.%${search}%,funder_name.ilike.%${search}%`)
+      if (sort === 'oldest') fundingQuery = fundingQuery.order('first_publication_date', { ascending: true, nullsFirst: false }).order('openalex_award_id')
+      else if (sort === 'funder') fundingQuery = fundingQuery.order('funder_name').order('latest_publication_date', { ascending: false, nullsFirst: false })
+      else fundingQuery = fundingQuery.order('latest_publication_date', { ascending: false, nullsFirst: false }).order('openalex_award_id')
+
+      const [{ data: awards, error, count }, overviewResult, syncResult, { data: sources, error: sourcesError }] = await Promise.all([
+        fundingQuery,
+        supabase.rpc('get_funding_radar_overview'),
+        supabase.from('funding_radar_sync_state').select('processed_work_count,linked_award_count,completed_cycles,last_completed_at,last_error,updated_at').eq('id', true).maybeSingle(),
+        sourcesPromise,
+      ])
+      if (error) throw error
+      if (overviewResult.error) throw overviewResult.error
+      if (syncResult.error) throw syncResult.error
+      if (sourcesError) throw sourcesError
+      return response(req, {
+        generated_at: new Date().toISOString(),
+        total_matching: count ?? 0,
+        offset,
+        next_offset: offset + (awards?.length ?? 0) < Number(count ?? 0) ? offset + (awards?.length ?? 0) : null,
+        filters: { topic: topic || null, country: country || null, funder: funder || null, institution: institution || null, search: search || null, sort },
+        overview: overviewResult.data ?? {},
+        coverage_status: {
+          historical_cycle_complete: Number(syncResult.data?.completed_cycles ?? 0) > 0,
+          completed_cycles: Number(syncResult.data?.completed_cycles ?? 0),
+          processed_work_count: Number(syncResult.data?.processed_work_count ?? 0),
+          last_completed_at: syncResult.data?.last_completed_at ?? null,
+          updated_at: syncResult.data?.updated_at ?? null,
+        },
+        awards: awards ?? [],
+        sources: (sources ?? []).filter((source: any) => source.id === 'openalex').map(publicSourceState),
+        scope_notice: 'These are funding acknowledgements and award identifiers connected to indexed longevity publications in OpenAlex. They are not a complete account of research spending, award value, project duration, or funder impact.',
+      })
+    }
+
     if (view === 'topics') {
       const [{ data: topics, error }, { data: sources, error: sourcesError }] = await Promise.all([
         supabase.rpc('get_intelligence_topic_counts'),
@@ -288,7 +343,7 @@ Deno.serve(async (req) => {
       if (!topic) return response(req, { error: 'Topic is required' }, 400)
       const researchRelation = 'research_item_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
       const trialRelation = 'clinical_trial_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
-      const [researchResult, trialResult, topicResult, evidenceResult, overviewResult, timelineResult, sourcesResult, pilotResult] = await Promise.all([
+      const [researchResult, trialResult, topicResult, evidenceResult, overviewResult, timelineResult, sourcesResult, pilotResult, fundingResult] = await Promise.all([
         supabase.from('research_items')
           .select(`id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,evidence_snapshot,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${researchRelation}`)
           .eq('publication_state', 'published').eq('research_item_topics.topic_slug', topic).eq('research_item_topics.is_published', true)
@@ -305,8 +360,9 @@ Deno.serve(async (req) => {
           .neq('event_type', 'quality_state_changed').contains('topic_slugs', [topic]).order('occurred_at', { ascending: false }).limit(40),
         sourcesPromise,
         supabase.rpc('get_topic_dossier_pilot', { requested_topic: topic }),
+        supabase.from('funding_award_topics').select('openalex_award_id', { count: 'exact', head: true }).eq('topic_slug', topic),
       ])
-      for (const result of [researchResult, trialResult, topicResult, evidenceResult, overviewResult, timelineResult, sourcesResult, pilotResult]) if (result.error) throw result.error
+      for (const result of [researchResult, trialResult, topicResult, evidenceResult, overviewResult, timelineResult, sourcesResult, pilotResult, fundingResult]) if (result.error) throw result.error
 
       const related = new Map<string, number>()
       for (const event of timelineResult.data ?? []) for (const slug of event.topic_slugs ?? []) if (slug !== topic) related.set(slug, (related.get(slug) ?? 0) + 1)
@@ -335,6 +391,7 @@ Deno.serve(async (req) => {
         overview: overviewResult.data ?? {},
         timeline: { topic: topicResult.data, events: timelineResult.data ?? [], related_topics: relatedTopics },
         pilot: pilotResult.data ?? null,
+        funding: { award_count: fundingResult.count ?? 0 },
         sources: (sourcesResult.data ?? []).map(publicSourceState),
       })
     }
