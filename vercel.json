@@ -45,6 +45,14 @@
       ]
     },
     {
+      "source": "/documents/:path*.pdf",
+      "headers": [
+        { "key": "Content-Type", "value": "application/pdf" },
+        { "key": "Content-Disposition", "value": "inline" },
+        { "key": "Cache-Control", "value": "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800" }
+      ]
+    },
+    {
       "source": "/(style.css|main.js|intelligence.css|intelligence.js|institutional-pilot.css|institutional-pilot.js)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800" }

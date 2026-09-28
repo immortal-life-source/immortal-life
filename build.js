@@ -190,6 +190,16 @@ for (const asset of staticAssets) {
   fs.copyFileSync(path.join(__dirname, asset), path.join(outputDir, asset));
 }
 
+// Public company materials are published under a stable first-party URL so
+// investor platforms can link to the current branded document without relying
+// on a third-party file host.
+const publicDocumentsDir = path.join(outputDir, 'documents');
+fs.mkdirSync(publicDocumentsDir, { recursive: true });
+fs.copyFileSync(
+  path.join(__dirname, 'output', 'pdf', 'immortal-life-strategic-opportunity.pdf'),
+  path.join(publicDocumentsDir, 'immortal-life-company-overview.pdf')
+);
+
 // The taxonomy is a maintained site asset, not a live analytical query. Serving
 // it statically keeps the complete directory available during source delays and
 // avoids spending database IO every time a visitor opens /topics.
