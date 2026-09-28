@@ -46,6 +46,27 @@ test('topic catalogue is compact, searchable, visual, and does not bury research
   assert.match(portal, /--card-hue/)
 })
 
+test('Evidence Compare is shareable, source-linked, and non-prescriptive', async () => {
+  const [template, portal, css, build, routes] = await Promise.all([
+    read('intelligence-template.html'), read('intelligence.js'), read('intelligence.css'), read('build.js'), read('vercel.json'),
+  ])
+  for (const id of ['compareSection', 'compareForm', 'compareLeft', 'compareRight', 'compareResults', 'compareSummary', 'compareGroups']) assert.match(template, new RegExp(`id="${id}"`))
+  assert.match(build, /filename: 'compare\.html'/)
+  assert.match(build, /PAGE_VIEW: 'compare'/)
+  assert.match(build, /href="\/compare\?left=\$\{encodeURIComponent\(topic\.slug\)\}"/)
+  assert.match(routes, /"source": "\/compare\/:pair", "destination": "\/compare\?pair=:pair"/)
+  assert.match(portal, /Promise\.all\(\[\s*request\('topic-dossier', 12, \{ topic: leftSlug \}\)/)
+  assert.match(portal, /history\.replaceState\(\{\}, '', `\/compare\/\$\{encodeURIComponent\(leftSlug\)\}-vs-\$\{encodeURIComponent\(rightSlug\)\}`\)/)
+  assert.match(portal, /comparison_started/)
+  assert.match(portal, /comparison_completed/)
+  assert.match(portal, /Posted-results coverage/)
+  assert.match(portal, /Visible evidence gaps/)
+  assert.match(portal, /none of these signals determines effectiveness or safety/)
+  assert.match(template, /do not establish benefit, safety, or suitability for any person/)
+  assert.match(css, /EVIDENCE COMPARE/)
+  assert.match(css, /\.compare-row/)
+})
+
 test('Trial Radar has one canonical visitor route', async () => {
   const [routes, home, template] = await Promise.all([read('vercel.json'), read('index.html'), read('intelligence-template.html')])
   assert.match(routes, /"source": "\/discover\/recruiting-trials", "destination": "\/trials", "permanent": true/)

@@ -147,6 +147,7 @@
   "rewrites": [
     { "source": "/auth/x", "destination": "/auth-x" },
     { "source": "/auth/linkedin", "destination": "/auth-linkedin" },
+    { "source": "/compare/:pair", "destination": "/compare?pair=:pair" },
     { "source": "/research/:id", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=record&kind=research&id=:id" },
     { "source": "/trials/:id", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=record&kind=trials&id=:id" },
     { "source": "/regulatory/:id", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=record&kind=regulatory&id=:id" },

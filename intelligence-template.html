@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,300&family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="icon" href="/favicon.ico" type="image/x-icon" />
-  <link rel="stylesheet" href="/intelligence.css?v=20260927-scored-records" />
+  <link rel="stylesheet" href="/intelligence.css?v=20260928-evidence-compare" />
 </head>
 <body data-view="{{PAGE_VIEW}}" data-topic="{{TOPIC_SLUG}}" style="{{BODY_STYLE}}">
   <header class="intel-header">
@@ -76,6 +76,30 @@
         <span id="topicResult" aria-live="polite"></span>
       </div>
       <div class="topic-grid" id="topicGrid"></div>
+    </section>
+
+    <section class="intel-section evidence-compare" id="compareSection" hidden aria-labelledby="compareTitle">
+      <div class="compare-intro">
+        <div><span class="section-index">Source-linked comparison</span><h2 id="compareTitle">Put two evidence landscapes side by side.</h2></div>
+        <p>Compare what the index currently contains—not which intervention is “best.” Counts describe source-linked coverage and study maturity; they do not establish benefit, safety, or suitability for any person.</p>
+      </div>
+      <form class="compare-picker" id="compareForm" aria-label="Choose two longevity topics to compare">
+        <label><span>First topic</span><select id="compareLeft" required><option value="">Choose a topic</option></select></label>
+        <button class="compare-swap" id="compareSwap" type="button" aria-label="Swap the two topics">⇄<span>Swap</span></button>
+        <label><span>Second topic</span><select id="compareRight" required><option value="">Choose a topic</option></select></label>
+        <button class="compare-submit" type="submit">Compare evidence</button>
+      </form>
+      <p class="compare-validation" id="compareValidation" aria-live="polite">Choose two different topics. You can share the resulting comparison URL.</p>
+      <div class="compare-results" id="compareResults" hidden aria-live="polite">
+        <header class="compare-result-heading">
+          <div><span class="section-index">Current indexed landscape</span><h2 id="compareResultTitle">Evidence comparison</h2></div>
+          <p id="compareResultDate"></p>
+        </header>
+        <div class="compare-summary" id="compareSummary"></div>
+        <div class="compare-topic-headings" id="compareTopicHeadings"></div>
+        <div class="compare-groups" id="compareGroups"></div>
+        <aside class="compare-caution"><strong>How to read this comparison</strong><p>A larger count means more eligible records are connected in the immortal.life index. It does not mean that findings agree, that an intervention works, or that it is safe. Registration is not a result; planned enrollment is not necessarily completed enrollment; publication activity is not evidence quality.</p><a href="/methodology">Read the methodology and limitations →</a></aside>
+      </div>
     </section>
 
     <section class="intel-section evidence-timeline-section" id="timelineSection" hidden>
@@ -253,7 +277,7 @@
   <nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/topics"><span aria-hidden="true">◇</span>Topics</a><a href="/trials"><span aria-hidden="true">＋</span>Trials</a><a href="/changes"><span aria-hidden="true">↻</span>News</a><a class="mobile-dock-you" href="/you"><span aria-hidden="true">✦</span>You</a></nav>
 
   <script src="/il-config.js"></script>
-  <script src="/intelligence.js?v=20260927-scored-records"></script>
+  <script src="/intelligence.js?v=20260928-evidence-compare"></script>
   <script src="/telemetry.js"></script>
 </body>
 </html>

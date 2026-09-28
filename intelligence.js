@@ -217,6 +217,18 @@
     topicSearch: document.getElementById('topicSearch'),
     topicDomain: document.getElementById('topicDomain'),
     topicResult: document.getElementById('topicResult'),
+    compareSection: document.getElementById('compareSection'),
+    compareForm: document.getElementById('compareForm'),
+    compareLeft: document.getElementById('compareLeft'),
+    compareRight: document.getElementById('compareRight'),
+    compareSwap: document.getElementById('compareSwap'),
+    compareValidation: document.getElementById('compareValidation'),
+    compareResults: document.getElementById('compareResults'),
+    compareResultTitle: document.getElementById('compareResultTitle'),
+    compareResultDate: document.getElementById('compareResultDate'),
+    compareSummary: document.getElementById('compareSummary'),
+    compareTopicHeadings: document.getElementById('compareTopicHeadings'),
+    compareGroups: document.getElementById('compareGroups'),
     researchSection: document.getElementById('researchSection'),
     researchList: document.getElementById('researchList'),
     researchControls: document.getElementById('researchControls'),
@@ -311,7 +323,7 @@
     topicSourceBasisList: document.getElementById('topicSourceBasisList'),
   };
 
-  document.querySelector(`[data-nav="${view === 'overview' ? 'research' : view === 'topic' ? 'topics' : view}"]`)?.setAttribute('aria-current', 'page');
+  document.querySelector(`[data-nav="${view === 'overview' ? 'research' : ['topic', 'compare'].includes(view) ? 'topics' : view}"]`)?.setAttribute('aria-current', 'page');
   if (view === 'you') return;
 
   function setNavigation(open) {
@@ -503,6 +515,197 @@
     }
   }
 
+  function compareHighestPhase(phaseCounts) {
+    const entries = Object.entries(phaseCounts || {}).filter(([, count]) => Number(count) > 0);
+    const normalized = entries.map(([phase]) => String(phase).toUpperCase().replace(/[^A-Z0-9]+/g, ''));
+    if (normalized.some((phase) => phase.includes('PHASE4'))) return 'Phase 4';
+    if (normalized.some((phase) => phase.includes('PHASE3'))) return 'Phase 3';
+    if (normalized.some((phase) => phase.includes('PHASE2'))) return 'Phase 2';
+    if (normalized.some((phase) => phase.includes('PHASE1'))) return 'Phase 1';
+    if (normalized.some((phase) => phase.includes('EARLY'))) return 'Early phase';
+    return 'Not reported';
+  }
+
+  function compareGapSummary(dossier) {
+    const evidence = dossier?.evidence || {};
+    const gaps = [];
+    if (!Number(evidence.human_evidence_total || 0)) gaps.push('human evidence');
+    if (!Number(evidence.randomized_human_total || 0)) gaps.push('randomized human studies');
+    if (!Number(evidence.human_synthesis_total || 0)) gaps.push('evidence syntheses');
+    if (!Number(evidence.trial_total || 0)) gaps.push('registered trials');
+    else if (!Number(evidence.trials_with_results || 0)) gaps.push('posted trial results');
+    if (!Number(evidence.regulatory_total || 0)) gaps.push('matched regulatory context');
+    return gaps.length ? gaps.join(', ') : 'No empty primary layer; interpretation still requires source review';
+  }
+
+  function compareTrendLabel(direction) {
+    return ({ growing: 'Growing recently', steady: 'Broadly steady', slowing: 'Slower recently', limited: 'Too little dated evidence' })[direction] || 'Too little dated evidence';
+  }
+
+  function renderEvidenceComparison(leftTopic, rightTopic, leftDossier, rightDossier) {
+    const leftEvidence = leftDossier.evidence || {};
+    const rightEvidence = rightDossier.evidence || {};
+    const leftOverview = leftDossier.overview || {};
+    const rightOverview = rightDossier.overview || {};
+    const leftHuman = Number(leftEvidence.human_evidence_total || 0);
+    const rightHuman = Number(rightEvidence.human_evidence_total || 0);
+    const leftResults = Number(leftEvidence.trials_with_results || 0);
+    const rightResults = Number(rightEvidence.trials_with_results || 0);
+    const leftTrials = Number(leftEvidence.trial_total || 0);
+    const rightTrials = Number(rightEvidence.trial_total || 0);
+    const largerHuman = leftHuman === rightHuman ? null : leftHuman > rightHuman ? leftTopic : rightTopic;
+    const resultCoverage = (results, trials) => trials ? `${numberFormatter.format(results)} of ${numberFormatter.format(trials)} · ${Math.round((results / trials) * 100)}%` : 'No matched trials';
+    const topicPath = (topic) => `/topics/${encodeURIComponent(topic.slug)}`;
+    const researchPath = (topic, evidence = '') => `/research?topic=${encodeURIComponent(topic.slug)}${evidence ? `&evidence=${encodeURIComponent(evidence)}` : ''}`;
+    const trialPath = (topic, status = '') => `/trials?topic=${encodeURIComponent(topic.slug)}${status ? `&status=${encodeURIComponent(status)}` : ''}`;
+    const metricLink = (topic, value, href, context) => {
+      const item = link('compare-value', '', href);
+      item.append(el('strong', '', value), el('small', '', context));
+      return item;
+    };
+    const row = (label, note, leftValue, rightValue, leftHref, rightHref, leftContext = 'Open underlying records', rightContext = leftContext) => {
+      const item = el('div', 'compare-row');
+      const heading = el('div', 'compare-row-label');
+      heading.append(el('strong', '', label), el('small', '', note));
+      item.append(heading, metricLink(leftTopic, leftValue, leftHref, leftContext), metricLink(rightTopic, rightValue, rightHref, rightContext));
+      return item;
+    };
+    const group = (title, description, rows) => {
+      const section = el('section', 'compare-group');
+      const heading = el('div', 'compare-group-heading');
+      heading.append(el('h3', '', title), el('p', '', description));
+      section.append(heading, ...rows);
+      elements.compareGroups.append(section);
+    };
+
+    elements.compareResultTitle.textContent = `${leftTopic.name} and ${rightTopic.name}`;
+    const generatedAt = [leftEvidence.generated_at, rightEvidence.generated_at, leftOverview.generated_at, rightOverview.generated_at].filter(Boolean).sort().at(-1);
+    elements.compareResultDate.textContent = generatedAt ? `Compared from index data available ${formatTimestamp(generatedAt)}` : 'Compared from the current public index';
+    elements.compareSummary.replaceChildren();
+    const summary = el('p');
+    summary.textContent = largerHuman
+      ? `${largerHuman.name} currently has the larger indexed human-evidence footprint. Trial maturity, posted-results coverage, activity trend, and visible evidence gaps should still be read separately; none of these signals determines effectiveness or safety.`
+      : 'The two topics currently have the same number of indexed human-evidence records. Trial maturity, posted-results coverage, activity trend, and visible evidence gaps should still be read separately; none of these signals determines effectiveness or safety.';
+    elements.compareSummary.append(summary);
+
+    elements.compareTopicHeadings.replaceChildren(el('span', 'compare-axis-label', 'Measure'));
+    [leftTopic, rightTopic].forEach((topic) => {
+      const card = link('compare-topic-heading', '', topicPath(topic));
+      card.append(el('span', '', topic.domain_name || 'Longevity topic'), el('h3', '', topic.name), el('p', '', topic.description), el('small', '', 'Open Living Evidence Dossier →'));
+      elements.compareTopicHeadings.append(card);
+    });
+
+    elements.compareGroups.replaceChildren();
+    group('Evidence maturity', 'Study type and source coverage—not a score of scientific quality or agreement.', [
+      row('Research records', 'Eligible indexed research linked to this topic.', numberFormatter.format(Number(leftEvidence.research_total || 0)), numberFormatter.format(Number(rightEvidence.research_total || 0)), researchPath(leftTopic), researchPath(rightTopic)),
+      row('Human evidence', 'Human studies, randomized studies, and evidence syntheses classified by the index.', numberFormatter.format(leftHuman), numberFormatter.format(rightHuman), researchPath(leftTopic, 'human'), researchPath(rightTopic, 'human')),
+      row('Randomized human studies', 'Study design classification; not a finding or risk-of-bias judgment.', numberFormatter.format(Number(leftEvidence.randomized_human_total || 0)), numberFormatter.format(Number(rightEvidence.randomized_human_total || 0)), researchPath(leftTopic, 'randomized-human'), researchPath(rightTopic, 'randomized-human')),
+      row('Evidence syntheses', 'Human evidence reviews or syntheses currently classified in the index.', numberFormatter.format(Number(leftEvidence.human_synthesis_total || 0)), numberFormatter.format(Number(rightEvidence.human_synthesis_total || 0)), researchPath(leftTopic, 'human-synthesis'), researchPath(rightTopic, 'human-synthesis')),
+      row('Preclinical research', 'Laboratory or animal evidence cannot establish benefit or safety in people.', numberFormatter.format(Number(leftEvidence.preclinical_total || 0)), numberFormatter.format(Number(rightEvidence.preclinical_total || 0)), researchPath(leftTopic, 'preclinical'), researchPath(rightTopic, 'preclinical')),
+    ]);
+    group('Clinical trial landscape', 'Registry metadata describes study plans and status. It is not a result.', [
+      row('Registered trials', 'All matched registrations currently eligible for the public index.', numberFormatter.format(leftTrials), numberFormatter.format(rightTrials), trialPath(leftTopic), trialPath(rightTopic)),
+      row('Recruiting or active', 'Current status can change; verify eligibility and locations in the registry.', numberFormatter.format(Number(leftEvidence.recruiting_trials || 0)), numberFormatter.format(Number(rightEvidence.recruiting_trials || 0)), trialPath(leftTopic, 'Recruiting'), trialPath(rightTopic, 'Recruiting')),
+      row('Posted-results coverage', 'Registrations with reusable structured results compared with all matched trials.', resultCoverage(leftResults, leftTrials), resultCoverage(rightResults, rightTrials), trialPath(leftTopic), trialPath(rightTopic), 'Inspect trial results and registrations', 'Inspect trial results and registrations'),
+      row('Participants listed', 'Registry enrollment may be planned or actual and can change over time.', numberFormatter.format(Number(leftEvidence.registered_enrollment || 0)), numberFormatter.format(Number(rightEvidence.registered_enrollment || 0)), trialPath(leftTopic), trialPath(rightTopic), 'Verify participant fields at source', 'Verify participant fields at source'),
+      row('Highest registered phase', 'Highest phase label found among matched registrations.', compareHighestPhase(leftEvidence.trials_by_phase), compareHighestPhase(rightEvidence.trials_by_phase), trialPath(leftTopic), trialPath(rightTopic)),
+    ]);
+    group('Momentum and research activity', 'Publication volume measures indexed activity, not whether results are positive or clinically useful.', [
+      row('Recent direction', 'Latest complete three-year period compared with the preceding three years.', compareTrendLabel(leftOverview.trend_direction), compareTrendLabel(rightOverview.trend_direction), `${topicPath(leftTopic)}#topicTrend`, `${topicPath(rightTopic)}#topicTrend`, 'Open trend and yearly counts', 'Open trend and yearly counts'),
+      row('Recent indexed records', 'Records in the latest complete three-year comparison period.', numberFormatter.format(Number(leftOverview.trend_recent_total || 0)), numberFormatter.format(Number(rightOverview.trend_recent_total || 0)), researchPath(leftTopic), researchPath(rightTopic)),
+      row('Leading institutions shown', 'The dossiers show a small research-activity sample; open the full topic-specific university view.', numberFormatter.format((leftOverview.universities || []).length), numberFormatter.format((rightOverview.universities || []).length), `/universities?topic=${encodeURIComponent(leftTopic.slug)}`, `/universities?topic=${encodeURIComponent(rightTopic.slug)}`, 'Open topic university activity', 'Open topic university activity'),
+    ]);
+    group('Regulation, integrity, and uncertainty', 'Absence of a matched notice is not evidence of approval, safety, or scientific agreement.', [
+      row('Official regulatory notices', 'Product-, indication-, date-, and jurisdiction-specific notices matched to the topic.', numberFormatter.format(Number(leftEvidence.regulatory_total || 0)), numberFormatter.format(Number(rightEvidence.regulatory_total || 0)), `/regulatory?topic=${encodeURIComponent(leftTopic.slug)}`, `/regulatory?topic=${encodeURIComponent(rightTopic.slug)}`),
+      row('Corrections or retractions', 'Matched integrity signals; open each record to understand its scope.', numberFormatter.format(Number(leftEvidence.integrity_total || 0)), numberFormatter.format(Number(rightEvidence.integrity_total || 0)), `/integrity?topic=${encodeURIComponent(leftTopic.slug)}`, `/integrity?topic=${encodeURIComponent(rightTopic.slug)}`),
+      row('Connected source types', 'Distinct connected sources contributing to the present evidence snapshot.', numberFormatter.format(Number(leftEvidence.source_count || 0)), numberFormatter.format(Number(rightEvidence.source_count || 0)), `${topicPath(leftTopic)}#topicSourceBasis`, `${topicPath(rightTopic)}#topicSourceBasis`, 'Open source-linked examples', 'Open source-linked examples'),
+      row('Visible evidence gaps', 'Empty layers in the current indexed and classified collection.', compareGapSummary(leftDossier), compareGapSummary(rightDossier), `${topicPath(leftTopic)}#topicEvidenceContext`, `${topicPath(rightTopic)}#topicEvidenceContext`, 'Read uncertainty and limitations', 'Read uncertainty and limitations'),
+      row('Last meaningful update', 'Most recent source-level event connected to the dossier.', leftEvidence.last_meaningful_update ? formatTimestamp(leftEvidence.last_meaningful_update) : 'None recorded', rightEvidence.last_meaningful_update ? formatTimestamp(rightEvidence.last_meaningful_update) : 'None recorded', `${topicPath(leftTopic)}#timelineSection`, `${topicPath(rightTopic)}#timelineSection`, 'Open evidence timeline', 'Open evidence timeline'),
+    ]);
+    elements.compareResults.hidden = false;
+    elements.compareResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function comparisonSelectionFromLocation() {
+    const params = new URLSearchParams(location.search);
+    const directMatch = location.pathname.match(/^\/compare\/([^/]+)-vs-([^/]+)\/?$/);
+    const pair = directMatch ? [directMatch[1], directMatch[2]] : String(params.get('pair') || '').split('-vs-');
+    return {
+      left: decodeURIComponent(params.get('left') || pair[0] || ''),
+      right: decodeURIComponent(params.get('right') || pair[1] || ''),
+    };
+  }
+
+  async function initEvidenceCompare() {
+    elements.compareSection.hidden = false;
+    const topics = await catalogueTopics();
+    const topicBySlug = new Map(topics.map((topic) => [topic.slug, topic]));
+    topics.forEach((topic) => {
+      const label = `${topic.name} — ${topic.domain_name || 'Longevity topic'}`;
+      elements.compareLeft.append(new Option(label, topic.slug));
+      elements.compareRight.append(new Option(label, topic.slug));
+    });
+    const initial = comparisonSelectionFromLocation();
+    if (topicBySlug.has(initial.left)) elements.compareLeft.value = initial.left;
+    if (topicBySlug.has(initial.right)) elements.compareRight.value = initial.right;
+    let startedTracked = false;
+    const trackStart = () => {
+      if (!startedTracked && (elements.compareLeft.value || elements.compareRight.value)) {
+        startedTracked = true;
+        window.ilTrackUtility?.('comparison_started');
+      }
+    };
+    const run = async () => {
+      const leftSlug = elements.compareLeft.value;
+      const rightSlug = elements.compareRight.value;
+      trackStart();
+      if (!leftSlug || !rightSlug) {
+        elements.compareResults.hidden = true;
+        elements.compareValidation.textContent = 'Choose both topics to create a comparison.';
+        return;
+      }
+      if (leftSlug === rightSlug) {
+        elements.compareResults.hidden = true;
+        elements.compareValidation.textContent = 'Choose two different topics so the comparison is meaningful.';
+        return;
+      }
+      elements.compareValidation.textContent = 'Loading two verified Living Evidence Dossiers…';
+      elements.compareResults.hidden = true;
+      try {
+        const [leftDossier, rightDossier] = await Promise.all([
+          request('topic-dossier', 12, { topic: leftSlug }),
+          request('topic-dossier', 12, { topic: rightSlug }),
+        ]);
+        if (leftDossier.fallback || rightDossier.fallback) throw new Error('Verified dossier data is temporarily reconnecting.');
+        renderEvidenceComparison(topicBySlug.get(leftSlug), topicBySlug.get(rightSlug), leftDossier, rightDossier);
+        history.replaceState({}, '', `/compare/${encodeURIComponent(leftSlug)}-vs-${encodeURIComponent(rightSlug)}`);
+        document.querySelector('meta[name="robots"]')?.setAttribute('content', 'noindex, follow');
+        elements.compareValidation.textContent = 'Comparison ready. Every value below opens its supporting records or dossier context.';
+        elements.freshness.dataset.health = 'healthy';
+        elements.freshnessText.textContent = 'Current source-linked dossier data loaded.';
+        window.ilTrackUtility?.('comparison_completed');
+      } catch (error) {
+        console.error('Evidence comparison failed:', error);
+        elements.compareValidation.textContent = 'The verified comparison data is temporarily unavailable. No zero counts or unverified fallback records have been substituted.';
+      }
+    };
+    elements.compareForm.addEventListener('submit', (event) => { event.preventDefault(); run(); });
+    elements.compareLeft.addEventListener('change', trackStart);
+    elements.compareRight.addEventListener('change', trackStart);
+    elements.compareSwap.addEventListener('click', () => {
+      const previousLeft = elements.compareLeft.value;
+      elements.compareLeft.value = elements.compareRight.value;
+      elements.compareRight.value = previousLeft;
+      if (elements.compareLeft.value && elements.compareRight.value) run();
+    });
+    if (elements.compareLeft.value || elements.compareRight.value) trackStart();
+    if (elements.compareLeft.value && elements.compareRight.value) await run();
+    else if (elements.compareLeft.value) {
+      elements.compareValidation.textContent = `${topicBySlug.get(elements.compareLeft.value).name} is selected. Choose a second topic to compare.`;
+      elements.compareRight.focus();
+    }
+  }
+
   function drawResearch(records, emptyMessage = 'The first source sync is in progress. This page will populate automatically.') {
     elements.researchList.replaceChildren();
     if (!records.length) {
@@ -635,12 +838,24 @@
   let researchSearchTimer = 0;
   let trialSearchTimer = 0;
   let catalogueTopicEntriesPromise;
+  let catalogueTopicsPromise;
+
+  function catalogueTopics() {
+    if (!catalogueTopicsPromise) {
+      catalogueTopicsPromise = fetch('/topics-directory.json', { headers: { Accept: 'application/json' } })
+        .then((response) => {
+          if (!response.ok) throw new Error(`Topic directory failed with ${response.status}`);
+          return response.json();
+        })
+        .then((directory) => (directory.topics || []).slice().sort((left, right) => left.name.localeCompare(right.name)));
+    }
+    return catalogueTopicsPromise;
+  }
 
   function catalogueTopicEntries() {
     if (!catalogueTopicEntriesPromise) {
-      catalogueTopicEntriesPromise = fetch('/topics-directory.json', { headers: { Accept: 'application/json' } })
-        .then((response) => response.ok ? response.json() : { topics: [] })
-        .then((directory) => (directory.topics || []).map((topic) => [topic.slug, topic.name]).sort((left, right) => left[1].localeCompare(right[1])))
+      catalogueTopicEntriesPromise = catalogueTopics()
+        .then((topics) => topics.map((topic) => [topic.slug, topic.name]))
         .catch(() => []);
     }
     return catalogueTopicEntriesPromise;
@@ -1078,7 +1293,7 @@
     if (elements.relatedJourneys) {
       elements.relatedJourneys.replaceChildren(el('span', '', 'Related discoveries'));
       elements.relatedJourneys.append(link('', 'See all changes for this topic', `/changes?topic=${encodeURIComponent(topicSlug)}`));
-      (data.related_topics || []).slice(0, 3).forEach((topic) => elements.relatedJourneys.append(link('', `Compare with ${topic.name}`, `/topics/${encodeURIComponent(topic.slug)}`)));
+      (data.related_topics || []).slice(0, 3).forEach((topic) => elements.relatedJourneys.append(link('', `Compare with ${topic.name}`, `/compare/${encodeURIComponent(topicSlug)}-vs-${encodeURIComponent(topic.slug)}`)));
       elements.relatedJourneys.append(link('', 'Find related university activity', `/universities?topic=${encodeURIComponent(topicSlug)}`));
     }
   }
@@ -1872,6 +2087,8 @@
         renderTopics(data.topics || [], false);
         elements.freshness.dataset.health = 'healthy';
         elements.freshnessText.textContent = `${numberFormatter.format(data.topic_count || data.topics?.length || 0)} topics organized across ${numberFormatter.format(data.domain_count || 0)} domains.`;
+      } else if (view === 'compare') {
+        await initEvidenceCompare();
       } else if (view === 'topic') {
         const dossier = await request('topic-dossier', 12);
         if (dossier.fallback) {

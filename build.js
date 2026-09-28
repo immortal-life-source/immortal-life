@@ -164,7 +164,7 @@ function intelligencePage(values, topicDossierHtml = '', topicEndHtml = '') {
   return renderTemplate(intelligenceTemplate, resolved, {
     SCHEMA_JSON: pageSchema(resolved),
     HERO_ACTION_HTML: resolved.PAGE_VIEW === 'topics'
-      ? '<a class="intel-hero-action" href="/resources">Open global sources <span aria-hidden="true">→</span></a>'
+      ? '<div class="intel-hero-actions"><a class="intel-hero-action" href="/compare">Compare evidence <span aria-hidden="true">→</span></a><a class="intel-hero-action" href="/resources">Open global sources <span aria-hidden="true">→</span></a></div>'
       : '',
     HERO_SUPPLEMENT_HTML: resolved.PAGE_VIEW === 'topic'
       ? '<aside class="topic-hero-timeline" aria-labelledby="topicHeroTimelineTitle"><div class="topic-hero-timeline-heading"><div><span class="section-index">Latest evidence activity</span><h2 id="topicHeroTimelineTitle">Evidence timeline</h2></div><a href="#timelineSection">Full timeline →</a></div><ol id="topicHeroTimelineList" aria-live="polite"><li class="topic-hero-timeline-loading">Loading recent source-linked changes…</li></ol></aside>'
@@ -239,6 +239,17 @@ const intelligencePages = [
     TOPIC_SLUG: '',
     PAGE_KICKER: 'Topic guides',
     PAGE_HEADING: 'Explore longevity one question at a time.',
+  },
+  {
+    filename: 'compare.html',
+    PAGE_TITLE: 'Compare Longevity Evidence — immortal.life',
+    PAGE_DESCRIPTION: 'Compare two longevity topics across human evidence, preclinical research, registered trials, participants, posted results, research trends, universities, regulation, and integrity signals.',
+    CANONICAL_URL: `${site}/compare`,
+    PAGE_VIEW: 'compare',
+    TOPIC_SLUG: '',
+    PAGE_KICKER: 'Evidence Compare',
+    PAGE_HEADING: 'Compare two longevity evidence landscapes.',
+    FRESHNESS_TEXT: 'Choose two topics to begin.',
   },
   {
     filename: 'regulatory.html',
@@ -327,7 +338,7 @@ for (const topic of intelligenceTopics) {
     <p class="topic-interpretation-method" id="topicInterpretationMethod">New records update the facts immediately. A potentially material change is identified separately so it cannot silently rewrite the current interpretation.</p>
   </section>` : '';
   const dossier = `<section class="intel-section living-dossier" id="topicLivingDossier" aria-labelledby="topic-question" data-topic-name="${htmlEscape(topic.name)}">
-    <div class="living-dossier-heading"><div><a class="topic-domain-badge" href="/topics?domain=${encodeURIComponent(topic.domain.slug)}">${htmlEscape(topic.domain.name)}</a><span class="section-index">Living Evidence Dossier</span><h2 id="topic-question">${htmlEscape(topic.question)}</h2><p>${htmlEscape(topic.state)}</p></div><div class="topic-follow-actions"><button class="section-link save-topic-button" type="button" data-watch-topic="${topic.slug}" data-watch-name="${htmlEscape(topic.name)}" aria-pressed="false">Follow this topic</button><a class="section-link" href="/feeds/topics/${topic.slug}.xml">RSS feed</a></div></div>
+    <div class="living-dossier-heading"><div><a class="topic-domain-badge" href="/topics?domain=${encodeURIComponent(topic.domain.slug)}">${htmlEscape(topic.domain.name)}</a><span class="section-index">Living Evidence Dossier</span><h2 id="topic-question">${htmlEscape(topic.question)}</h2><p>${htmlEscape(topic.state)}</p></div><div class="topic-follow-actions"><a class="section-link topic-compare-link" href="/compare?left=${encodeURIComponent(topic.slug)}">Compare evidence</a><button class="section-link save-topic-button" type="button" data-watch-topic="${topic.slug}" data-watch-name="${htmlEscape(topic.name)}" aria-pressed="false">Follow this topic</button><a class="section-link" href="/feeds/topics/${topic.slug}.xml">RSS feed</a></div></div>
     <nav class="topic-contents" aria-label="On this page"><span>On this page</span>${pilotContentsLink}<a href="#topicUniversities">Universities</a><a href="#trialsSection">Trials</a><a href="#researchSection">Research</a><a href="#topicTrend">Trend</a><a href="#topicEvidenceContext">Evidence context</a></nav>
     <div class="dossier-snapshot" id="topicDossierSnapshot" aria-live="polite"><p class="dossier-loading">Loading the evidence overview…</p></div>
     ${pilotInterpretation}
