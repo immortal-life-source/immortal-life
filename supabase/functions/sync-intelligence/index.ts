@@ -104,7 +104,7 @@ async function persistResearchPage(
 ): Promise<void> {
   const imported = await supabase.from('research_items')
     .upsert(records, { onConflict: 'source_id,external_id', defaultToNull: false })
-  if (imported.error) throw imported.error
+  if (imported.error) throw new Error(`research page upsert: ${errorMessage(imported.error)}`)
   const links = records.map((record: any) => {
     const assessment = assessments.get(record.external_id) ?? assessTopic(topic, { title: '', sourceId })
     return {
@@ -121,12 +121,12 @@ async function persistResearchPage(
     p_topic_slug: topic.slug,
     p_links: links,
   })
-  if (linked.error) throw linked.error
-  const reindexed = await supabase.rpc('reindex_research_source_records', {
+  if (linked.error) throw new Error(`research topic link: ${errorMessage(linked.error)}`)
+  const reindexed = await supabase.rpc('enqueue_research_source_records_for_reindex', {
     p_source_id: sourceId,
     p_external_ids: records.map((record: any) => record.external_id),
   })
-  if (reindexed.error) throw reindexed.error
+  if (reindexed.error) throw new Error(`research reindex enqueue: ${errorMessage(reindexed.error)}`)
 }
 
 async function persistTrialPage(
@@ -139,7 +139,7 @@ async function persistTrialPage(
 ): Promise<void> {
   const imported = await supabase.from('clinical_trials')
     .upsert(records, { onConflict: 'source_id,external_id', defaultToNull: false })
-  if (imported.error) throw imported.error
+  if (imported.error) throw new Error(`trial page upsert: ${errorMessage(imported.error)}`)
   const links = records.map((record: any) => {
     const assessment = assessments.get(record.external_id) ?? assessTopic(topic, { title: '', sourceId })
     return {
@@ -156,12 +156,12 @@ async function persistTrialPage(
     p_topic_slug: topic.slug,
     p_links: links,
   })
-  if (linked.error) throw linked.error
-  const reindexed = await supabase.rpc('reindex_trial_source_records', {
+  if (linked.error) throw new Error(`trial topic link: ${errorMessage(linked.error)}`)
+  const reindexed = await supabase.rpc('enqueue_trial_source_records_for_reindex', {
     p_source_id: sourceId,
     p_external_ids: records.map((record: any) => record.external_id),
   })
-  if (reindexed.error) throw reindexed.error
+  if (reindexed.error) throw new Error(`trial reindex enqueue: ${errorMessage(reindexed.error)}`)
 }
 
 function constantTimeSecretMatch(supplied: string, expected: string): boolean {
@@ -404,7 +404,11 @@ async function syncCrossref(supabase: any, job: Job): Promise<SyncOutcome> {
     }
   }
   if (events.length) {
-    const { error } = await supabase.from('research_integrity_events').upsert(events, { onConflict: 'source_id,external_id', defaultToNull: false })
+    // Crossref can repeat the same update relationship inside one cursor page.
+    // PostgreSQL rejects a multi-row upsert when the same conflict key appears
+    // twice, so collapse the page before the single database write.
+    const uniqueEvents = [...new Map(events.map((event: any) => [`${event.source_id}|${event.external_id}`, event])).values()]
+    const { error } = await supabase.from('research_integrity_events').upsert(uniqueEvents, { onConflict: 'source_id,external_id', defaultToNull: false })
     if (error) throw error
   }
   // Source-level freshness records the successful global pass. Updating every
@@ -746,7 +750,10 @@ async function syncDoaj(supabase: any, topic: Topic, job: Job): Promise<SyncOutc
   // DOAJ accepts Boolean expressions but rejects wildcard and other advanced
   // Lucene operators. The downstream relevance check still applies the full
   // controlled topic definition, so this only broadens candidate retrieval.
-  const doajQuery = topic.literature_query.replace(/[+*?~^\\]/g, ' ').replace(/\s+/g, ' ').trim()
+  // A few valid portal queries exceed DOAJ's accepted Lucene complexity and
+  // return HTTP 400. Use the concise controlled topic name for candidate
+  // retrieval; the full local matcher still determines publication.
+  const doajQuery = topic.name.replace(/[^\p{L}\p{N}\s-]/gu, ' ').replace(/\s+/g, ' ').trim()
   const url = new URL(`/api/search/articles/${encodeURIComponent(doajQuery)}`, 'https://doaj.org')
   url.searchParams.set('page', String(page))
   url.searchParams.set('pageSize', String(DOAJ_PAGE_SIZE))
@@ -1039,7 +1046,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return jsonResponse(req, { error: 'Method not allowed' }, 405, 'POST')
 
   const requestBody = await req.clone().json().catch(() => ({}))
-  if (requestBody?.trigger === 'schedule' && Deno.env.get('SCHEDULED_INGESTION_PAUSED') === 'true') {
+  if (['schedule', 'schedule-history'].includes(requestBody?.trigger) && Deno.env.get('SCHEDULED_INGESTION_PAUSED') === 'true') {
     return jsonResponse(req, { ok: true, status: 'maintenance_pause' }, 202, 'POST')
   }
 

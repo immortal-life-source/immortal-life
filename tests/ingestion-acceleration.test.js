@@ -34,6 +34,18 @@ test('university history is isolated off peak and expensive score rebuild is dai
   assert.match(migration, /immortal-life-university-score-refresh/)
 })
 
+test('high-volume historical sources receive independent bounded recovery capacity', async () => {
+  const migration = await read('supabase/migrations/20260928000200_accelerate_historical_source_workers.sql')
+  assert.match(migration, /immortal-life-pubmed-sync/)
+  assert.match(migration, /immortal-life-europe-pmc-sync/)
+  assert.match(migration, /immortal-life-clinicaltrials-sync/)
+  assert.match(migration, /"source":"pubmed"/)
+  assert.match(migration, /"source":"europe-pmc"/)
+  assert.match(migration, /"source":"clinicaltrials-gov"/)
+  assert.match(migration, /immortal-life-university-history/)
+  assert.match(migration, /'\*\/5 22-23,0-4 \* \* \*'/)
+})
+
 test('source reuse is fail-closed, auditable, expiring, and excluded from paid delivery by default', async () => {
   const [migration, expiry] = await Promise.all([
     read('supabase/migrations/20260927000300_accelerate_history_and_enforce_source_policy.sql'),
