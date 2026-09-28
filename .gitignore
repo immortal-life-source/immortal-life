@@ -8,4 +8,10 @@ dist/
 .vercel/
 .vercel-auth-immortal/
 supabase/.temp/
+backup/
+backups/
+recovery/
+*.sql.gz
+*.sql.gz.enc
+*.tar.gz.enc
 og-image.png.png

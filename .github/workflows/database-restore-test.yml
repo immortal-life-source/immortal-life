@@ -1,0 +1,106 @@
+name: Database restore test
+
+on:
+  schedule:
+    - cron: "43 3 1 * *"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: database-restore-test
+  cancel-in-progress: false
+
+jobs:
+  restore-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: supabase/postgres:17.6.1.121
+        env:
+          POSTGRES_PASSWORD: restore-test-only
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+      GH_TOKEN: ${{ github.token }}
+      PGHOST: 127.0.0.1
+      PGPORT: 54322
+      PGUSER: postgres
+      PGPASSWORD: restore-test-only
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require recovery key
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$BACKUP_ENCRYPTION_PASSPHRASE" || { echo "BACKUP_ENCRYPTION_PASSPHRASE is not configured" >&2; exit 1; }
+
+      - name: Download latest successful encrypted backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id="$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow database-backup.yml \
+            --status success \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId')"
+          test -n "$run_id" || { echo "No successful database backup run exists" >&2; exit 1; }
+          mkdir -p recovery/encrypted recovery/plain
+          gh run download "$run_id" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name immortal-life-database-backup \
+            --dir recovery/encrypted
+          (cd recovery/encrypted && sha256sum -c immortal-life-database.tar.gz.enc.sha256)
+
+      - name: Decrypt backup in the isolated runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 \
+            -in recovery/encrypted/immortal-life-database.tar.gz.enc \
+            -out recovery/database-backup.tar.gz \
+            -pass env:BACKUP_ENCRYPTION_PASSPHRASE
+          tar -C recovery/plain -xzf recovery/database-backup.tar.gz
+          (cd recovery/plain && sha256sum -c SHA256SUMS)
+
+      - name: Restore into a disposable database
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -c 'create database immortal_life_restore_test'
+          export PGDATABASE=immortal_life_restore_test
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          declare role_name text;
+          begin
+            foreach role_name in array array['anon','authenticated','service_role','authenticator','supabase_admin','dashboard_user'] loop
+              if not exists (select 1 from pg_roles where rolname = role_name) then
+                execute format('create role %I nologin', role_name);
+              end if;
+            end loop;
+          end
+          $$;
+          SQL
+          psql -v ON_ERROR_STOP=1 -f recovery/plain/schema.sql
+          psql -v ON_ERROR_STOP=1 -f recovery/plain/data.sql
+          psql -v ON_ERROR_STOP=1 -f scripts/verify-restored-database.sql
+
+      - name: Destroy plaintext recovery material
+        if: always()
+        shell: bash
+        run: rm -rf recovery/plain recovery/database-backup.tar.gz
+

@@ -1,0 +1,77 @@
+name: Encrypted database backup
+
+on:
+  schedule:
+    - cron: "17 2 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: encrypted-database-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+      PROJECT_REF: nifbuyoghesveotugday
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require backup credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "SUPABASE_ACCESS_TOKEN is not configured" >&2; exit 1; }
+          test -n "$BACKUP_ENCRYPTION_PASSPHRASE" || { echo "BACKUP_ENCRYPTION_PASSPHRASE is not configured" >&2; exit 1; }
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.118.0
+
+      - name: Export project-owned schema and data
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p backup/plain backup/encrypted
+          supabase db dump --project-ref "$PROJECT_REF" --schema public --file backup/plain/schema.sql
+          supabase db dump --project-ref "$PROJECT_REF" --schema public --data-only --use-copy --file backup/plain/data.sql
+          test -s backup/plain/schema.sql
+          test -s backup/plain/data.sql
+          cat > backup/plain/manifest.txt <<EOF
+          project_ref=$PROJECT_REF
+          created_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          commit_sha=$GITHUB_SHA
+          schema=public
+          EOF
+          (cd backup/plain && sha256sum schema.sql data.sql manifest.txt > SHA256SUMS)
+          tar -C backup/plain -czf backup/database-backup.tar.gz schema.sql data.sql manifest.txt SHA256SUMS
+
+      - name: Encrypt before leaving the runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl enc -aes-256-cbc -salt -pbkdf2 -iter 600000 \
+            -in backup/database-backup.tar.gz \
+            -out backup/encrypted/immortal-life-database.tar.gz.enc \
+            -pass env:BACKUP_ENCRYPTION_PASSPHRASE
+          sha256sum backup/encrypted/immortal-life-database.tar.gz.enc \
+            > backup/encrypted/immortal-life-database.tar.gz.enc.sha256
+          test -s backup/encrypted/immortal-life-database.tar.gz.enc
+          rm -rf backup/plain backup/database-backup.tar.gz
+
+      - name: Retain encrypted recovery artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: immortal-life-database-backup
+          path: backup/encrypted/
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+
