@@ -250,6 +250,18 @@
     trialClear: document.getElementById('trialClear'),
     trialResult: document.getElementById('trialResult'),
     trialLoadMore: document.getElementById('trialLoadMore'),
+    resultsGapSection: document.getElementById('resultsGapSection'),
+    resultsGapStats: document.getElementById('resultsGapStats'),
+    resultsGapYearPanel: document.getElementById('resultsGapYearPanel'),
+    resultsGapYears: document.getElementById('resultsGapYears'),
+    resultsGapControls: document.getElementById('resultsGapControls'),
+    resultsGapSearch: document.getElementById('resultsGapSearch'),
+    resultsGapTopic: document.getElementById('resultsGapTopic'),
+    resultsGapStatus: document.getElementById('resultsGapStatus'),
+    resultsGapSort: document.getElementById('resultsGapSort'),
+    resultsGapClear: document.getElementById('resultsGapClear'),
+    resultsGapResult: document.getElementById('resultsGapResult'),
+    resultsGapList: document.getElementById('resultsGapList'),
     regulatorySection: document.getElementById('regulatorySection'),
     regulatoryList: document.getElementById('regulatoryList'),
     regulatoryLibrary: document.getElementById('regulatoryLibrary'),
@@ -323,7 +335,7 @@
     topicSourceBasisList: document.getElementById('topicSourceBasisList'),
   };
 
-  document.querySelector(`[data-nav="${view === 'overview' ? 'research' : ['topic', 'compare'].includes(view) ? 'topics' : view}"]`)?.setAttribute('aria-current', 'page');
+  document.querySelector(`[data-nav="${view === 'overview' ? 'research' : ['topic', 'compare'].includes(view) ? 'topics' : view === 'trial-results-gap' ? 'trials' : view}"]`)?.setAttribute('aria-current', 'page');
   if (view === 'you') return;
 
   function setNavigation(open) {
@@ -1071,6 +1083,151 @@
       elements.trialLoadMore.disabled = false;
       elements.trialLoadMore.textContent = 'Load more trials';
     }
+  }
+
+  function resultsGapStateLabel(state) {
+    return {
+      'possible-gap': 'Possible results gap',
+      'within-window': 'Within 12 months',
+      'results-posted': 'Results visible',
+      'date-unavailable': 'Completion date unavailable',
+    }[state] || 'Completed trial';
+  }
+
+  function renderResultsGapMonitor(data) {
+    const trials = Array.isArray(data.trials) ? data.trials : [];
+    const summary = data.summary || {};
+    let selectedYear = '';
+
+    const activateFilter = (state = '', year = '') => {
+      if (elements.resultsGapStatus) elements.resultsGapStatus.value = state;
+      selectedYear = year ? String(year) : '';
+      draw();
+      elements.resultsGapList?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    elements.resultsGapStats.replaceChildren();
+    [
+      ['', summary.completed_trials, 'Completed registrations', 'The completed longevity-trial cohort checked by this monitor.'],
+      ['possible-gap', summary.possible_gaps, 'Possible results gaps', 'No posted registry results more than 12 months after completion.'],
+      ['within-window', summary.within_window, 'Completed within 12 months', 'No posted results yet, but still inside the monitor’s 12-month marker.'],
+      ['results-posted', summary.results_posted, 'Registry results visible', `${Number(summary.results_coverage_percent || 0).toFixed(1)}% of this completed cohort.`],
+      ['date-unavailable', summary.completion_date_unavailable, 'Date unavailable', 'Completed status without a usable past completion date.'],
+    ].forEach(([state, value, label, note]) => {
+      const button = el('button', `results-gap-stat${state === 'possible-gap' ? ' is-primary' : ''}`);
+      button.type = 'button';
+      button.dataset.state = state;
+      button.append(el('strong', '', numberFormatter.format(Number(value || 0))), el('span', '', label), el('small', '', note));
+      button.addEventListener('click', () => activateFilter(state));
+      elements.resultsGapStats.append(button);
+    });
+
+    const cohorts = Array.isArray(data.cohorts) ? data.cohorts.slice(0, 12) : [];
+    elements.resultsGapYears.replaceChildren();
+    const maximum = Math.max(1, ...cohorts.map((cohort) => Number(cohort.completed || 0)));
+    cohorts.forEach((cohort) => {
+      const button = el('button', 'results-gap-year');
+      button.type = 'button';
+      button.dataset.year = String(cohort.year);
+      const bar = el('span', 'results-gap-year-bar');
+      bar.style.setProperty('--cohort-size', `${Math.max(8, (Number(cohort.completed || 0) / maximum) * 100)}%`);
+      const postedShare = Number(cohort.completed || 0) ? Math.round((Number(cohort.results_posted || 0) / Number(cohort.completed)) * 100) : 0;
+      bar.style.setProperty('--posted-share', `${postedShare}%`);
+      button.append(el('strong', '', cohort.year), bar, el('span', '', `${numberFormatter.format(cohort.completed)} completed`), el('small', '', `${numberFormatter.format(cohort.results_posted)} results visible · ${numberFormatter.format(cohort.possible_gaps)} possible gaps`));
+      button.addEventListener('click', () => activateFilter(elements.resultsGapStatus?.value || '', cohort.year));
+      elements.resultsGapYears.append(button);
+    });
+    elements.resultsGapYearPanel.hidden = !cohorts.length;
+
+    const topicEntries = topicOptions(trials, 'clinical_trial_topics');
+    replaceFilterOptions(elements.resultsGapTopic, 'All topics', topicEntries);
+    const params = new URLSearchParams(location.search);
+    elements.resultsGapSearch.value = params.get('search')?.trim() || '';
+    elements.resultsGapTopic.value = params.get('topic')?.trim() || '';
+    elements.resultsGapStatus.value = params.get('status')?.trim() || 'possible-gap';
+    elements.resultsGapSort.value = params.get('sort')?.trim() || 'longest-gap';
+
+    function gapDetail(record) {
+      if (record.result_state === 'possible-gap') {
+        const months = Math.max(1, Math.floor(Number(record.gap_days || 0) / 30));
+        return `${numberFormatter.format(months)} month${months === 1 ? '' : 's'} beyond the 12-month marker`;
+      }
+      if (record.result_state === 'within-window') return `${numberFormatter.format(Number(record.days_since_completion || 0))} days since listed completion`;
+      if (record.result_state === 'results-posted') return 'Structured results are visible in the registry record';
+      return 'No usable past completion date is available for timing';
+    }
+
+    function draw() {
+      const query = String(elements.resultsGapSearch.value || '').trim().toLowerCase();
+      const topic = elements.resultsGapTopic.value || '';
+      const state = elements.resultsGapStatus.value || '';
+      const sort = elements.resultsGapSort.value || 'longest-gap';
+      const visible = trials.filter((record) => {
+        const year = record.completion_date ? String(record.completion_date).slice(0, 4) : '';
+        return (!query || trialSearchText(record).includes(query)) &&
+          (!topic || includesTopic(record, 'clinical_trial_topics', topic)) &&
+          (!state || record.result_state === state) &&
+          (!selectedYear || year === selectedYear);
+      }).sort((left, right) => {
+        if (sort === 'title') return String(left.title).localeCompare(String(right.title));
+        if (sort === 'recent-completion') return String(right.completion_date || '').localeCompare(String(left.completion_date || ''));
+        if (sort === 'recent-update') return String(right.last_update_date || '').localeCompare(String(left.last_update_date || ''));
+        return Number(right.gap_days || 0) - Number(left.gap_days || 0) || String(left.completion_date || '').localeCompare(String(right.completion_date || ''));
+      });
+
+      elements.resultsGapStats.querySelectorAll('[data-state]').forEach((button) => button.classList.toggle('is-active', button.dataset.state === state));
+      elements.resultsGapYears.querySelectorAll('[data-year]').forEach((button) => button.classList.toggle('is-active', button.dataset.year === selectedYear));
+      elements.resultsGapList.replaceChildren();
+      visible.forEach((record) => {
+        const card = el('article', `results-gap-card results-gap-card--${record.result_state}`);
+        const meta = el('div', 'results-gap-card-meta');
+        meta.append(el('span', `results-gap-state results-gap-state--${record.result_state}`, resultsGapStateLabel(record.result_state)));
+        meta.append(el('strong', '', record.external_id || 'Registry ID unavailable'));
+        if (record.content_sources?.name) meta.append(el('small', '', record.content_sources.name));
+
+        const main = el('div', 'results-gap-card-main');
+        const heading = el('h3'); heading.append(link('', record.title, `/trials/${encodeURIComponent(record.id)}`));
+        const context = el('p', 'results-gap-context');
+        context.textContent = `${record.sponsor || 'Sponsor not supplied'} · completed ${formatDate(record.completion_date)} · registry updated ${formatDate(record.last_update_date)}`;
+        const signal = el('div', 'results-gap-signal');
+        signal.append(el('strong', '', gapDetail(record)), el('span', '', record.result_state === 'possible-gap' ? 'No structured results are visible in the indexed registry record.' : resultsGapStateLabel(record.result_state)));
+        const tags = el('div', 'record-tags');
+        topicLinks(record, 'clinical_trial_topics').forEach((item) => tags.append(link('record-tag', item.name, `/topics/${encodeURIComponent(item.slug)}`)));
+        (record.phases || []).forEach((phase) => tags.append(el('span', 'record-tag', readableStatus(phase))));
+        main.append(heading, context, signal, tags);
+
+        const action = el('div', 'results-gap-card-action');
+        const local = link('section-link', 'Open indexed trial', `/trials/${encodeURIComponent(record.id)}`);
+        const source = link('source-link', 'Verify in original registry', record.source_url);
+        source.target = '_blank'; source.rel = 'noopener noreferrer'; source.dataset.ilEvent = 'open_source';
+        action.append(local, source);
+        card.append(meta, main, action);
+        elements.resultsGapList.append(card);
+      });
+      if (!visible.length) elements.resultsGapList.append(el('p', 'empty-list', 'No completed trial matches these filters. Try all statuses, another topic, or clear the search.'));
+      const yearText = selectedYear ? ` completed in ${selectedYear}` : '';
+      elements.resultsGapResult.textContent = `Showing ${numberFormatter.format(visible.length)} of ${numberFormatter.format(trials.length)} completed trial registrations${yearText}. Updated ${formatTimestamp(data.generated_at)}.`;
+      const url = new URL(location.href);
+      [['search', elements.resultsGapSearch.value.trim()], ['topic', topic], ['status', state], ['sort', sort]].forEach(([key, value]) => value ? url.searchParams.set(key, value) : url.searchParams.delete(key));
+      history.replaceState({}, '', `${url.pathname}${url.search}`);
+    }
+
+    elements.resultsGapControls.addEventListener('input', draw);
+    elements.resultsGapControls.addEventListener('change', draw);
+    elements.resultsGapClear.onclick = () => {
+      elements.resultsGapSearch.value = '';
+      elements.resultsGapTopic.value = '';
+      elements.resultsGapStatus.value = '';
+      elements.resultsGapSort.value = 'longest-gap';
+      selectedYear = '';
+      draw();
+      elements.resultsGapSearch.focus();
+    };
+    draw();
+    elements.resultsGapSection.hidden = false;
+    elements.freshness.dataset.health = 'healthy';
+    elements.freshnessText.textContent = `${numberFormatter.format(Number(summary.completed_trials || 0))} completed trial registrations checked · ${numberFormatter.format(Number(summary.possible_gaps || 0))} possible results gaps.`;
+    window.ilTrackUtility?.('trial_results_gap_monitor_viewed', { possible_gaps: Number(summary.possible_gaps || 0) });
   }
 
   function regulatoryGuideTitle(resource) {
@@ -1991,7 +2148,7 @@
   // Cache Storage survives ordinary reloads. Bump this contract whenever a
   // repaired public aggregation would otherwise remain hidden by an older
   // zero-value response in a visitor's browser.
-  const publicCacheName = 'immortal-life-public-intelligence-v5';
+  const publicCacheName = 'immortal-life-public-intelligence-v6';
   const publicCacheMaxAgeMs = 15 * 60 * 1000;
 
   async function readCachedRequest(url) {
@@ -2042,7 +2199,7 @@
     if (topicSlug) url.searchParams.set('topic', topicSlug);
     const cached = await readCachedRequest(url);
     if (cached) return cached;
-    const res = await fetchWithDeadline(url, viewName === 'topic-dossier' ? 10000 : 6500);
+    const res = await fetchWithDeadline(url, ['topic-dossier', 'trial-results-gap'].includes(viewName) ? 10000 : 6500);
     if (res.ok) {
       const data = await res.json();
       await writeCachedRequest(url, data);
@@ -2079,6 +2236,10 @@
         renderTrials(data.trials || [], topicEntries);
         elements.trialLoadMore.hidden = trialNextOffset == null;
         elements.trialLoadMore.onclick = () => loadMoreTrials().catch((error) => console.error('Trial page request failed:', error));
+        renderSources(data.sources || [], false);
+      } else if (view === 'trial-results-gap') {
+        const data = await request('trial-results-gap', 500);
+        renderResultsGapMonitor(data);
         renderSources(data.sources || [], false);
       } else if (view === 'topics') {
         const response = await fetch('/topics-directory.json', { headers: { Accept: 'application/json' } });

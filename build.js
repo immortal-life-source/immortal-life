@@ -165,7 +165,9 @@ function intelligencePage(values, topicDossierHtml = '', topicEndHtml = '') {
     SCHEMA_JSON: pageSchema(resolved),
     HERO_ACTION_HTML: resolved.PAGE_VIEW === 'topics'
       ? '<div class="intel-hero-actions"><a class="intel-hero-action" href="/compare">Compare evidence <span aria-hidden="true">→</span></a><a class="intel-hero-action" href="/resources">Open global sources <span aria-hidden="true">→</span></a></div>'
-      : '',
+      : resolved.PAGE_VIEW === 'trials'
+        ? '<div class="intel-hero-actions"><a class="intel-hero-action" href="/trials/results-gap">Open Results Gap Monitor <span aria-hidden="true">→</span></a></div>'
+        : '',
     HERO_SUPPLEMENT_HTML: resolved.PAGE_VIEW === 'topic'
       ? '<aside class="topic-hero-timeline" aria-labelledby="topicHeroTimelineTitle"><div class="topic-hero-timeline-heading"><div><span class="section-index">Latest evidence activity</span><h2 id="topicHeroTimelineTitle">Evidence timeline</h2></div><a href="#timelineSection">Full timeline →</a></div><ol id="topicHeroTimelineList" aria-live="polite"><li class="topic-hero-timeline-loading">Loading recent source-linked changes…</li></ol></aside>'
       : '',
@@ -229,6 +231,17 @@ const intelligencePages = [
     TOPIC_SLUG: '',
     PAGE_KICKER: 'Clinical studies from official registries',
     PAGE_HEADING: 'See which longevity trials are being registered.',
+  },
+  {
+    filename: 'trial-results-gap.html',
+    PAGE_TITLE: 'Trial Results Gap Monitor — immortal.life',
+    PAGE_DESCRIPTION: 'Track completed longevity trial registrations whose registry records do not yet show posted results, with transparent dates, topics, sponsors, and original-source links.',
+    CANONICAL_URL: `${site}/trials/results-gap`,
+    PAGE_VIEW: 'trial-results-gap',
+    TOPIC_SLUG: '',
+    PAGE_KICKER: 'Trial transparency monitor',
+    PAGE_HEADING: 'Which completed trials still show no posted results?',
+    FRESHNESS_TEXT: 'Checking completed trial registrations…',
   },
   {
     filename: 'topics.html',
@@ -438,7 +451,11 @@ fs.mkdirSync(sitemapDirectory, { recursive: true });
 const sitemapUrlset = (urls) => `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((url) => `  <url><loc>${site}${url}</loc></url>`).join('\n')}\n</urlset>\n`;
 const staticRoutes = fs.readdirSync(outputDir)
   .filter((name) => name.endsWith('.html') && !['auth-x.html', 'auth-linkedin.html', 'confirmed.html', 'unsubscribed.html', 'institutional-pilot.html'].includes(name))
-  .map((name) => name === 'index.html' ? '/' : `/${name.replace(/\.html$/, '')}`)
+  .map((name) => {
+    if (name === 'index.html') return '/';
+    if (name === 'trial-results-gap.html') return '/trials/results-gap';
+    return `/${name.replace(/\.html$/, '')}`;
+  })
   .sort();
 const topicRoutes = intelligenceTopics.map((topic) => `/topics/${topic.slug}`);
 fs.writeFileSync(path.join(sitemapDirectory, 'static.xml'), sitemapUrlset(staticRoutes));

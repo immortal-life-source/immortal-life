@@ -67,6 +67,30 @@ test('Evidence Compare is shareable, source-linked, and non-prescriptive', async
   assert.match(css, /\.compare-row/)
 })
 
+test('Trial Results Gap Monitor is source-linked, complete, and avoids misconduct claims', async () => {
+  const [template, portal, css, build, routes, api, proxy] = await Promise.all([
+    read('intelligence-template.html'), read('intelligence.js'), read('intelligence.css'), read('build.js'), read('vercel.json'),
+    read('supabase/functions/public-intelligence/index.ts'), read('api/intelligence.js'),
+  ])
+  for (const id of ['resultsGapSection', 'resultsGapStats', 'resultsGapYears', 'resultsGapControls', 'resultsGapList']) assert.match(template, new RegExp(`id="${id}"`))
+  assert.match(build, /filename: 'trial-results-gap\.html'/)
+  assert.match(build, /PAGE_VIEW: 'trial-results-gap'/)
+  assert.match(build, /href="\/trials\/results-gap"/)
+  assert.match(build, /name === 'trial-results-gap\.html'\) return '\/trials\/results-gap'/)
+  assert.match(routes, /"source": "\/trials\/results-gap", "destination": "\/trial-results-gap"/)
+  assert.match(api, /if \(view === 'trial-results-gap'\)/)
+  assert.match(api, /\.eq\('overall_status', 'Completed'\)/)
+  assert.match(api, /for \(let page = 0; ; page \+= 1\)/)
+  assert.match(api, /daysSinceCompletion > 365/)
+  assert.match(api, /not a finding of legal non-compliance/)
+  assert.match(proxy, /'trial-results-gap'/)
+  assert.match(portal, /renderResultsGapMonitor/)
+  assert.match(portal, /Verify in original registry/)
+  assert.match(template, /It is a discovery signal—not proof/)
+  assert.match(css, /TRIAL RESULTS GAP MONITOR/)
+  assert.match(css, /\.results-gap-card--possible-gap/)
+})
+
 test('Trial Radar has one canonical visitor route', async () => {
   const [routes, home, template] = await Promise.all([read('vercel.json'), read('index.html'), read('intelligence-template.html')])
   assert.match(routes, /"source": "\/discover\/recruiting-trials", "destination": "\/trials", "permanent": true/)
@@ -139,7 +163,7 @@ test('research and trials use complete searchable filter systems', async () => {
 test('public data views recover from brief Edge Function saturation', async () => {
   const [portal, proxy, vercel] = await Promise.all([read('intelligence.js'), read('api/intelligence.js'), read('vercel.json')])
   assert.match(portal, /fetchWithDeadline/)
-  assert.match(portal, /immortal-life-public-intelligence-v5/)
+  assert.match(portal, /immortal-life-public-intelligence-v6/)
   assert.match(portal, /const endpoint = '\/api\/intelligence'/)
   assert.match(portal, /new URL\(endpoint, window\.location\.origin\)/)
   assert.match(portal, /timeoutMs = 6500/)
@@ -221,7 +245,7 @@ test('university fallbacks never present a 100-row sample as complete global cov
   ])
   assert.match(proxy, /total_matching: null/)
   assert.match(proxy, /temporary sample, not index totals/)
-  assert.match(proxy, /view === 'universities' \|\| request\.query\?\.view === 'topic-dossier'/)
+  assert.match(proxy, /\['universities', 'topic-dossier', 'trial-results-gap'\]\.includes\(request\.query\?\.view\)/)
   assert.match(proxy, /slowAggregate \? 9000 : 3500/)
   assert.match(api, /country_name\.ilike/)
   assert.match(api, /count: 'exact'/)

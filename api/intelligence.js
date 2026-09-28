@@ -168,7 +168,7 @@ module.exports = async function intelligenceProxy(request, response) {
   // aborting that early cached a 100-row OpenAlex sample as if it were the
   // complete index. Keep the proxy responsive, but allow the authoritative
   // aggregate enough time to answer.
-  const slowAggregate = request.query?.view === 'universities' || request.query?.view === 'topic-dossier';
+  const slowAggregate = ['universities', 'topic-dossier', 'trial-results-gap'].includes(request.query?.view);
   const timeout = setTimeout(() => controller.abort(), slowAggregate ? 9000 : 3500);
   try {
     const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';

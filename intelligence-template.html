@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,300&family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="icon" href="/favicon.ico" type="image/x-icon" />
-  <link rel="stylesheet" href="/intelligence.css?v=20260928-evidence-compare" />
+  <link rel="stylesheet" href="/intelligence.css?v=20260928-results-gap-monitor" />
 </head>
 <body data-view="{{PAGE_VIEW}}" data-topic="{{TOPIC_SLUG}}" style="{{BODY_STYLE}}">
   <header class="intel-header">
@@ -144,6 +144,28 @@
       <p class="filter-result" id="trialResult" aria-live="polite"></p>
       <div class="record-list" id="trialList"></div>
       <button class="section-link record-load-more" id="trialLoadMore" type="button" hidden>Load more trials</button>
+    </section>
+
+    <section class="intel-section results-gap-monitor" id="resultsGapSection" hidden aria-labelledby="resultsGapTitle">
+      <div class="results-gap-intro">
+        <div><span class="section-index">Trial transparency</span><h2 id="resultsGapTitle">Follow the distance between trial completion and visible results.</h2></div>
+        <p>This monitor checks completed longevity trial registrations. A <strong>possible gap</strong> means the indexed registry record shows no posted results more than 12 months after its listed completion date. It is a discovery signal—not proof that results are legally overdue, unpublished everywhere, or withheld.</p>
+      </div>
+      <div class="results-gap-stats" id="resultsGapStats" aria-label="Trial results coverage"></div>
+      <div class="results-gap-year-panel" id="resultsGapYearPanel" hidden>
+        <div><span class="section-index">Completion-year view</span><h3>How visible results vary across completed trial cohorts</h3></div>
+        <div class="results-gap-years" id="resultsGapYears"></div>
+      </div>
+      <form class="results-gap-controls" id="resultsGapControls" role="search" aria-label="Filter completed trial results coverage">
+        <label><span>Search trials</span><input id="resultsGapSearch" type="search" placeholder="Title, sponsor, or registry ID" autocomplete="off" /></label>
+        <label><span>Longevity topic</span><select id="resultsGapTopic"><option value="">All topics</option></select></label>
+        <label><span>Results status</span><select id="resultsGapStatus"><option value="">All completed trials</option><option value="possible-gap">Possible gap · over 12 months</option><option value="within-window">Completed within 12 months</option><option value="results-posted">Results visible in registry</option><option value="date-unavailable">Completion date unavailable</option></select></label>
+        <label><span>Order by</span><select id="resultsGapSort"><option value="longest-gap">Longest possible gap</option><option value="recent-completion">Most recent completion</option><option value="recent-update">Most recently updated</option><option value="title">Trial title</option></select></label>
+        <button class="record-filter-clear" id="resultsGapClear" type="button">Clear filters</button>
+      </form>
+      <p class="filter-result" id="resultsGapResult" aria-live="polite"></p>
+      <div class="results-gap-list" id="resultsGapList"></div>
+      <aside class="results-gap-caution"><strong>How to interpret a flag</strong><p>A registry can lack structured results even when findings appear in a journal, conference, sponsor report, another registry, or a delayed update. Some studies are not subject to the same reporting rules. Dates and statuses can change. Open the original registry record before drawing a conclusion.</p><a href="/methodology">Read the methodology and limitations →</a></aside>
     </section>
 
     <section class="intel-section" id="regulatorySection" hidden>
@@ -277,7 +299,7 @@
   <nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/topics"><span aria-hidden="true">◇</span>Topics</a><a href="/trials"><span aria-hidden="true">＋</span>Trials</a><a href="/changes"><span aria-hidden="true">↻</span>News</a><a class="mobile-dock-you" href="/you"><span aria-hidden="true">✦</span>You</a></nav>
 
   <script src="/il-config.js"></script>
-  <script src="/intelligence.js?v=20260928-evidence-compare"></script>
+  <script src="/intelligence.js?v=20260928-results-gap-monitor"></script>
   <script src="/telemetry.js"></script>
 </body>
 </html>

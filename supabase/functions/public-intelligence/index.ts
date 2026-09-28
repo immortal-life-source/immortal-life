@@ -339,6 +339,92 @@ Deno.serve(async (req) => {
       })
     }
 
+    if (view === 'trial-results-gap') {
+      // Read the completed cohort in bounded database pages, then classify it
+      // in one cached public response. This avoids one database request per
+      // visitor-visible card and keeps the monitor complete as history grows.
+      const completedRows: any[] = []
+      const pageSize = 1000
+      for (let page = 0; ; page += 1) {
+        const start = page * pageSize
+        const { data, error } = await supabase
+          .from('clinical_trials')
+          .select('id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,evidence_snapshot,metadata,source_url,editorial_summary,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),clinical_trial_topics(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))')
+          .eq('publication_state', 'published')
+          .eq('overall_status', 'Completed')
+          .eq('clinical_trial_topics.is_published', true)
+          .order('completion_date', { ascending: true, nullsFirst: false })
+          .order('id', { ascending: true })
+          .range(start, start + pageSize - 1)
+        if (error) throw error
+        completedRows.push(...(data ?? []))
+        if ((data?.length ?? 0) < pageSize) break
+      }
+
+      const today = new Date()
+      const dayMs = 24 * 60 * 60 * 1000
+      const classified = publicRecords(completedRows, 'clinical_trial_topics').map((record: any) => {
+        const hasResults = record?.metadata?.source_has_results === true || record?.metadata?.source_has_results === 'true'
+        const completion = record.completion_date ? new Date(`${record.completion_date}T00:00:00Z`) : null
+        const validCompletion = completion && !Number.isNaN(completion.getTime()) && completion.getTime() <= today.getTime()
+        const daysSinceCompletion = validCompletion ? Math.max(0, Math.floor((today.getTime() - completion.getTime()) / dayMs)) : null
+        const resultState = hasResults
+          ? 'results-posted'
+          : daysSinceCompletion == null
+            ? 'date-unavailable'
+            : daysSinceCompletion > 365
+              ? 'possible-gap'
+              : 'within-window'
+        const { metadata: _privateMetadata, ...publicRecord } = record
+        return {
+          ...publicRecord,
+          has_results: hasResults,
+          result_state: resultState,
+          days_since_completion: daysSinceCompletion,
+          gap_days: resultState === 'possible-gap' ? daysSinceCompletion - 365 : 0,
+        }
+      })
+
+      const countState = (state: string) => classified.filter((record: any) => record.result_state === state).length
+      const yearMap = new Map<number, { year: number; completed: number; results_posted: number; possible_gaps: number; within_window: number }>()
+      for (const record of classified) {
+        if (!record.completion_date || record.days_since_completion == null) continue
+        const year = Number(String(record.completion_date).slice(0, 4))
+        if (!Number.isFinite(year)) continue
+        const cohort = yearMap.get(year) ?? { year, completed: 0, results_posted: 0, possible_gaps: 0, within_window: 0 }
+        cohort.completed += 1
+        if (record.result_state === 'results-posted') cohort.results_posted += 1
+        if (record.result_state === 'possible-gap') cohort.possible_gaps += 1
+        if (record.result_state === 'within-window') cohort.within_window += 1
+        yearMap.set(year, cohort)
+      }
+      const resultsPosted = countState('results-posted')
+      const { data: sources, error: sourcesError } = await sourcesPromise
+      if (sourcesError) throw sourcesError
+      return response(req, {
+        generated_at: new Date().toISOString(),
+        definition: {
+          threshold_days: 365,
+          cohort: 'Published longevity trial registrations with registry status Completed and at least one eligible public topic match.',
+          possible_gap: 'No structured results are visible in the indexed registry record more than 365 days after its listed completion date.',
+        },
+        summary: {
+          completed_trials: classified.length,
+          results_posted: resultsPosted,
+          possible_gaps: countState('possible-gap'),
+          within_window: countState('within-window'),
+          completion_date_unavailable: countState('date-unavailable'),
+          results_coverage_percent: classified.length ? Math.round((resultsPosted / classified.length) * 1000) / 10 : 0,
+          topics_represented: new Set(classified.flatMap((record: any) => record.clinical_trial_topics.map((relation: any) => relation.topic_slug))).size,
+          oldest_gap_days: classified.reduce((maximum: number, record: any) => Math.max(maximum, Number(record.gap_days ?? 0)), 0),
+        },
+        cohorts: [...yearMap.values()].sort((left, right) => right.year - left.year),
+        trials: classified.sort((left: any, right: any) => Number(right.gap_days ?? 0) - Number(left.gap_days ?? 0) || String(left.title).localeCompare(String(right.title))),
+        sources: (sources ?? []).map(publicSourceState),
+        interpretation_notice: 'A possible gap is an automated registry-transparency signal. It is not a finding of legal non-compliance, selective reporting, sponsor misconduct, or absence of results elsewhere.',
+      })
+    }
+
     if (view === 'research') {
       const search = publicSearchTerm(url.searchParams.get('q'))
       const evidence = cleanText(url.searchParams.get('evidence') ?? '', 40)
