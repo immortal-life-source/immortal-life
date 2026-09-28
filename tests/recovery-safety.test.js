@@ -11,6 +11,7 @@ test('weekly database backup is encrypted before upload and retains no plaintext
   assert.match(backup, /openssl enc -aes-256-cbc -salt -pbkdf2 -iter 600000/)
   assert.match(backup, /path: backup\/encrypted\//)
   assert.doesNotMatch(backup, /path: backup\/plain\//)
+  assert.match(backup, /cd backup\/encrypted[\s\S]*sha256sum immortal-life-database\.tar\.gz\.enc/)
   assert.match(backup, /retention-days: 90/)
 })
 

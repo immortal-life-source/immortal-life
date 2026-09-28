@@ -61,8 +61,9 @@ jobs:
             -in backup/database-backup.tar.gz \
             -out backup/encrypted/immortal-life-database.tar.gz.enc \
             -pass env:BACKUP_ENCRYPTION_PASSPHRASE
-          sha256sum backup/encrypted/immortal-life-database.tar.gz.enc \
-            > backup/encrypted/immortal-life-database.tar.gz.enc.sha256
+          (cd backup/encrypted && \
+            sha256sum immortal-life-database.tar.gz.enc \
+              > immortal-life-database.tar.gz.enc.sha256)
           test -s backup/encrypted/immortal-life-database.tar.gz.enc
           rm -rf backup/plain backup/database-backup.tar.gz
 
