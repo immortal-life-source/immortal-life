@@ -57,7 +57,7 @@ type Job = {
 }
 
 const SIX_HOURS_MS = 6 * 60 * 60 * 1000
-const RUN_TIME_BUDGET_MS = 15_000
+const RUN_TIME_BUDGET_MS = 20_000
 const PUBMED_PAGE_SIZE = 200
 // A 1,000-record upsert exceeds the live database statement budget once all
 // publication and discovery indexes are maintained. Smaller resumable pages
@@ -65,7 +65,7 @@ const PUBMED_PAGE_SIZE = 200
 const EUROPE_PMC_PAGE_SIZE = 250
 // Keep database writes comfortably below the hosted statement timeout while
 // retaining an uncapped, cursor-driven corpus traversal.
-const CLINICAL_TRIALS_PAGE_SIZE = 200
+const CLINICAL_TRIALS_PAGE_SIZE = 100
 const ISRCTN_PAGE_SIZE = 1000
 const DOAJ_PAGE_SIZE = 100
 const HISTORY_START = '1800-01-01'
@@ -194,6 +194,27 @@ async function isAuthorized(req: Request, supabase: any): Promise<boolean> {
   return !error && typeof data?.value === 'string' && constantTimeSecretMatch(suppliedHash, data.value)
 }
 
+class UpstreamHttpError extends Error {
+  status: number
+  retryAfterMs: number | null
+
+  constructor(status: number, hostname: string, retryAfterMs: number | null = null) {
+    super(`Upstream ${status} from ${hostname}`)
+    this.name = 'UpstreamHttpError'
+    this.status = status
+    this.retryAfterMs = retryAfterMs
+  }
+}
+
+function retryAfterMilliseconds(response: Response): number | null {
+  const value = response.headers.get('retry-after')?.trim()
+  if (!value) return null
+  const seconds = Number(value)
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.min(24 * 60 * 60 * 1000, seconds * 1000)
+  const date = Date.parse(value)
+  return Number.isFinite(date) ? Math.max(0, Math.min(24 * 60 * 60 * 1000, date - Date.now())) : null
+}
+
 async function fetchJson(url: URL): Promise<any> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 25_000)
@@ -202,7 +223,7 @@ async function fetchJson(url: URL): Promise<any> {
       headers: { Accept: 'application/json', 'User-Agent': USER_AGENT },
       signal: controller.signal,
     })
-    if (!response.ok) throw new Error(`Upstream ${response.status} from ${url.hostname}`)
+    if (!response.ok) throw new UpstreamHttpError(response.status, url.hostname, retryAfterMilliseconds(response))
     return await response.json()
   } finally {
     clearTimeout(timeout)
@@ -934,11 +955,21 @@ async function syncClinicalTrials(supabase: any, topic: Topic, job: Job): Promis
   url.searchParams.set('format', 'json')
   url.searchParams.set('pageSize', String(CLINICAL_TRIALS_PAGE_SIZE))
   url.searchParams.set('sort', 'LastUpdatePostDate:desc')
-  if (typeof job.cursor_state?.pageToken === 'string' && job.cursor_state.pageToken) {
-    url.searchParams.set('pageToken', String(job.cursor_state.pageToken))
-  }
+  const savedPageToken = typeof job.cursor_state?.pageToken === 'string' ? String(job.cursor_state.pageToken) : ''
+  if (savedPageToken) url.searchParams.set('pageToken', savedPageToken)
 
-  const payload = await fetchJson(url)
+  let payload: any
+  try {
+    payload = await fetchJson(url)
+  } catch (error) {
+    // ClinicalTrials.gov invalidates some opaque page tokens while a long
+    // historical traversal is in progress. Restart that one topic stream from
+    // page one; source-id upserts make the replay safe and the fresh response
+    // supplies a valid continuation token.
+    if (!(error instanceof UpstreamHttpError) || error.status !== 400 || !savedPageToken) throw error
+    url.searchParams.delete('pageToken')
+    payload = await fetchJson(url)
+  }
   const studies = Array.isArray(payload?.studies) ? payload.studies : []
   const now = new Date().toISOString()
   const assessments = new Map<string, ReturnType<typeof assessTopicMatch>>()
@@ -1076,7 +1107,7 @@ Deno.serve(async (req) => {
   if (runError) return jsonResponse(req, { error: 'Unable to create ingestion run' }, 500, 'POST')
   // Source-scoped workers deliberately yield well before the platform timeout.
   // This leaves Edge capacity available for the reader-facing public API.
-  const runTimeBudgetMs = requestedSource === 'all' ? RUN_TIME_BUDGET_MS : 10_000
+  const runTimeBudgetMs = requestedSource === 'all' ? RUN_TIME_BUDGET_MS : 20_000
 
   try {
     const { data: topics, error: topicsError } = await supabase
@@ -1242,8 +1273,17 @@ Deno.serve(async (req) => {
         errors += 1
         errorSources.add(job.source_id)
         const message = errorMessage(error)
-        const isDead = attempt >= 5
-        const retryDelayMs = Math.min(6 * 60 * 60 * 1000, 15 * 60 * 1000 * 2 ** Math.max(0, attempt - 1))
+        const isAbort = error instanceof DOMException && error.name === 'AbortError'
+        const isEuropePmcTransient = job.source_id === 'europe-pmc'
+          && ((error instanceof UpstreamHttpError && (error.status === 429 || error.status >= 500)) || isAbort)
+        const maxAttempts = isEuropePmcTransient ? 20 : 8
+        const isDead = attempt >= maxAttempts
+        const baseDelayMs = isEuropePmcTransient ? 60 * 60 * 1000 : 15 * 60 * 1000
+        const maximumDelayMs = isEuropePmcTransient ? 24 * 60 * 60 * 1000 : 6 * 60 * 60 * 1000
+        const exponentialDelayMs = Math.min(maximumDelayMs, baseDelayMs * 2 ** Math.max(0, attempt - 1))
+        const upstreamDelayMs = error instanceof UpstreamHttpError ? error.retryAfterMs ?? 0 : 0
+        const jitterMs = ((Number(job.id) * 37 + attempt * 101) % 900) * 1000
+        const retryDelayMs = Math.min(maximumDelayMs, Math.max(exponentialDelayMs, upstreamDelayMs) + jitterMs)
         await supabase.from('ingestion_jobs').update({
           status: isDead ? 'dead' : 'retry',
           attempts: attempt,

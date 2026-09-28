@@ -28,7 +28,7 @@ test('university history is isolated off peak and expensive score rebuild is dai
     read('supabase/functions/sync-university-index/index.ts'),
     read('supabase/migrations/20260927000300_accelerate_history_and_enforce_source_policy.sql'),
   ])
-  assert.match(source, /HISTORY_RUN_TIME_BUDGET_MS = 50_000/)
+  assert.match(source, /HISTORY_RUN_TIME_BUDGET_MS = 80_000/)
   assert.doesNotMatch(source, /if \(nextPhase === 'complete'\)[\s\S]{0,200}refresh_university_research_scores/)
   assert.match(migration, /immortal-life-university-history/)
   assert.match(migration, /immortal-life-university-score-refresh/)
@@ -49,6 +49,22 @@ test('high-volume historical sources receive independent bounded recovery capaci
 test('Europe PMC pages stay below the indexed upsert statement budget', async () => {
   const source = await read('supabase/functions/sync-intelligence/index.ts')
   assert.match(source, /EUROPE_PMC_PAGE_SIZE = 250/)
+})
+
+test('Pro ingestion headroom is used without changing billing controls', async () => {
+  const [sync, universities, migration] = await Promise.all([
+    read('supabase/functions/sync-intelligence/index.ts'),
+    read('supabase/functions/sync-university-index/index.ts'),
+    read('supabase/migrations/20260928000900_use_pro_ingestion_headroom.sql'),
+  ])
+  assert.match(sync, /CLINICAL_TRIALS_PAGE_SIZE = 100/)
+  assert.match(sync, /error instanceof UpstreamHttpError[\s\S]{0,120}error\.status !== 400[\s\S]{0,100}!savedPageToken/)
+  assert.match(sync, /isEuropePmcTransient[\s\S]{0,500}24 \* 60 \* 60 \* 1000/)
+  assert.match(universities, /HISTORY_RUN_TIME_BUDGET_MS = 80_000/)
+  assert.match(migration, /'\*\/2 22-23,0-4 \* \* \*'/)
+  assert.match(migration, /does not alter billing controls, compute size, corpus scope/)
+  const executableSql = migration.split('\n').filter((line) => !line.trimStart().startsWith('--')).join('\n')
+  assert.doesNotMatch(executableSql, /spend[_ ]cap|subscription|billing/i)
 })
 
 test('source reuse is fail-closed, auditable, expiring, and excluded from paid delivery by default', async () => {

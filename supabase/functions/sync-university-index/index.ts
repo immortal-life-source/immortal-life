@@ -7,8 +7,8 @@ const METHOD_VERSION = 'university-index-complete-2026-09-v2'
 const OPENALEX = 'https://api.openalex.org'
 const OPENALEX_MIN_INTERVAL_MS = 450
 const OPENALEX_PAGE_SIZE = 200
-const RUN_TIME_BUDGET_MS = 20_000
-const HISTORY_RUN_TIME_BUDGET_MS = 50_000
+const RUN_TIME_BUDGET_MS = 25_000
+const HISTORY_RUN_TIME_BUDGET_MS = 80_000
 let openAlexGate = Promise.resolve()
 let lastOpenAlexRequestAt = 0
 
