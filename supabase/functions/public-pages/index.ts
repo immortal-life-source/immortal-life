@@ -54,7 +54,7 @@ function readablePhases(phases: unknown): string {
   return Array.isArray(phases) && phases.length ? phases.map(readableLabel).join(', ') : 'Phase not reported'
 }
 
-function pageShell(input: { title: string; description: string; canonical: string; kicker: string; heading: string; body: string; type?: string; date?: string; socialImage?: string; indexable?: boolean; journeys?: Array<{ href: string; label: string }> }): string {
+function pageShell(input: { title: string; description: string; canonical: string; kicker: string; heading: string; body: string; type?: string; date?: string; socialImage?: string; indexable?: boolean; journeys?: Array<{ href: string; label: string }>; subjectSchema?: Record<string, unknown> }): string {
   const canonicalPath = new URL(input.canonical).pathname
   const crumbs = canonicalPath === '/'
     ? [{ name: 'Home', item: SITE }]
@@ -110,16 +110,17 @@ function pageShell(input: { title: string; description: string; canonical: strin
       },
     ],
   }
+  if (input.subjectSchema) (schema['@graph'] as any[]).push(input.subjectSchema)
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(input.title)}</title><meta name="description" content="${escapeHtml(input.description)}"><meta name="robots" content="${input.indexable === false ? 'noindex,follow' : 'index,follow,max-image-preview:large'}">
 <link rel="canonical" href="${escapeHtml(input.canonical)}"><link rel="alternate" type="application/rss+xml" title="immortal.life updates" href="${SITE}/feed.xml">
 <meta property="og:type" content="article"><meta property="og:title" content="${escapeHtml(input.title)}"><meta property="og:description" content="${escapeHtml(input.description)}"><meta property="og:url" content="${escapeHtml(input.canonical)}"><meta property="og:image" content="${escapeHtml(input.socialImage || `${SITE}/og-image.png`)}">
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(input.title)}"><meta name="twitter:description" content="${escapeHtml(input.description)}">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,300&family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/intelligence.css?v=20260925-taxonomy-b"><link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,300&family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/intelligence.css?v=20260928-funder-profiles"><link rel="icon" href="/favicon.ico">
 <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}</script></head><body>
 <header class="intel-header"><a class="intel-logo" href="/" aria-label="immortal.life home"><img src="/linkedin-app-logo.png?v=20260926-color" width="54" height="54" alt="" decoding="async"><span>immortal.life</span></a><button class="intel-nav-toggle" id="intelNavToggle" type="button" aria-expanded="false" aria-controls="intelNav"><span>Menu</span><i aria-hidden="true"></i></button><nav class="intel-nav" id="intelNav" aria-label="Primary navigation"><div class="intel-nav-top"><a href="/changes">News</a><a href="/topics">Topics</a><a href="/trials">Trials</a><a href="/universities">Universities</a><a href="/research">Research</a><a href="/you" class="intel-nav-you">You</a><a href="/regulatory">Regulatory</a><a href="/resources">Resources</a><a href="/briefings">Briefings</a><a href="/methodology">About</a></div><form class="intel-nav-search" role="search"><input type="search" aria-label="Search longevity topics" placeholder="Search topics…"><button type="submit">Search</button></form></nav></header>
 <main><section class="intel-hero record-hero"><div class="bio-ambient bio-ambient--intel" aria-hidden="true"><div class="bio-dna"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><div class="bio-human"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div class="intel-kicker">${escapeHtml(input.kicker)}</div><h1>${escapeHtml(input.heading)}</h1><p class="intel-lede">${escapeHtml(input.description)}</p></section>${input.body}<nav class="next-journey" aria-label="Related discoveries"><span>${input.journeys?.length ? 'Related discoveries' : 'Continue exploring'}</span>${(input.journeys?.length ? input.journeys : [{ href: '/changes', label: "What's new today" }, { href: '/topics', label: 'Choose a topic' }, { href: '/trials', label: 'Open Trial Radar' }, { href: '/universities', label: 'Compare universities' }]).map((item) => `<a href="${escapeHtml(item.href)}">${escapeHtml(item.label)}</a>`).join('')}</nav></main>
-<footer class="intel-footer"><p><strong>Automated publication.</strong> ${escapeHtml(DISCLOSURE)} Research information only; not medical advice, diagnosis, or treatment guidance.</p><div><a href="/changes">What's new</a><a href="/reports">Reports</a><a href="/data">Data & feeds</a><a href="/methodology">Methodology</a><a href="/automation">Automation disclosure</a><a href="/corrections">Corrections</a><span>© 2026 immortal.life</span></div></footer><nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/topics"><span aria-hidden="true">◇</span>Topics</a><a href="/trials"><span aria-hidden="true">＋</span>Trials</a><a href="/changes"><span aria-hidden="true">↻</span>News</a><a class="mobile-dock-you" href="/you"><span aria-hidden="true">✦</span>You</a></nav><script src="/il-config.js"></script><script src="/intelligence.js?v=20260925-taxonomy-b"></script><script src="/telemetry.js"></script></body></html>`
+<footer class="intel-footer"><p><strong>Automated publication.</strong> ${escapeHtml(DISCLOSURE)} Research information only; not medical advice, diagnosis, or treatment guidance.</p><div><a href="/changes">What's new</a><a href="/reports">Reports</a><a href="/data">Data & feeds</a><a href="/methodology">Methodology</a><a href="/automation">Automation disclosure</a><a href="/corrections">Corrections</a><span>© 2026 immortal.life</span></div></footer><nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/topics"><span aria-hidden="true">◇</span>Topics</a><a href="/trials"><span aria-hidden="true">＋</span>Trials</a><a href="/changes"><span aria-hidden="true">↻</span>News</a><a class="mobile-dock-you" href="/you"><span aria-hidden="true">✦</span>You</a></nav><script src="/il-config.js"></script><script src="/intelligence.js?v=20260928-funder-profiles"></script><script src="/telemetry.js"></script></body></html>`
 }
 
 function chips(topics: string[]): string {
@@ -343,7 +344,7 @@ async function recordSitemapResponse(supabase: any, type: string, segment = 0): 
 }
 
 async function sitemap(supabase: any, type = 'index'): Promise<string> {
-  const allowed = ['static', 'topics', 'briefings', 'entities', 'universities']
+  const allowed = ['static', 'topics', 'briefings', 'entities', 'universities', 'funders']
   if (type === 'index') {
     const counts = await Promise.all(Object.entries(RECORD_SITEMAPS).map(async ([name, spec]) => {
       const result = await supabase.from(spec.table).select('id', { count: 'exact', head: true }).eq('publication_state', 'published')
@@ -355,7 +356,7 @@ async function sitemap(supabase: any, type = 'index'): Promise<string> {
   }
   if (!allowed.includes(type)) return sitemapUrlset([])
   if (type === 'static') {
-    return sitemapUrlset(['', '/you', '/changes', '/research', '/trials', '/topics', '/universities', '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/resources', '/entities', '/quality', '/reports', '/methodology', '/automation', '/publication-policy', '/corrections', '/data'].map((path) => ({ path })))
+    return sitemapUrlset(['', '/you', '/changes', '/research', '/trials', '/topics', '/universities', '/funding', '/funders', '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/resources', '/entities', '/quality', '/reports', '/methodology', '/automation', '/publication-policy', '/corrections', '/data'].map((path) => ({ path })))
   }
   let urls: Array<{ path: string; modified?: string }> = []
   if (type === 'topics') {
@@ -370,6 +371,10 @@ async function sitemap(supabase: any, type = 'index'): Promise<string> {
   } else if (type === 'universities') {
     const rows = await collectAllRows((from, to) => supabase.from('university_research_institutions').select('slug,updated_at').eq('is_eligible', true).order('research_index_score', { ascending: false }).order('slug').range(from, to))
     urls = rows.map((row: any) => ({ path: `/universities/${row.slug}`, modified: row.updated_at }))
+  } else if (type === 'funders') {
+    const result = await supabase.rpc('get_funder_directory', { p_search: '', p_offset: 0, p_limit: 1000 })
+    if (result.error) throw result.error
+    urls = (result.data ?? []).filter((row: any) => Number(row.award_count ?? 0) >= 3 && Number(row.linked_publication_count ?? 0) >= 2).map((row: any) => ({ path: `/funders/${row.slug}`, modified: row.updated_at }))
   }
   return sitemapUrlset(urls)
 }
@@ -539,6 +544,83 @@ async function universityPage(supabase: any, slug: string): Promise<string | nul
   const body = `<section class="intel-section"><div class="university-profile-metrics"><div><strong>${Number(university.research_index_score ?? 0).toFixed(1)}</strong><span>Transparent research index score</span></div><div><strong>${Number(university.indexed_works_all_time ?? 0)}</strong><span>All-time longevity work links</span></div><div><strong>${Number(university.indexed_works_five_year ?? 0)}</strong><span>Rolling five-year work links</span></div><div><strong>${Number(university.indexed_topic_count ?? 0)}</strong><span>Longevity topics represented</span></div><div><strong>${Number(university.momentum_score ?? 0).toFixed(0)}%</strong><span>Share in the rolling two-year window</span></div><div><strong>${university.representative_open_access_share == null ? 'N/A' : `${Number(university.representative_open_access_share).toFixed(0)}%`}</strong><span>Open-access share across linked works</span></div></div><div class="record-links">${links}</div><p class="quality-intro">${escapeHtml(location)}. This profile is generated from all retained OpenAlex work affiliations resolved against ROR institution identities.</p><section class="university-topic-profile"><div class="section-heading"><div><span class="section-index">Topic profile</span><h2>Where the indexed activity appears</h2></div><a class="section-link" href="/universities">Compare universities</a></div>${topicRows || '<p class="empty-list">Topic metrics will appear after the next automated refresh.</p>'}</section><aside class="automation-notice"><strong>Activity is not quality</strong><p>This index does not rank teaching, clinical care, study quality, safety, effectiveness, or institutional quality. Counts can overlap when several universities appear on one paper. OpenAlex affiliation matching, citations, open-access status, and publication dates can be incomplete or incorrect. Every retained work remains source-linked and available through the complete work list.</p></aside></section>`
   const description = `${university.name} longevity research profile: ${university.indexed_works_all_time ?? 0} source-matched work links across ${university.indexed_topic_count} tracked topics and all available history.`
   return pageShell({ title: `${university.name} longevity research — immortal.life`, description, canonical: `${SITE}/universities/${slug}`, kicker: 'Global University Research Index', heading: university.name, body, socialImage: `${SITE}/social-card/university/${slug}.png`, indexable: Number(university.indexed_works_five_year ?? 0) >= 3 })
+}
+
+function safeExternalUrl(value: unknown): string {
+  try {
+    const url = new URL(String(value ?? ''))
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : ''
+  } catch {
+    return ''
+  }
+}
+
+function numberText(value: unknown): string {
+  return new Intl.NumberFormat('en').format(Number(value ?? 0))
+}
+
+function funderIdFromSlug(slug: string): string {
+  return slug.match(/(?:^|-)(f\d+)$/i)?.[1]?.toUpperCase() ?? ''
+}
+
+async function fundersDirectoryPage(supabase: any, url: URL): Promise<string> {
+  const query = String(url.searchParams.get('q') ?? '').trim().slice(0, 120)
+  const offset = Math.max(0, Math.min(100000, Number.parseInt(url.searchParams.get('offset') ?? '0', 10) || 0))
+  const limit = 60
+  const result = await supabase.rpc('get_funder_directory', { p_search: query, p_offset: offset, p_limit: limit })
+  if (result.error) throw result.error
+  const rows = result.data ?? []
+  const total = Number(rows[0]?.total_matching ?? 0)
+  const cards = rows.map((row: any) => {
+    const description = row.description || `A public research-funder identity linked to source-indexed longevity publications.`
+    const context = [row.country_code, row.first_publication_date && row.latest_publication_date ? `${String(row.first_publication_date).slice(0, 4)}–${String(row.latest_publication_date).slice(0, 4)}` : ''].filter(Boolean).join(' · ')
+    return `<article class="funder-card"><div><span class="section-index">${escapeHtml(context || 'Source-linked funder')}</span><h2><a href="/funders/${encodeURIComponent(row.slug)}">${escapeHtml(row.name)}</a></h2><p>${escapeHtml(description)}</p></div><dl><div><dt>Award entities</dt><dd>${numberText(row.award_count)}</dd></div><div><dt>Linked publications</dt><dd>${numberText(row.linked_publication_count)}</dd></div><div><dt>Topics</dt><dd>${numberText(row.topic_count)}</dd></div><div><dt>Universities</dt><dd>${numberText(row.institution_count)}</dd></div></dl><a class="section-link" href="/funders/${encodeURIComponent(row.slug)}">Open source-linked profile →</a></article>`
+  }).join('')
+  const params = new URLSearchParams()
+  if (query) params.set('q', query)
+  const pageLink = (nextOffset: number, label: string) => {
+    params.set('offset', String(nextOffset))
+    return `<a class="section-link" href="/funders?${params.toString()}">${label}</a>`
+  }
+  const pagination = `<nav class="funder-pagination" aria-label="Funder directory pages">${offset > 0 ? pageLink(Math.max(0, offset - limit), '← Previous') : '<span></span>'}${offset + rows.length < total ? pageLink(offset + limit, 'Next →') : ''}</nav>`
+  const body = `<section class="intel-section funder-directory"><div class="funder-directory-intro"><div><span class="section-index">Longevity funding directory</span><h2>${query ? `Funders matching “${escapeHtml(query)}”` : 'Explore the organizations named in funding acknowledgements.'}</h2></div><p>${numberText(total)} source identities match this view. Counts describe relationships visible in retained scholarly metadata—not total spending, grant value, influence, quality, or impact.</p></div><form class="funder-directory-search" method="get" action="/funders" role="search"><label for="funderQuery">Find a funder</label><input id="funderQuery" name="q" type="search" value="${escapeHtml(query)}" placeholder="Search by funder name" autocomplete="off"><button type="submit">Search</button></form><div class="funder-grid">${cards || '<p class="empty-list">No funder identity matches this search.</p>'}</div>${pagination}<aside class="funding-caution"><strong>How to read this directory</strong><p>These profiles connect public funder identities to acknowledgements attached to longevity publications indexed by immortal.life. Source metadata can be incomplete, delayed or duplicated. Inclusion does not imply endorsement, affiliation, award ownership, research quality or complete funding coverage.</p><a href="/funding">Open Funding Radar →</a></aside></section>`
+  return pageShell({ title: query ? `${query} funders — immortal.life` : 'Longevity research funders — immortal.life', description: 'Browse source-linked research funders appearing in the immortal.life longevity publication index.', canonical: query || offset ? `${SITE}/funders` : `${SITE}/funders`, kicker: 'Funding Radar', heading: 'Who appears behind longevity research?', body, indexable: !query && offset === 0, journeys: [{ href: '/funding', label: 'Open Funding Radar' }, { href: '/research', label: 'Browse research' }, { href: '/universities', label: 'Explore universities' }] })
+}
+
+async function funderPage(supabase: any, slug: string): Promise<string | null> {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return null
+  const funderId = funderIdFromSlug(slug)
+  if (!funderId) return null
+  const result = await supabase.rpc('get_funder_page', { p_funder_id: funderId })
+  if (result.error) throw result.error
+  if (!result.data?.profile) return null
+  const { profile, summary = {}, cohorts = [], topics = [], institutions = [], awards = [] } = result.data
+  const canonical = `${SITE}/funders/${profile.slug}`
+  const description = profile.description || `${profile.name} appears in public funding acknowledgements connected to longevity publications indexed by immortal.life.`
+  const links = [
+    safeExternalUrl(profile.homepage_url) ? `<a class="section-link" href="${escapeHtml(safeExternalUrl(profile.homepage_url))}" target="_blank" rel="noopener noreferrer">Official website</a>` : '',
+    `<a class="section-link" href="${escapeHtml(profile.source_url)}" target="_blank" rel="noopener noreferrer">OpenAlex identity record</a>`,
+    safeExternalUrl(profile.ror_id) ? `<a class="section-link" href="${escapeHtml(safeExternalUrl(profile.ror_id))}" target="_blank" rel="noopener noreferrer">ROR identity record</a>` : '',
+    safeExternalUrl(profile.wikidata_url) ? `<a class="section-link" href="${escapeHtml(safeExternalUrl(profile.wikidata_url))}" target="_blank" rel="noopener noreferrer">Wikidata record</a>` : '',
+  ].filter(Boolean).join('')
+  const metrics = [
+    ['Award entities', summary.award_count, '#awards'],
+    ['Linked publications', summary.linked_publication_count, '#awards'],
+    ['Longevity topics', summary.topic_count, '#topics'],
+    ['Universities', summary.institution_count, '#universities'],
+  ].map(([label, value, href]) => `<a href="${href}"><strong>${numberText(value)}</strong><span>${label}</span><small>View evidence →</small></a>`).join('')
+  const maximum = Math.max(1, ...cohorts.map((item: any) => Number(item.publications ?? 0)))
+  const trend = cohorts.slice().reverse().map((item: any) => `<div class="funder-year"><strong>${Number(item.year)}</strong><i style="--funder-year-width:${Math.max(3, Math.round(100 * Number(item.publications ?? 0) / maximum))}%"></i><span>${numberText(item.publications)} publications · ${numberText(item.awards)} awards</span></div>`).join('')
+  const topicCards = topics.map((item: any) => `<a href="/topics/${encodeURIComponent(item.slug)}"><strong>${escapeHtml(item.name)}</strong><span>${numberText(item.publications)} publications · ${numberText(item.awards)} award entities</span></a>`).join('')
+  const universityCards = institutions.map((item: any) => `<a href="/universities/${encodeURIComponent(item.slug)}"><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.country_name || item.country_code || 'Location unavailable')} · ${numberText(item.publications)} publications</span></a>`).join('')
+  const awardCards = awards.map((award: any) => {
+    const workLinks = (award.publications ?? []).map((work: any) => `<a href="${escapeHtml(work.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(work.title)}</a>`).join('')
+    return `<article class="funder-award"><div><span class="section-index">${escapeHtml(award.award_identifier || 'Identifier unavailable')}</span><h3>${escapeHtml(award.title || 'Source-linked funding acknowledgement')}</h3><p>${numberText(award.publication_count)} linked publication${Number(award.publication_count) === 1 ? '' : 's'}${award.latest_publication_date ? ` · latest ${escapeHtml(formatDate(award.latest_publication_date))}` : ''}</p></div>${workLinks ? `<div class="funder-award-works">${workLinks}</div>` : ''}<a class="section-link" href="${escapeHtml(award.source_url)}" target="_blank" rel="noopener noreferrer">Verify in OpenAlex →</a></article>`
+  }).join('')
+  const aliases = Array.isArray(profile.alternate_titles) && profile.alternate_titles.length ? `<p class="funder-aliases"><strong>Also known as:</strong> ${escapeHtml(profile.alternate_titles.slice(0, 8).join(' · '))}</p>` : ''
+  const body = `<section class="intel-section funder-profile"><div class="funder-profile-intro"><div><span class="section-index">Independent source-backed profile${profile.country_code ? ` · ${escapeHtml(profile.country_code)}` : ''}</span><p>${escapeHtml(description)}</p>${aliases}<div class="record-links">${links}</div></div><div class="funder-profile-metrics">${metrics}</div></div><section class="funder-trend" aria-labelledby="funderTrend"><div class="section-heading"><div><span class="section-index">Indexed publication history</span><h2 id="funderTrend">How the source-linked activity changed</h2></div><a class="section-link" href="/funding?search=${encodeURIComponent(profile.name)}">Filter Funding Radar</a></div>${trend || '<p class="empty-list">Publication-year history is not yet available.</p>'}</section><section id="topics" class="funder-relations"><div class="section-heading"><div><span class="section-index">Longevity topics</span><h2>Where this funder appears</h2></div></div><div class="funder-relation-grid">${topicCards || '<p class="empty-list">No tracked topic relationships are currently available.</p>'}</div></section><section id="universities" class="funder-relations"><div class="section-heading"><div><span class="section-index">Research affiliations</span><h2>Universities connected through publications</h2></div></div><div class="funder-relation-grid">${universityCards || '<p class="empty-list">No eligible university relationships are currently available.</p>'}</div></section><section id="awards" class="funder-awards"><div class="section-heading"><div><span class="section-index">Source records</span><h2>Funding acknowledgements and linked publications</h2></div></div>${awardCards || '<p class="empty-list">No award records are currently available.</p>'}</section><aside class="funding-caution"><strong>Important scope and independence notice</strong><p>This independent profile is compiled from public scholarly metadata. Listed relationships indicate funding acknowledgements associated with indexed publications; they do not establish complete funding coverage, award value, institutional ownership, endorsement, research quality or scientific impact. immortal.life is not affiliated with this organization.</p><p>Names, identifiers, dates and relationships can be incomplete, delayed or duplicated. Verify consequential details at the linked primary records.</p></aside></section>`
+  const indexable = Number(summary.award_count ?? 0) >= 3 && Number(summary.linked_publication_count ?? 0) >= 2
+  return pageShell({ title: `${profile.name} longevity funding profile — immortal.life`, description, canonical, kicker: 'Longevity Funder Profile', heading: profile.name, body, indexable, journeys: [{ href: `/funding?search=${encodeURIComponent(profile.name)}`, label: 'Open linked funding records' }, { href: '/funders', label: 'Browse all funders' }, { href: '/research', label: 'Explore research' }, { href: '/universities', label: 'Explore universities' }], subjectSchema: { '@type': 'Organization', '@id': `${canonical}#funder`, name: profile.name, url: safeExternalUrl(profile.homepage_url) || undefined, sameAs: [profile.source_url, safeExternalUrl(profile.ror_id), safeExternalUrl(profile.wikidata_url)].filter(Boolean), description } })
 }
 
 function slugify(value: unknown): string {
@@ -791,6 +873,11 @@ Deno.serve(async (req) => {
     }
     if (mode === 'university') {
       const html = await universityPage(supabase, url.searchParams.get('slug') || '')
+      return html ? response(html, 'text/html; charset=utf-8') : response('Not found', 'text/plain', 404, 'no-store')
+    }
+    if (mode === 'funders') return response(await fundersDirectoryPage(supabase, url), 'text/html; charset=utf-8')
+    if (mode === 'funder') {
+      const html = await funderPage(supabase, url.searchParams.get('slug') || '')
       return html ? response(html, 'text/html; charset=utf-8') : response('Not found', 'text/plain', 404, 'no-store')
     }
     if (mode === 'university-works') {

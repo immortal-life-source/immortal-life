@@ -119,6 +119,27 @@ test('Funding Radar is source-linked, paginated, and does not invent financial t
   assert.match(css, /FUNDING RADAR/)
 })
 
+test('funder profiles are source-backed, conservative, searchable, and indexable only when useful', async () => {
+  const [migration, worker, pages, script, config] = await Promise.all([
+    read('supabase/migrations/20260928000800_funder_profiles.sql'),
+    read('supabase/functions/sync-funding-funders/index.ts'), read('supabase/functions/public-pages/index.ts'),
+    read('intelligence.js'), read('vercel.json'),
+  ])
+  assert.match(migration, /create table if not exists public\.funding_funders/)
+  assert.match(migration, /get_funder_directory/)
+  assert.match(migration, /get_funder_page/)
+  assert.match(migration, /30 days/)
+  assert.match(worker, /alternate_titles,country_code,description,homepage_url,ids,updated_date/)
+  assert.doesNotMatch(worker, /image_url|image_thumbnail_url/)
+  assert.match(pages, /mode === 'funders'/)
+  assert.match(pages, /mode === 'funder'/)
+  assert.match(pages, /award_count \?\? 0\) >= 3/)
+  assert.match(pages, /immortal\.life is not affiliated with this organization/)
+  assert.match(script, /funderProfilePath/)
+  assert.match(config, /funders\/:slug/)
+  assert.match(config, /sitemaps\/funders\.xml/)
+})
+
 test('Trial Radar has one canonical visitor route', async () => {
   const [routes, home, template] = await Promise.all([read('vercel.json'), read('index.html'), read('intelligence-template.html')])
   assert.match(routes, /"source": "\/discover\/recruiting-trials", "destination": "\/trials", "permanent": true/)

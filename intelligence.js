@@ -1123,6 +1123,13 @@
     return (award.funding_award_institutions || []).map((relation) => relation.university_research_institutions).filter(Boolean);
   }
 
+  function funderProfilePath(name, id) {
+    const cleanId = String(id || '').match(/F\d+/i)?.[0]?.toLowerCase();
+    if (!cleanId) return '';
+    const cleanName = String(name || 'funder').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 100) || 'funder';
+    return `/funders/${encodeURIComponent(`${cleanName}-${cleanId}`)}`;
+  }
+
   function drawFundingAwards() {
     elements.fundingList.replaceChildren();
     if (!fundingRows.length) {
@@ -1133,7 +1140,8 @@
     fundingRows.forEach((award) => {
       const card = el('article', 'funding-card');
       const meta = el('div', 'funding-card-meta');
-      meta.append(el('span', 'funding-funder', award.funder_name || 'Funder unavailable'));
+      const funderPath = funderProfilePath(award.funder_name, award.funder_id);
+      meta.append(funderPath ? link('funding-funder', award.funder_name || 'Funder unavailable', funderPath) : el('span', 'funding-funder', award.funder_name || 'Funder unavailable'));
       meta.append(el('strong', '', award.award_identifier || award.openalex_award_id || 'Award identifier unavailable'));
       if (award.latest_publication_date) meta.append(el('small', '', `Latest linked research ${formatDate(award.latest_publication_date)}`));
 
@@ -1194,18 +1202,19 @@
       row.append(el('strong', '', cohort.year), bar, el('span', '', `${numberFormatter.format(cohort.awards)} awards · ${numberFormatter.format(cohort.publications)} publications`));
       elements.fundingYears.append(row);
     });
-    const drawLeaders = (target, rows, label, handler) => {
+    const drawLeaders = (target, rows, label, handler, hrefFor) => {
       target.replaceChildren();
       rows.slice(0, 8).forEach((item) => {
-        const button = el('button', 'funding-leader'); button.type = 'button';
-        button.append(el('span', '', label(item)), el('strong', '', numberFormatter.format(Number(item.awards || 0))));
-        button.onclick = () => handler(item);
-        const entry = el('li'); entry.append(button); target.append(entry);
+        const href = hrefFor?.(item);
+        const control = href ? link('funding-leader', '', href) : el('button', 'funding-leader');
+        if (!href) { control.type = 'button'; control.onclick = () => handler(item); }
+        control.append(el('span', '', label(item)), el('strong', '', numberFormatter.format(Number(item.awards || 0))));
+        const entry = el('li'); entry.append(control); target.append(entry);
       });
     };
     drawLeaders(elements.fundingFunders, overview.leading_funders || [], (item) => item.funder_name, (item) => {
       elements.fundingSearch.value = item.funder_name; reloadFunding().catch((error) => console.error('Funding filter failed:', error));
-    });
+    }, (item) => funderProfilePath(item.funder_name, item.funder_id));
     drawLeaders(elements.fundingTopics, overview.leading_topics || [], (item) => item.name, (item) => {
       elements.fundingTopic.value = item.slug; reloadFunding().catch((error) => console.error('Funding filter failed:', error));
     });

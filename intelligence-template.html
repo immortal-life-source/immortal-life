@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,300&family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="icon" href="/favicon.ico" type="image/x-icon" />
-  <link rel="stylesheet" href="/intelligence.css?v=20260928-funding-radar" />
+  <link rel="stylesheet" href="/intelligence.css?v=20260928-funder-profiles" />
 </head>
 <body data-view="{{PAGE_VIEW}}" data-topic="{{TOPIC_SLUG}}" style="{{BODY_STYLE}}">
   <header class="intel-header">
@@ -129,7 +129,7 @@
     </section>
 
     <section class="intel-section funding-radar" id="fundingSection" hidden aria-labelledby="fundingTitle">
-      <div class="funding-intro"><div><span class="section-index">Funding Radar</span><h2 id="fundingTitle">Follow disclosed funding relationships behind longevity research.</h2></div><p>This view connects OpenAlex award entities and funder acknowledgements to indexed publications, topics, and universities. It shows where funding is visible in the source metadata—not a complete measure of research spending.</p></div>
+      <div class="funding-intro"><div><span class="section-index">Funding Radar</span><h2 id="fundingTitle">Follow disclosed funding relationships behind longevity research.</h2><a class="section-link funding-directory-link" href="/funders">Browse all funder profiles →</a></div><p>This view connects OpenAlex award entities and funder acknowledgements to indexed publications, topics, and universities. It shows where funding is visible in the source metadata—not a complete measure of research spending.</p></div>
       <div class="funding-stats" id="fundingStats" aria-label="Funding Radar coverage"></div>
       <section class="funding-landscape" id="fundingLandscape" hidden><div class="funding-trend"><span class="section-index">Publication-year view</span><h3>Award-linked research over time</h3><div id="fundingYears" class="funding-years"></div></div><div class="funding-leaders"><div><span class="section-index">Leading funders</span><ol id="fundingFunders"></ol></div><div><span class="section-index">Leading topics</span><ol id="fundingTopics"></ol></div></div></section>
       <form class="funding-controls" id="fundingControls" role="search" aria-label="Filter funding records"><label><span>Search awards</span><input id="fundingSearch" type="search" placeholder="Funder, award identifier, or title" autocomplete="off" /></label><label><span>Longevity topic</span><select id="fundingTopic"><option value="">All topics</option></select></label><label><span>Recipient country</span><select id="fundingCountry"><option value="">All countries</option></select></label><label><span>Order by</span><select id="fundingSort"><option value="recent">Most recently linked research</option><option value="oldest">Earliest linked research</option><option value="funder">Funder name</option></select></label><button class="record-filter-clear" id="fundingClear" type="button">Clear filters</button></form>
@@ -310,7 +310,7 @@
   <nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/topics"><span aria-hidden="true">◇</span>Topics</a><a href="/trials"><span aria-hidden="true">＋</span>Trials</a><a href="/changes"><span aria-hidden="true">↻</span>News</a><a class="mobile-dock-you" href="/you"><span aria-hidden="true">✦</span>You</a></nav>
 
   <script src="/il-config.js"></script>
-  <script src="/intelligence.js?v=20260928-funding-radar"></script>
+  <script src="/intelligence.js?v=20260928-funder-profiles"></script>
   <script src="/telemetry.js"></script>
 </body>
 </html>

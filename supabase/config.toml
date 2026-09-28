@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.sync-funding-radar]
 verify_jwt = false
+
+[functions.sync-funding-funders]
+verify_jwt = false
