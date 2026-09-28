@@ -120,10 +120,10 @@ test('Funding Radar is source-linked, paginated, and does not invent financial t
 })
 
 test('funder profiles are source-backed, conservative, searchable, and indexable only when useful', async () => {
-  const [migration, worker, pages, script, config] = await Promise.all([
+  const [migration, worker, pages, script, config, sitemapProxy] = await Promise.all([
     read('supabase/migrations/20260928000800_funder_profiles.sql'),
     read('supabase/functions/sync-funding-funders/index.ts'), read('supabase/functions/public-pages/index.ts'),
-    read('intelligence.js'), read('vercel.json'),
+    read('intelligence.js'), read('vercel.json'), read('api/sitemap.js'),
   ])
   assert.match(migration, /create table if not exists public\.funding_funders/)
   assert.match(migration, /get_funder_directory/)
@@ -138,6 +138,7 @@ test('funder profiles are source-backed, conservative, searchable, and indexable
   assert.match(script, /funderProfilePath/)
   assert.match(config, /funders\/:slug/)
   assert.match(config, /sitemaps\/funders\.xml/)
+  assert.match(sitemapProxy, /'funders'/)
 })
 
 test('Trial Radar has one canonical visitor route', async () => {

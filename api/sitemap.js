@@ -1,7 +1,7 @@
 'use strict';
 
 const upstreamBase = 'https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages';
-const allowedTypes = new Set(['research', 'trials', 'regulatory', 'integrity', 'briefings', 'universities', 'entities']);
+const allowedTypes = new Set(['research', 'trials', 'regulatory', 'integrity', 'briefings', 'universities', 'entities', 'funders']);
 
 const emptyUrlset = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n</urlset>\n';
 
