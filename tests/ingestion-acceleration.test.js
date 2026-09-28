@@ -46,6 +46,11 @@ test('high-volume historical sources receive independent bounded recovery capaci
   assert.match(migration, /'\*\/5 22-23,0-4 \* \* \*'/)
 })
 
+test('Europe PMC pages stay below the indexed upsert statement budget', async () => {
+  const source = await read('supabase/functions/sync-intelligence/index.ts')
+  assert.match(source, /EUROPE_PMC_PAGE_SIZE = 250/)
+})
+
 test('source reuse is fail-closed, auditable, expiring, and excluded from paid delivery by default', async () => {
   const [migration, expiry] = await Promise.all([
     read('supabase/migrations/20260927000300_accelerate_history_and_enforce_source_policy.sql'),

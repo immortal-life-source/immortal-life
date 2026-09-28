@@ -59,7 +59,10 @@ type Job = {
 const SIX_HOURS_MS = 6 * 60 * 60 * 1000
 const RUN_TIME_BUDGET_MS = 15_000
 const PUBMED_PAGE_SIZE = 200
-const EUROPE_PMC_PAGE_SIZE = 1000
+// A 1,000-record upsert exceeds the live database statement budget once all
+// publication and discovery indexes are maintained. Smaller resumable pages
+// complete reliably and therefore deliver higher effective throughput.
+const EUROPE_PMC_PAGE_SIZE = 250
 // Keep database writes comfortably below the hosted statement timeout while
 // retaining an uncapped, cursor-driven corpus traversal.
 const CLINICAL_TRIALS_PAGE_SIZE = 200
