@@ -55,6 +55,12 @@ test('research metric destinations open the matching evidence set', () => {
   assert.match(proxy, /filteredResearch/);
 });
 
+test('university examples open topic profiles without advertising unverified work-link totals', () => {
+  assert.match(script, /universities\/\$\{encodeURIComponent\(record\.slug\)\}\?topic=exercise/);
+  assert.match(script, /record\.city/);
+  assert.doesNotMatch(script, /works_all_time \|\| 0\).*work links/);
+});
+
 test('institutional pilot states commercial and medical boundaries', () => {
   assert.match(html, /only sources explicitly approved for paid distribution/i);
   assert.match(html, /does not diagnose, prescribe, recommend treatment/i);

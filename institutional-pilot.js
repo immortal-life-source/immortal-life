@@ -89,7 +89,10 @@
       );
       renderList('pilotResearch', research, (record) => item(date(record.published_on), text(record.title), record.source_url || `/research/${encodeURIComponent(record.id)}`), 'No current research example is available.');
       renderList('pilotTrials', exerciseTrials, (record) => item(text(record.overall_status), text(record.title), record.source_url || `/trials/${encodeURIComponent(record.id)}`), 'No current trial registration is available.');
-      renderList('pilotUniversities', universities, (record) => item(number.format(Number(record.works_all_time || 0)) + ' work links', text(record.name), `/universities/${encodeURIComponent(record.slug)}?topic=exercise`), 'No topic-specific university activity is currently available.');
+      renderList('pilotUniversities', universities, (record) => {
+        const location = [record.city, record.country_name || record.country_code].filter(Boolean).join(', ');
+        return item(location || 'Exercise topic profile', text(record.name), `/universities/${encodeURIComponent(record.slug)}?topic=exercise`);
+      }, 'No topic-specific university activity is currently available.');
       renderList('pilotChanges', events, (record) => item(date(record.occurred_at), text(record.title), record.source_url || '/changes?topic=exercise'), 'No source-level change is currently recorded.');
       status.classList.add('is-live');
       status.querySelector('span').textContent = `Live index snapshot generated ${date(data.generated_at)} · open any item to inspect its source.`;
