@@ -1044,7 +1044,15 @@
       (!country || (record.countries || []).includes(country))
     );
     drawTrials(filtered, 'No clinical trial matches these filters. Try a broader search or clear one of the filters.');
-    if (elements.trialResult) elements.trialResult.textContent = `Showing ${numberFormatter.format(filtered.length)} matching trials from ${numberFormatter.format(searchableTrials.length)} loaded · ${numberFormatter.format(trialTotal || searchableTrials.length)} available.`;
+    if (elements.trialResult) {
+      const resultSummary = `Showing ${numberFormatter.format(filtered.length)} matching trials from ${numberFormatter.format(searchableTrials.length)} loaded · ${numberFormatter.format(trialTotal || searchableTrials.length)} available.`;
+      const requestedMetric = new URLSearchParams(location.search).get('metric');
+      const listedEnrollment = filtered.reduce((sum, record) => sum + Math.max(0, Number(record.enrollment) || 0), 0);
+      const enrollmentSummary = requestedMetric === 'enrollment'
+        ? ` Listed enrollment across ${filtered.length < trialTotal ? 'these loaded matches' : 'these matches'}: ${numberFormatter.format(listedEnrollment)} people.`
+        : '';
+      elements.trialResult.textContent = resultSummary + enrollmentSummary;
+    }
   }
 
   function setupTrialSearch(topicEntries = []) {
@@ -2346,7 +2354,7 @@
   // Cache Storage survives ordinary reloads. Bump this contract whenever a
   // repaired public aggregation would otherwise remain hidden by an older
   // zero-value response in a visitor's browser.
-  const publicCacheName = 'immortal-life-public-intelligence-v7';
+  const publicCacheName = 'immortal-life-public-intelligence-v8';
   const publicCacheMaxAgeMs = 15 * 60 * 1000;
 
   async function readCachedRequest(url) {
@@ -2387,7 +2395,7 @@
 
   async function request(viewName, limit, params = {}) {
     const url = new URL(endpoint, window.location.origin);
-    url.searchParams.set('quality_rules', '20260930-trial-pagination');
+    url.searchParams.set('quality_rules', '20260930-audited-pilot-metrics');
     url.searchParams.set('view', viewName);
     url.searchParams.set('limit', String(limit));
     Object.entries(params).forEach(([key, value]) => {

@@ -43,7 +43,12 @@ test('institutional pilot never presents an incomplete zero-filled snapshot as a
 test('trial metric destinations open visibly filtered results', () => {
   assert.match(script, /Exercise-related trials'[\s\S]*\/trials\?search=exercise/);
   assert.match(script, /Active trials'[\s\S]*\/trials\?search=exercise&status=active/);
-  assert.match(script, /People listed in trials'[\s\S]*\/trials\?search=exercise/);
+  assert.match(script, /People listed in trials'[\s\S]*\/trials\?search=exercise&metric=enrollment/);
+});
+
+test('research metric destinations open the matching evidence set', () => {
+  assert.match(script, /Indexed research'[\s\S]*\/research\?topic=exercise/);
+  assert.match(script, /Human studies'[\s\S]*\/research\?topic=exercise&evidence=human/);
 });
 
 test('institutional pilot states commercial and medical boundaries', () => {

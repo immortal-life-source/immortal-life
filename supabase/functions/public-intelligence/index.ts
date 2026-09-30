@@ -486,6 +486,7 @@ Deno.serve(async (req) => {
       const search = publicSearchTerm(url.searchParams.get('q'))
       const evidence = cleanText(url.searchParams.get('evidence') ?? '', 40)
       const access = cleanText(url.searchParams.get('access') ?? '', 12)
+      const countMode = search || evidence || access || topic ? 'exact' : 'planned'
       // Only use an inner relationship when a topic filter needs it. An inner
       // join across every topic relation made the unfiltered global index and
       // its exact count increasingly expensive as historical coverage grew.
@@ -496,7 +497,7 @@ Deno.serve(async (req) => {
         .from('research_items')
         // A planned count avoids a full-corpus count scan on every visitor
         // request while retaining uncapped cursor pagination through history.
-        .select(`id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,evidence_snapshot,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${topicRelation}`, { count: 'planned' })
+        .select(`id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,evidence_snapshot,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${topicRelation}`, { count: countMode })
         .eq('publication_state', 'published')
         .eq('research_item_topics.is_published', true)
         .order('published_on', { ascending: false, nullsFirst: false })
@@ -515,7 +516,8 @@ Deno.serve(async (req) => {
         ...record,
         evidence_snapshot: record.evidence_snapshot && Object.keys(record.evidence_snapshot).length ? record.evidence_snapshot : researchEvidenceSnapshot(record),
       }))
-      return response(req, { research, total_matching: count ?? 0, offset, next_offset: offset + (data?.length ?? 0) < Number(count ?? 0) ? offset + (data?.length ?? 0) : null, sources: (sources ?? []).map(publicSourceState) })
+      const pageLength = data?.length ?? 0
+      return response(req, { research, total_matching: count ?? pageLength, offset, next_offset: pageLength === limit && offset + pageLength < Number(count ?? 0) ? offset + pageLength : null, sources: (sources ?? []).map(publicSourceState) })
     }
 
     if (view === 'trials') {

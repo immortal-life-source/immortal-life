@@ -52,11 +52,12 @@
       dossierUrl.searchParams.set('view', 'topic-dossier');
       dossierUrl.searchParams.set('topic', 'exercise');
       dossierUrl.searchParams.set('limit', '12');
-      dossierUrl.searchParams.set('quality_rules', '20260916b');
+      dossierUrl.searchParams.set('quality_rules', '20260930-audited-pilot-metrics');
       const trialsUrl = new URL(endpoint);
       trialsUrl.searchParams.set('view', 'trials');
       trialsUrl.searchParams.set('q', 'exercise');
       trialsUrl.searchParams.set('limit', '100');
+      trialsUrl.searchParams.set('quality_rules', '20260930-audited-pilot-metrics');
       const [response, trialsResponse] = await Promise.all([
         fetch(dossierUrl, { headers: window.ilFnHeaders() }),
         fetch(trialsUrl, { headers: window.ilFnHeaders() }),
@@ -80,10 +81,10 @@
       clear(grid);
       grid.append(
         metric('Indexed research', number.format(Number(evidence.research_total || 0)), '/research?topic=exercise', 'See the research →'),
-        metric('Human studies', number.format(Number(evidence.human_evidence_total || 0)), '/topics/exercise#dossier-human-evidence', 'See the human studies →'),
+        metric('Human studies', number.format(Number(evidence.human_evidence_total || 0)), '/research?topic=exercise&evidence=human', 'See the human studies →'),
         metric('Exercise-related trials', number.format(exerciseTrials.length), '/trials?search=exercise', 'See trial registrations →'),
         metric('Active trials', number.format(activeTrials.length), '/trials?search=exercise&status=active', 'See active trials →'),
-        metric('People listed in trials', number.format(listedParticipants), '/trials?search=exercise', 'See listed enrollment →'),
+        metric('People listed in trials', number.format(listedParticipants), '/trials?search=exercise&metric=enrollment', 'See listed enrollment →'),
         metric('Research activity', text(overview.trend_direction, 'Limited').replace(/^./, (value) => value.toUpperCase()), '/topics/exercise#topicTrend', 'View the trend →'),
       );
       renderList('pilotResearch', research, (record) => item(date(record.published_on), text(record.title), record.source_url || `/research/${encodeURIComponent(record.id)}`), 'No current research example is available.');
