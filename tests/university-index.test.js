@@ -83,7 +83,7 @@ test('public interface explains the ranking and provides global comparison contr
 test('university page invalidates incomplete cached coverage snapshots', () => {
   const script = read('intelligence.js')
   const template = read('intelligence-template.html')
-  assert.match(script, /immortal-life-public-intelligence-v8/)
+  assert.match(script, /immortal-life-public-intelligence-v9/)
   assert.match(script, /20260930-audited-pilot-metrics/)
-  assert.match(template, /intelligence\.js\?v=20260930-audited-pilot-metrics/)
+  assert.match(template, /intelligence\.js\?v=20260930-audited-pilot-metrics-b/)
 })
