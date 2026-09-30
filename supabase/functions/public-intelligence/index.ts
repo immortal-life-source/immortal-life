@@ -523,12 +523,13 @@ Deno.serve(async (req) => {
       const status = cleanText(url.searchParams.get('status') ?? '', 80)
       const phase = cleanText(url.searchParams.get('phase') ?? '', 80)
       const country = cleanText(url.searchParams.get('country') ?? '', 120)
+      const countMode = search || status || phase || country || topic ? 'exact' : 'planned'
       const topicRelation = topic
         ? 'clinical_trial_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
         : 'clinical_trial_topics(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
       let query = supabase
         .from('clinical_trials')
-        .select(`id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,evidence_snapshot,source_url,editorial_summary,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${topicRelation}`, { count: 'planned' })
+        .select(`id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,evidence_snapshot,source_url,editorial_summary,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${topicRelation}`, { count: countMode })
         .eq('publication_state', 'published')
         .eq('clinical_trial_topics.is_published', true)
         .order('last_update_date', { ascending: false, nullsFirst: false })
@@ -536,7 +537,8 @@ Deno.serve(async (req) => {
         .range(offset, offset + limit - 1)
       if (topic) query = query.eq('clinical_trial_topics.topic_slug', topic).eq('clinical_trial_topics.is_published', true)
       if (search) query = query.or(`title.ilike.%${search}%,sponsor.ilike.%${search}%,external_id.ilike.%${search}%`)
-      if (status) query = query.eq('overall_status', status)
+      if (status === 'active') query = query.or('overall_status.ilike.%recruiting%,overall_status.ilike.%active%,overall_status.ilike.%enrolling%')
+      else if (status) query = query.eq('overall_status', status)
       if (phase) query = query.contains('phases', [phase])
       if (country) query = query.contains('countries', [country])
       const [{ data, error, count }, { data: sources, error: sourcesError }] = await Promise.all([query, sourcesPromise])
@@ -546,7 +548,8 @@ Deno.serve(async (req) => {
         ...record,
         evidence_snapshot: record.evidence_snapshot && Object.keys(record.evidence_snapshot).length ? record.evidence_snapshot : trialEvidenceSnapshot(record),
       }))
-      return response(req, { trials, total_matching: count ?? 0, offset, next_offset: offset + (data?.length ?? 0) < Number(count ?? 0) ? offset + (data?.length ?? 0) : null, sources: (sources ?? []).map(publicSourceState) })
+      const pageLength = data?.length ?? 0
+      return response(req, { trials, total_matching: count ?? pageLength, offset, next_offset: pageLength === limit && offset + pageLength < Number(count ?? 0) ? offset + pageLength : null, sources: (sources ?? []).map(publicSourceState) })
     }
 
     if (view === 'integrity') {

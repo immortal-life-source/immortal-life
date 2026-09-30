@@ -203,6 +203,7 @@ test('research and trials use complete searchable filter systems', async () => {
   assert.match(portal, /reloadTrials/)
   assert.match(portal, /function filterResearchRecords/)
   assert.match(portal, /function filterTrialRecords/)
+  assert.match(portal, /status: selectedStatus/)
   assert.match(portal, /researchNextOffset/)
   assert.match(portal, /trialNextOffset/)
   assert.match(css, /\.record-controls/)

@@ -37,14 +37,15 @@ test('uncapped historical ingestion is paced below the database IO baseline', as
   assert.doesNotMatch(migration, /delete from|truncate/i)
 })
 
-test('public research and trial browsing avoids exact full-corpus count scans', async () => {
+test('public research avoids exact scans while filtered trials use exact pagination', async () => {
   const api = await read('supabase/functions/public-intelligence/index.ts')
   const researchView = api.slice(api.indexOf("if (view === 'research')"), api.indexOf("if (view === 'trials')"))
   const trialView = api.slice(api.indexOf("if (view === 'trials')"), api.indexOf("if (view === 'integrity')"))
   assert.match(researchView, /count: 'planned'/)
-  assert.match(trialView, /count: 'planned'/)
+  assert.match(trialView, /countMode = search \|\| status \|\| phase \|\| country \|\| topic \? 'exact' : 'planned'/)
+  assert.match(trialView, /status === 'active'/)
+  assert.match(trialView, /pageLength === limit/)
   assert.doesNotMatch(researchView, /count: 'exact'/)
-  assert.doesNotMatch(trialView, /count: 'exact'/)
 })
 
 test('public browsing, graph totals, sitemaps and downloads traverse the complete retained corpus', async () => {
