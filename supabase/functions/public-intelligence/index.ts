@@ -447,6 +447,7 @@ Deno.serve(async (req) => {
             current_by_record_type: pulseCounts(currentPulse),
             previous_by_record_type: pulseCounts(previousPulse),
             complete: Number(timelinePulseResult.count ?? pulseEvents.length) === pulseEvents.length,
+            baseline_ready: previousPulse.length > 0,
           },
         },
         pilot: pilotResult.data ?? null,

@@ -41,6 +41,7 @@ test('decision views remain source-linked and use the same Exercise cohorts as t
   assert.match(script, /\/universities\/\$\{encodeURIComponent\(university\.slug\)\}\?topic=/);
   assert.match(intelligence, /university_connections: universityConnections/);
   assert.match(intelligence, /previous_by_record_type/);
+  assert.match(intelligence, /baseline_ready: previousPulse\.length > 0/);
   assert.match(intelligence, /const gapSearch = publicSearchTerm/);
 });
 
@@ -48,6 +49,7 @@ test('decision views state their limits rather than turning activity into effica
   assert.match(html, /Distinct record categories—not a conversion funnel/);
   assert.match(html, /Activity is not a ranking of research quality/);
   assert.match(script, /not whether the scientific conclusion improved/);
+  assert.match(script, /baseline is not mature enough for an acceleration claim/);
   assert.match(script, /listed enrollment is not proof of completed participation/);
   assert.match(script, /not an allegation of misconduct/);
 });

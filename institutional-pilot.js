@@ -78,9 +78,11 @@
     const maximum = Math.max(current, previous, 1);
     const summary = node('p', 'pulse-summary');
     const delta = current - previous;
-    summary.textContent = delta === 0 ? 'Source activity was unchanged.' : `${formatCount(Math.abs(delta))} ${delta > 0 ? 'more' : 'fewer'} source events than in the preceding six weeks.`;
+    summary.textContent = pulse.baseline_ready === false
+      ? `${formatCount(current)} source events are indexed for the latest six weeks. The preceding-window baseline is not mature enough for an acceleration claim.`
+      : delta === 0 ? 'Source activity was unchanged.' : `${formatCount(Math.abs(delta))} ${delta > 0 ? 'more' : 'fewer'} source events than in the preceding six weeks.`;
     container.append(summary);
-    [['Previous six weeks', previous], ['Latest six weeks', current]].forEach(([label, value]) => {
+    (pulse.baseline_ready === false ? [['Latest six weeks', current]] : [['Previous six weeks', previous], ['Latest six weeks', current]]).forEach(([label, value]) => {
       const link = visualLink('comparison-bar', '/changes?topic=exercise');
       const copy = node('span'); copy.append(node('b', '', label), node('strong', '', formatCount(value)));
       const track = node('i'); const fill = node('em'); fill.style.width = `${Math.max(2, (Number(value) / maximum) * 100)}%`; track.append(fill);
@@ -92,7 +94,7 @@
       const destination = /trial/i.test(key) ? '/trials?search=exercise' : /regulatory/i.test(key) ? '/regulatory?topic=exercise' : /integrity|correction|retraction/i.test(key) ? '/integrity?topic=exercise' : '/research?topic=exercise';
       const link = visualLink('', destination); link.append(node('strong', '', formatCount(value)), node('span', '', typeLabels[key] || key.replace(/_/g, ' '))); types.append(link);
     });
-    container.append(types, node('p', 'visual-footnote', 'This measures indexed source activity, not whether the scientific conclusion improved.'));
+    container.append(types, node('p', 'visual-footnote', 'This measures indexed source activity, not whether the scientific conclusion improved. A trend comparison appears only after both six-week windows contain indexed history.'));
   };
   const renderTrialLandscape = (trials) => {
     const container = document.getElementById('pilotTrialLandscape'); clear(container);
