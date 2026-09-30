@@ -524,9 +524,7 @@ Deno.serve(async (req) => {
       const phase = cleanText(url.searchParams.get('phase') ?? '', 80)
       const country = cleanText(url.searchParams.get('country') ?? '', 120)
       const countMode = search || status || phase || country || topic ? 'exact' : 'planned'
-      const topicRelation = topic
-        ? 'clinical_trial_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
-        : 'clinical_trial_topics(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
+      const topicRelation = 'clinical_trial_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
       let query = supabase
         .from('clinical_trials')
         .select(`id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,evidence_snapshot,source_url,editorial_summary,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${topicRelation}`, { count: countMode })

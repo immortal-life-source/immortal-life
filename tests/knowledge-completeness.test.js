@@ -44,6 +44,7 @@ test('public research avoids exact scans while filtered trials use exact paginat
   assert.match(researchView, /count: 'planned'/)
   assert.match(trialView, /countMode = search \|\| status \|\| phase \|\| country \|\| topic \? 'exact' : 'planned'/)
   assert.match(trialView, /status === 'active'/)
+  assert.match(trialView, /clinical_trial_topics!inner/)
   assert.match(trialView, /pageLength === limit/)
   assert.doesNotMatch(researchView, /count: 'exact'/)
 })
