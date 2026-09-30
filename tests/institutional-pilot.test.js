@@ -32,6 +32,7 @@ test('decision views remain source-linked and use the same Exercise cohorts as t
   }
   assert.match(script, /view', 'trial-results-gap'/);
   assert.match(script, /gapUrl\.searchParams\.set\('q', 'exercise'\)/);
+  assert.match(script, /quality_rules', '20260930-decision-views-b'/);
   assert.match(script, /renderMaturity/);
   assert.match(script, /renderPulse/);
   assert.match(script, /renderTrialLandscape/);

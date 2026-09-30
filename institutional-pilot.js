@@ -178,12 +178,12 @@
       dossierUrl.searchParams.set('view', 'topic-dossier');
       dossierUrl.searchParams.set('topic', 'exercise');
       dossierUrl.searchParams.set('limit', '12');
-      dossierUrl.searchParams.set('quality_rules', '20260930-audited-pilot-metrics');
+      dossierUrl.searchParams.set('quality_rules', '20260930-decision-views-b');
       const trialsUrl = new URL(endpoint);
       trialsUrl.searchParams.set('view', 'trials');
       trialsUrl.searchParams.set('q', 'exercise');
       trialsUrl.searchParams.set('limit', '100');
-      trialsUrl.searchParams.set('quality_rules', '20260930-audited-pilot-metrics');
+      trialsUrl.searchParams.set('quality_rules', '20260930-decision-views-b');
       const gapUrl = new URL(endpoint);
       gapUrl.searchParams.set('view', 'trial-results-gap');
       gapUrl.searchParams.set('q', 'exercise');
