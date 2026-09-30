@@ -1064,11 +1064,12 @@
     ]);
     replaceFilterOptions(elements.trialPhase, 'All phases', [...new Set(searchableTrials.flatMap((record) => record.phases || []).filter(Boolean))].sort().map((value) => [value, readableStatus(value)]));
     replaceFilterOptions(elements.trialCountry, 'All countries', [...new Set(searchableTrials.flatMap((record) => record.countries || []).filter(Boolean))].sort((left, right) => left.localeCompare(right)).map((value) => [value, value]));
-    elements.trialSearch.value = new URLSearchParams(location.search).get('search')?.trim() || '';
-    elements.trialTopic.value = new URLSearchParams(location.search).get('topic')?.trim() || '';
-    elements.trialStatus.value = new URLSearchParams(location.search).get('status')?.trim() || '';
-    elements.trialPhase.value = new URLSearchParams(location.search).get('phase')?.trim() || '';
-    elements.trialCountry.value = new URLSearchParams(location.search).get('country')?.trim() || '';
+    const trialParameters = new URLSearchParams(location.search);
+    elements.trialSearch.value = trialParameters.get('search')?.trim() || trialParameters.get('q')?.trim() || '';
+    elements.trialTopic.value = trialParameters.get('topic')?.trim() || '';
+    elements.trialStatus.value = trialParameters.get('status')?.trim() || '';
+    elements.trialPhase.value = trialParameters.get('phase')?.trim() || '';
+    elements.trialCountry.value = trialParameters.get('country')?.trim() || '';
     elements.trialControls.addEventListener('input', () => {
       filterTrialRecords();
       window.clearTimeout(trialSearchTimer);
@@ -2438,7 +2439,7 @@
       } else if (view === 'trials') {
         const params = new URLSearchParams(location.search);
         const requestedStatus = params.get('status')?.trim() || '';
-        const [data, topicEntries] = await Promise.all([request('trials', 100, { q: params.get('search')?.trim() || '', topic: params.get('topic')?.trim() || '', status: requestedStatus, phase: params.get('phase')?.trim() || '', country: params.get('country')?.trim() || '' }), catalogueTopicEntries()]);
+        const [data, topicEntries] = await Promise.all([request('trials', 100, { q: params.get('search')?.trim() || params.get('q')?.trim() || '', topic: params.get('topic')?.trim() || '', status: requestedStatus, phase: params.get('phase')?.trim() || '', country: params.get('country')?.trim() || '' }), catalogueTopicEntries()]);
         trialNextOffset = data.next_offset;
         trialTotal = Number(data.total_matching || data.trials?.length || 0);
         renderTrials(data.trials || [], topicEntries);

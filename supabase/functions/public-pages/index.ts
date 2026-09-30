@@ -445,17 +445,25 @@ function changeLabel(value: string): string {
   return labels[value] || value.replace(/_/g, ' ')
 }
 
-async function changesPage(supabase: any): Promise<string> {
-  const since = new Date(Date.now() - 30 * 86400000).toISOString()
-  const { data, error } = await supabase.from('intelligence_change_events').select('id,event_type,importance,record_type,record_id,title,occurred_at,topic_slugs,metadata').neq('event_type', 'quality_state_changed').gte('occurred_at', since).order('occurred_at', { ascending: false }).limit(250)
+async function changesPage(supabase: any, url: URL): Promise<string> {
+  const requestedTopic = url.searchParams.get('topic') || ''
+  const topic = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(requestedTopic) ? requestedTopic : ''
+  const days = topic ? 42 : 30
+  const since = new Date(Date.now() - days * 86400000).toISOString()
+  let query = supabase.from('intelligence_change_events').select('id,event_type,importance,record_type,record_id,title,occurred_at,topic_slugs,metadata').neq('event_type', 'quality_state_changed').gte('occurred_at', since).order('occurred_at', { ascending: false }).limit(250)
+  if (topic) query = query.contains('topic_slugs', [topic])
+  const { data, error } = await query
   if (error) throw error
   const events = data ?? []
   const counts = ['research', 'trials', 'regulatory', 'integrity'].map((kind) => ({ kind, count: events.filter((event: any) => event.record_type === kind).length })).filter(({ count }) => count > 0)
   const rows = events.slice(0, 100).map((event: any) => `<li class="change-row${event.importance === 'important' ? ' is-important' : ''}"><div><span class="section-index">${escapeHtml(changeLabel(event.event_type))} · ${escapeHtml(formatDate(event.occurred_at))}</span><h2><a data-il-event="open_change" href="/${escapeHtml(event.record_type)}/${Number(event.record_id)}">${escapeHtml(event.title)}</a></h2>${event.topic_slugs?.length ? `<div class="record-tags">${chips(event.topic_slugs)}</div>` : ''}</div><span class="change-kind">${escapeHtml(event.record_type)}</span></li>`).join('')
   const countLabels: Record<string, string> = { research: 'research additions', trials: 'trial additions and updates', regulatory: 'official notices', integrity: 'corrections and retractions' }
+  const topicQuery = topic ? `?topic=${encodeURIComponent(topic)}` : ''
   const countLinks: Record<string, string> = { research: '/research', trials: '/trials', regulatory: '/regulatory', integrity: '/integrity' }
-  const body = `<section class="intel-section changes-section">${counts.length ? `<div class="report-metrics report-metrics--active">${counts.map(({ kind, count }) => `<a class="report-metric" href="${countLinks[kind] || '/changes'}" aria-label="Browse ${escapeHtml(countLabels[kind] || `${kind} updates`)}"><strong>${count}</strong><span>${escapeHtml(countLabels[kind] || `${kind} updates`)} in the last 30 days</span><small>Browse records →</small></a>`).join('')}</div>` : ''}<div class="section-heading report-heading"><div><span class="section-index">Recent additions and updates</span><h2>Newest research and trial updates</h2></div><a class="section-link" href="/changes/feed.xml">Follow by RSS</a></div><ol class="change-list">${rows || '<li class="empty-list">Nothing new has been indexed in this period. Source monitoring continues automatically.</li>'}</ol><aside class="automation-notice"><strong>How to read this feed</strong><p>This page lists newly found records and source updates. It does not mean that an intervention works, is safe, or is medically important.</p></aside></section>`
-  return pageShell({ title: "What's new in longevity research — immortal.life", description: 'New longevity research, clinical trial updates, official notices, corrections and retractions, collected automatically.', canonical: `${SITE}/changes`, kicker: 'Updated automatically', heading: "What's new in longevity?", body, indexable: events.length >= 3, socialImage: `${SITE}/social-card/changes/latest.png` })
+  const periodLabel = topic ? 'last six weeks' : 'last 30 days'
+  const topicName = topic ? topic.replace(/-/g, ' ').replace(/^./, (letter) => letter.toUpperCase()) : ''
+  const body = `<section class="intel-section changes-section">${counts.length ? `<div class="report-metrics report-metrics--active">${counts.map(({ kind, count }) => `<a class="report-metric" href="${countLinks[kind] ? `${countLinks[kind]}${topicQuery}` : `/changes${topicQuery}`}" aria-label="Browse ${escapeHtml(countLabels[kind] || `${kind} updates`)}"><strong>${count}</strong><span>${escapeHtml(countLabels[kind] || `${kind} updates`)} in the ${periodLabel}</span><small>Browse records →</small></a>`).join('')}</div>` : ''}<div class="section-heading report-heading"><div><span class="section-index">${topic ? `${escapeHtml(topicName)} · ` : ''}Recent additions and updates</span><h2>${topic ? `All ${events.length} source-level changes recorded in the last six weeks` : 'Newest research and trial updates'}</h2></div><a class="section-link" href="/changes/feed.xml${topicQuery}">Follow by RSS</a></div><ol class="change-list">${rows || '<li class="empty-list">Nothing new has been indexed in this period. Source monitoring continues automatically.</li>'}</ol><aside class="automation-notice"><strong>How to read this feed</strong><p>This page lists newly found records and source updates. A new or updated record does not necessarily change a scientific conclusion, show that an intervention works, or establish safety or medical importance.</p></aside></section>`
+  return pageShell({ title: topic ? `${topicName} changes in the last six weeks — immortal.life` : "What's new in longevity research — immortal.life", description: topic ? `Source-level research, trial, regulatory, and integrity changes linked to ${topicName} during the last six weeks.` : 'New longevity research, clinical trial updates, official notices, corrections and retractions, collected automatically.', canonical: topic ? `${SITE}/changes?topic=${encodeURIComponent(topic)}` : `${SITE}/changes`, kicker: 'Updated automatically', heading: topic ? `What changed for ${topicName} in the last six weeks?` : "What's new in longevity?", body, indexable: !topic && events.length >= 3, socialImage: `${SITE}/social-card/changes/latest.png` })
 }
 
 async function changeFeed(supabase: any, format: string): Promise<Response> {
@@ -856,7 +864,7 @@ Deno.serve(async (req) => {
       return response(await sitemap(supabase, sitemapType), 'application/xml; charset=utf-8')
     }
     if (mode === 'feed') return await feed(supabase, url.searchParams.get('format') || 'rss', url.searchParams.get('topic') || '')
-    if (mode === 'changes') return response(await changesPage(supabase), 'text/html; charset=utf-8')
+    if (mode === 'changes') return response(await changesPage(supabase, url), 'text/html; charset=utf-8')
     if (mode === 'change-feed') return await changeFeed(supabase, url.searchParams.get('format') || 'rss')
     if (mode === 'reports') return response(await reportsPage(supabase), 'text/html; charset=utf-8')
     if (mode === 'dataset') {

@@ -55,7 +55,7 @@
       dossierUrl.searchParams.set('quality_rules', '20260930-audited-pilot-metrics');
       const trialsUrl = new URL(endpoint);
       trialsUrl.searchParams.set('view', 'trials');
-      trialsUrl.searchParams.set('q', 'exercise');
+      trialsUrl.searchParams.set('topic', 'exercise');
       trialsUrl.searchParams.set('limit', '100');
       trialsUrl.searchParams.set('quality_rules', '20260930-audited-pilot-metrics');
       const [response, trialsResponse] = await Promise.all([
@@ -76,23 +76,38 @@
       }
       const research = Array.isArray(data.research) ? data.research : [];
       const universities = Array.isArray(overview.universities) ? overview.universities : [];
+      const universityTotal = Math.max(universities.length, Number(overview.university_total) || 0);
       const events = Array.isArray(data.timeline?.events) ? data.timeline.events : [];
       const grid = document.getElementById('metricGrid');
       clear(grid);
       grid.append(
         metric('Indexed research', number.format(Number(evidence.research_total || 0)), '/research?topic=exercise', 'See the research →'),
         metric('Human studies', number.format(Number(evidence.human_evidence_total || 0)), '/research?topic=exercise&evidence=human', 'See the human studies →'),
-        metric('Exercise-related trials', number.format(exerciseTrials.length), '/trials?search=exercise', 'See trial registrations →'),
-        metric('Active trials', number.format(activeTrials.length), '/trials?search=exercise&status=active', 'See active trials →'),
-        metric('People listed in trials', number.format(listedParticipants), '/trials?search=exercise&metric=enrollment', 'See listed enrollment →'),
+        metric('Exercise-related trials', number.format(exerciseTrials.length), '/trials?topic=exercise', 'See trial registrations →'),
+        metric('Active trials', number.format(activeTrials.length), '/trials?topic=exercise&status=active', 'See active trials →'),
+        metric('People listed in trials', number.format(listedParticipants), '/trials?topic=exercise&metric=enrollment', 'See listed enrollment →'),
         metric('Research activity', text(overview.trend_direction, 'Limited').replace(/^./, (value) => value.toUpperCase()), '/topics/exercise#topicTrend', 'View the trend →'),
       );
       renderList('pilotResearch', research, (record) => item(date(record.published_on), text(record.title), record.source_url || `/research/${encodeURIComponent(record.id)}`), 'No current research example is available.');
       renderList('pilotTrials', exerciseTrials, (record) => item(text(record.overall_status), text(record.title), record.source_url || `/trials/${encodeURIComponent(record.id)}`), 'No current trial registration is available.');
+      const universitiesSummary = document.getElementById('pilotUniversitiesSummary');
+      if (universitiesSummary) {
+        const visible = Math.min(3, universities.length);
+        universitiesSummary.textContent = universityTotal
+          ? `${visible === universityTotal ? `Showing all ${number.format(universityTotal)}` : `Showing 3 leading profiles from ${number.format(universityTotal)}`} universities currently linked to Exercise research. Open the complete topic view to browse the full filtered index.`
+          : 'No university profile is currently linked to Exercise research.';
+      }
       renderList('pilotUniversities', universities, (record) => {
         const location = [record.city, record.country_name || record.country_code].filter(Boolean).join(', ');
         return item(location || 'Exercise topic profile', text(record.name), `/universities/${encodeURIComponent(record.slug)}?topic=exercise`);
       }, 'No topic-specific university activity is currently available.');
+      const changesSummary = document.getElementById('pilotChangesSummary');
+      if (changesSummary) {
+        const visible = Math.min(3, events.length);
+        changesSummary.textContent = events.length
+          ? `${visible === events.length ? `Showing all ${number.format(events.length)}` : `Showing the ${number.format(visible)} newest of ${number.format(events.length)}`} source-level changes recorded for Exercise in the last six weeks. A new or updated record does not necessarily change the scientific conclusion.`
+          : 'No source-level change is currently recorded for Exercise in the last six weeks.';
+      }
       renderList('pilotChanges', events, (record) => item(date(record.occurred_at), text(record.title), record.source_url || '/changes?topic=exercise'), 'No source-level change is currently recorded.');
       status.classList.add('is-live');
       status.querySelector('span').textContent = `Live index snapshot generated ${date(data.generated_at)} · open any item to inspect its source.`;

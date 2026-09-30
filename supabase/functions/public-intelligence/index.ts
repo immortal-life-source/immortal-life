@@ -341,9 +341,10 @@ Deno.serve(async (req) => {
 
     if (view === 'topic-dossier') {
       if (!topic) return response(req, { error: 'Topic is required' }, 400)
+      const sixWeeksAgo = new Date(Date.now() - 42 * 86400000).toISOString()
       const researchRelation = 'research_item_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
       const trialRelation = 'clinical_trial_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
-      const [researchResult, trialResult, topicResult, evidenceResult, overviewResult, timelineResult, sourcesResult, pilotResult, fundingResult] = await Promise.all([
+      const [researchResult, trialResult, topicResult, evidenceResult, overviewResult, timelineResult, sourcesResult, pilotResult, fundingResult, universityCountResult] = await Promise.all([
         supabase.from('research_items')
           .select(`id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,evidence_snapshot,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${researchRelation}`)
           .eq('publication_state', 'published').eq('research_item_topics.topic_slug', topic).eq('research_item_topics.is_published', true)
@@ -357,12 +358,15 @@ Deno.serve(async (req) => {
         supabase.rpc('get_topic_reader_overview', { requested_topic: topic }),
         supabase.from('intelligence_change_events')
           .select('id,event_type,importance,record_type,record_id,title,source_url,occurred_at,topic_slugs,metadata')
-          .neq('event_type', 'quality_state_changed').contains('topic_slugs', [topic]).order('occurred_at', { ascending: false }).limit(40),
+          .neq('event_type', 'quality_state_changed').contains('topic_slugs', [topic]).gte('occurred_at', sixWeeksAgo).order('occurred_at', { ascending: false }).limit(250),
         sourcesPromise,
         supabase.rpc('get_topic_dossier_pilot', { requested_topic: topic }),
         supabase.from('funding_award_topics').select('openalex_award_id', { count: 'exact', head: true }).eq('topic_slug', topic),
+        supabase.from('university_research_topic_metrics')
+          .select('openalex_id,university_research_institutions!inner(is_eligible)', { count: 'exact', head: true })
+          .eq('topic_slug', topic).gt('works_all_time', 0).eq('university_research_institutions.is_eligible', true),
       ])
-      for (const result of [researchResult, trialResult, topicResult, evidenceResult, overviewResult, timelineResult, sourcesResult, pilotResult, fundingResult]) if (result.error) throw result.error
+      for (const result of [researchResult, trialResult, topicResult, evidenceResult, overviewResult, timelineResult, sourcesResult, pilotResult, fundingResult, universityCountResult]) if (result.error) throw result.error
 
       const related = new Map<string, number>()
       for (const event of timelineResult.data ?? []) for (const slug of event.topic_slugs ?? []) if (slug !== topic) related.set(slug, (related.get(slug) ?? 0) + 1)
@@ -388,7 +392,7 @@ Deno.serve(async (req) => {
         research,
         trials,
         evidence: evidenceResult.data ?? {},
-        overview: overviewResult.data ?? {},
+        overview: { ...(overviewResult.data ?? {}), university_total: universityCountResult.count ?? 0 },
         timeline: { topic: topicResult.data, events: timelineResult.data ?? [], related_topics: relatedTopics },
         pilot: pilotResult.data ?? null,
         funding: { award_count: fundingResult.count ?? 0 },

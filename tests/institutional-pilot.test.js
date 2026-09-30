@@ -9,6 +9,9 @@ const script = fs.readFileSync(path.join(root, 'institutional-pilot.js'), 'utf8'
 const playbook = fs.readFileSync(path.join(root, 'docs', 'institutional-pilot-playbook.md'), 'utf8');
 const build = fs.readFileSync(path.join(root, 'build.js'), 'utf8');
 const proxy = fs.readFileSync(path.join(root, 'api', 'intelligence.js'), 'utf8');
+const portal = fs.readFileSync(path.join(root, 'intelligence.js'), 'utf8');
+const pages = fs.readFileSync(path.join(root, 'supabase', 'functions', 'public-pages', 'index.ts'), 'utf8');
+const intelligence = fs.readFileSync(path.join(root, 'supabase', 'functions', 'public-intelligence', 'index.ts'), 'utf8');
 
 test('institutional pilot is unlisted and excluded from indexing', () => {
   assert.match(html, /noindex, nofollow, noarchive/);
@@ -33,18 +36,18 @@ test('institutional pilot explains the product and asks a concrete demo question
 test('institutional pilot never presents an incomplete zero-filled snapshot as a successful example', () => {
   assert.match(script, /requiredCounts/);
   assert.match(script, /Number\(evidence\[field\]\) <= 0/);
-  assert.match(script, /searchParams\.set\('q', 'exercise'\)/);
+  assert.match(script, /searchParams\.set\('topic', 'exercise'\)/);
   assert.match(script, /exerciseTrials\.length/);
   assert.match(script, /listedParticipants/);
-  assert.match(script, /\/trials\?search=exercise/);
+  assert.match(script, /\/trials\?topic=exercise/);
   assert.match(script, /status=active/);
   assert.match(script, /The live pilot snapshot is incomplete/);
 });
 
 test('trial metric destinations open visibly filtered results', () => {
-  assert.match(script, /Exercise-related trials'[\s\S]*\/trials\?search=exercise/);
-  assert.match(script, /Active trials'[\s\S]*\/trials\?search=exercise&status=active/);
-  assert.match(script, /People listed in trials'[\s\S]*\/trials\?search=exercise&metric=enrollment/);
+  assert.match(script, /Exercise-related trials'[\s\S]*\/trials\?topic=exercise/);
+  assert.match(script, /Active trials'[\s\S]*\/trials\?topic=exercise&status=active/);
+  assert.match(script, /People listed in trials'[\s\S]*\/trials\?topic=exercise&metric=enrollment/);
 });
 
 test('research metric destinations open the matching evidence set', () => {
@@ -59,6 +62,23 @@ test('university examples open topic profiles without advertising unverified wor
   assert.match(script, /universities\/\$\{encodeURIComponent\(record\.slug\)\}\?topic=exercise/);
   assert.match(script, /record\.city/);
   assert.doesNotMatch(script, /works_all_time \|\| 0\).*work links/);
+  assert.match(script, /universityTotal/);
+  assert.match(script, /Showing 3 leading profiles/);
+});
+
+test('pilot changes are explicitly a six-week topic window with a visible preview count', () => {
+  assert.match(html, /What changed in the last six weeks/);
+  assert.match(script, /newest of/);
+  assert.match(script, /does not necessarily change the scientific conclusion/);
+  assert.match(intelligence, /42 \* 86400000/);
+  assert.match(intelligence, /contains\('topic_slugs', \[topic\]\)\.gte\('occurred_at', sixWeeksAgo\)/);
+  assert.match(pages, /query = query\.contains\('topic_slugs', \[topic\]\)/);
+  assert.match(pages, /changesPage\(supabase, url\)/);
+});
+
+test('legacy q trial links remain filtered while new pilot links use exact topic taxonomy', () => {
+  assert.match(portal, /trialParameters\.get\('search'\).*trialParameters\.get\('q'\)/);
+  assert.match(portal, /params\.get\('search'\).*params\.get\('q'\)/);
 });
 
 test('institutional pilot states commercial and medical boundaries', () => {
