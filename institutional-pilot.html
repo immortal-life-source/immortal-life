@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="icon" href="/favicon.ico" type="image/x-icon" />
-  <link rel="stylesheet" href="/institutional-pilot.css?v=20260930-previews" />
+  <link rel="stylesheet" href="/institutional-pilot.css?v=20260930-decision-views" />
 </head>
 <body>
   <header class="pilot-header">
@@ -53,6 +53,36 @@
       <div class="metric-grid" id="metricGrid" aria-label="Exercise evidence snapshot">
         <div class="metric-skeleton"></div><div class="metric-skeleton"></div><div class="metric-skeleton"></div><div class="metric-skeleton"></div><div class="metric-skeleton"></div><div class="metric-skeleton"></div>
       </div>
+      <section class="decision-story" aria-labelledby="decisionStoryTitle">
+        <div class="decision-story-heading">
+          <div><span class="eyebrow">Decision view</span><h3 id="decisionStoryTitle">See how the field is moving—not only how many records exist.</h3></div>
+          <p>These views connect research maturity, recent activity, trial progress, university specialisation, and missing results. Every interactive element opens the records behind it.</p>
+        </div>
+        <div class="decision-visual-grid">
+          <article class="decision-visual decision-visual--wide">
+            <div class="visual-heading"><div><span>Evidence maturity path</span><h4>How far has Exercise research progressed?</h4></div><a href="/topics/exercise">Open dossier</a></div>
+            <p class="visual-note">Distinct record categories—not a conversion funnel. Human studies are a subset of research records; trial registrations are a separate registry corpus.</p>
+            <div class="maturity-path" id="pilotMaturity"><p>Loading evidence stages…</p></div>
+          </article>
+          <article class="decision-visual">
+            <div class="visual-heading"><div><span>Six-week pulse</span><h4>Is source activity accelerating?</h4></div><a href="/changes?topic=exercise">Open timeline</a></div>
+            <div id="pilotChangePulse" class="change-pulse"><p>Loading the comparison…</p></div>
+          </article>
+          <article class="decision-visual">
+            <div class="visual-heading"><div><span>Trial landscape</span><h4>Where do the registered studies stand?</h4></div><a href="/trials?search=exercise">Open trials</a></div>
+            <div id="pilotTrialLandscape" class="landscape-bars"><p>Loading trial status…</p></div>
+          </article>
+          <article class="decision-visual decision-visual--wide">
+            <div class="visual-heading"><div><span>University connections</span><h4>What adjacent longevity fields connect the leading institutions?</h4></div><a href="/universities?topic=exercise">Open university view</a></div>
+            <p class="visual-note">Relative five-year indexed activity across source-matched topics. Activity is not a ranking of research quality or educational suitability.</p>
+            <div id="pilotUniversityHeatmap" class="university-heatmap"><p>Loading university connections…</p></div>
+          </article>
+          <article class="decision-visual decision-visual--wide">
+            <div class="visual-heading"><div><span>Results gap</span><h4>Do completed trial registrations show structured results?</h4></div><a href="/trials/results-gap?search=exercise">Open Results Gap Monitor</a></div>
+            <div id="pilotResultsGap" class="results-gap"><p>Loading completed-trial transparency signals…</p></div>
+          </article>
+        </div>
+      </section>
       <div class="demo-grid">
         <article>
           <div class="card-heading"><span>Newest research</span><a href="/research?topic=exercise">Open all research</a></div>
@@ -141,6 +171,6 @@
 
   <footer><p>Automated, source-linked research intelligence. Not medical advice, diagnosis, or treatment guidance.</p><div><a href="/methodology">Methodology</a><a href="/resources">Sources</a><a href="/privacy">Privacy</a><a href="mailto:hello@immortal.life">Contact</a></div></footer>
   <script src="/il-config.js"></script>
-  <script src="/institutional-pilot.js?v=20260930-audited-metrics-d" defer></script>
+  <script src="/institutional-pilot.js?v=20260930-decision-views" defer></script>
 </body>
 </html>

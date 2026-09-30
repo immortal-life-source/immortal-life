@@ -45,6 +45,130 @@
     link.append(node('strong', '', value), node('span', '', label), node('small', '', note));
     return link;
   };
+  const formatCount = (value) => number.format(Math.max(0, Number(value) || 0));
+  const visualLink = (className, href) => {
+    const link = node('a', className);
+    link.href = href;
+    return link;
+  };
+  const renderMaturity = (evidence, trials, activeTrials, gapSummary) => {
+    const container = document.getElementById('pilotMaturity'); clear(container);
+    const stages = [
+      ['Indexed research', Number(evidence.research_total) || 0, '/research?topic=exercise'],
+      ['Human studies', Number(evidence.human_evidence_total) || 0, '/research?topic=exercise&evidence=human'],
+      ['Trial registrations', trials.length, '/trials?search=exercise'],
+      ['Active trials', activeTrials.length, '/trials?search=exercise&status=active'],
+      ['Completed trials', Number(gapSummary.completed_trials) || 0, '/trials/results-gap?search=exercise'],
+      ['Structured results visible', Number(gapSummary.results_posted) || 0, '/trials/results-gap?search=exercise&status=results-posted'],
+    ];
+    stages.forEach(([label, value, href], index) => {
+      const link = visualLink('maturity-stage', href);
+      link.append(node('small', '', String(index + 1).padStart(2, '0')), node('strong', '', formatCount(value)), node('span', '', label));
+      container.append(link);
+    });
+  };
+  const renderPulse = (pulse) => {
+    const container = document.getElementById('pilotChangePulse'); clear(container);
+    if (!pulse || pulse.complete !== true) {
+      container.append(node('p', 'visual-empty', 'A complete twelve-week comparison is not available yet. Open the source timeline instead.'));
+      return;
+    }
+    const current = Number(pulse.current_total) || 0;
+    const previous = Number(pulse.previous_total) || 0;
+    const maximum = Math.max(current, previous, 1);
+    const summary = node('p', 'pulse-summary');
+    const delta = current - previous;
+    summary.textContent = delta === 0 ? 'Source activity was unchanged.' : `${formatCount(Math.abs(delta))} ${delta > 0 ? 'more' : 'fewer'} source events than in the preceding six weeks.`;
+    container.append(summary);
+    [['Previous six weeks', previous], ['Latest six weeks', current]].forEach(([label, value]) => {
+      const link = visualLink('comparison-bar', '/changes?topic=exercise');
+      const copy = node('span'); copy.append(node('b', '', label), node('strong', '', formatCount(value)));
+      const track = node('i'); const fill = node('em'); fill.style.width = `${Math.max(2, (Number(value) / maximum) * 100)}%`; track.append(fill);
+      link.append(copy, track); container.append(link);
+    });
+    const types = node('div', 'pulse-types');
+    const typeLabels = { research: 'Research', research_item: 'Research', trial: 'Trials', clinical_trial: 'Trials', regulatory: 'Official notices', integrity: 'Corrections' };
+    Object.entries(pulse.current_by_record_type || {}).sort((left, right) => Number(right[1]) - Number(left[1])).slice(0, 4).forEach(([key, value]) => {
+      const destination = /trial/i.test(key) ? '/trials?search=exercise' : /regulatory/i.test(key) ? '/regulatory?topic=exercise' : /integrity|correction|retraction/i.test(key) ? '/integrity?topic=exercise' : '/research?topic=exercise';
+      const link = visualLink('', destination); link.append(node('strong', '', formatCount(value)), node('span', '', typeLabels[key] || key.replace(/_/g, ' '))); types.append(link);
+    });
+    container.append(types, node('p', 'visual-footnote', 'This measures indexed source activity, not whether the scientific conclusion improved.'));
+  };
+  const renderTrialLandscape = (trials) => {
+    const container = document.getElementById('pilotTrialLandscape'); clear(container);
+    const groups = [
+      { label: 'Active or recruiting', test: /recruiting|active|enrolling/i, href: '/trials?search=exercise&status=active' },
+      { label: 'Completed', test: /^completed$/i, href: '/trials?search=exercise&status=Completed' },
+      { label: 'Stopped early', test: /terminated|withdrawn|suspended/i, href: '/trials?search=exercise' },
+    ];
+    const assigned = new Set();
+    const rows = groups.map((group) => {
+      const records = trials.filter((trial, index) => group.test.test(String(trial.overall_status || '')) && !assigned.has(index));
+      trials.forEach((trial, index) => { if (group.test.test(String(trial.overall_status || ''))) assigned.add(index); });
+      return { ...group, records };
+    });
+    rows.push({ label: 'Other registry status', href: '/trials?search=exercise', records: trials.filter((trial, index) => !assigned.has(index)) });
+    const maximum = Math.max(...rows.map((row) => row.records.length), 1);
+    rows.forEach((row) => {
+      const participants = row.records.reduce((sum, trial) => sum + Math.max(0, Number(trial.enrollment) || 0), 0);
+      const link = visualLink('landscape-row', row.href);
+      const heading = node('span'); heading.append(node('b', '', row.label), node('strong', '', formatCount(row.records.length)));
+      const track = node('i'); const fill = node('em'); fill.style.width = `${Math.max(2, (row.records.length / maximum) * 100)}%`; track.append(fill);
+      link.append(heading, track, node('small', '', `${formatCount(participants)} listed participants`)); container.append(link);
+    });
+    container.append(node('p', 'visual-footnote', 'Status and participant totals come from registry records; listed enrollment is not proof of completed participation.'));
+  };
+  const renderUniversityConnections = (connections) => {
+    const container = document.getElementById('pilotUniversityHeatmap'); clear(container);
+    const topics = Array.isArray(connections?.topics) ? connections.topics : [];
+    const universities = Array.isArray(connections?.universities) ? connections.universities : [];
+    if (!topics.length || !universities.length) {
+      container.append(node('p', 'visual-empty', 'No complete cross-topic university view is available yet.'));
+      return;
+    }
+    const maximum = Math.max(...universities.flatMap((university) => topics.map((topic) => Number(university.values?.[topic.slug]) || 0)), 1);
+    const table = node('table');
+    const head = node('thead'); const headRow = node('tr'); headRow.append(node('th', '', 'Institution'));
+    topics.forEach((topic) => { const cell = node('th'); const link = visualLink('', `/topics/${encodeURIComponent(topic.slug)}`); link.textContent = topic.name; cell.append(link); headRow.append(cell); });
+    head.append(headRow); table.append(head);
+    const body = node('tbody');
+    universities.forEach((university) => {
+      const row = node('tr'); const label = node('th'); const profile = visualLink('', `/universities/${encodeURIComponent(university.slug)}?topic=exercise`); profile.textContent = university.name; label.append(profile); row.append(label);
+      topics.forEach((topic) => {
+        const value = Number(university.values?.[topic.slug]) || 0;
+        const cell = node('td'); const link = visualLink('heat-cell', `/universities/${encodeURIComponent(university.slug)}?topic=${encodeURIComponent(topic.slug)}`);
+        link.style.setProperty('--heat', String(value / maximum)); link.textContent = formatCount(value); link.title = `${university.name}: ${formatCount(value)} indexed five-year links to ${topic.name}`; cell.append(link); row.append(cell);
+      });
+      body.append(row);
+    });
+    table.append(body); container.append(table, node('p', 'visual-footnote', 'Select any cell to inspect that institution and topic. Counts are indexed publication links from the latest five-year window.'));
+  };
+  const renderResultsGap = (summary) => {
+    const container = document.getElementById('pilotResultsGap'); clear(container);
+    const completed = Number(summary.completed_trials) || 0;
+    const posted = Number(summary.results_posted) || 0;
+    const possible = Number(summary.possible_gaps) || 0;
+    const within = Number(summary.within_window) || 0;
+    const unavailable = Number(summary.completion_date_unavailable) || 0;
+    if (!completed) {
+      container.append(node('p', 'visual-empty', 'No completed Exercise trial registrations are present in this exact text-matched cohort.'));
+      return;
+    }
+    const bar = node('div', 'results-segments');
+    [[posted, 'posted'], [within, 'window'], [possible, 'gap'], [unavailable, 'unknown']].forEach(([value, kind]) => {
+      if (!value) return;
+      const segment = node('i', `is-${kind}`); segment.style.width = `${(Number(value) / completed) * 100}%`; bar.append(segment);
+    });
+    container.append(bar);
+    const cards = node('div', 'results-cards');
+    [
+      ['Completed registrations', completed, '/trials/results-gap?search=exercise'],
+      ['Structured results visible', posted, '/trials/results-gap?search=exercise&status=results-posted'],
+      ['Possible reporting gap', possible, '/trials/results-gap?search=exercise&status=possible-gap'],
+      ['Still within 365-day window', within, '/trials/results-gap?search=exercise&status=within-window'],
+    ].forEach(([label, value, href]) => { const link = visualLink('result-card', href); link.append(node('strong', '', formatCount(value)), node('span', '', label)); cards.append(link); });
+    container.append(cards, node('p', 'visual-footnote', 'A possible gap means no structured result was visible in the indexed registry record more than 365 days after listed completion. It is not an allegation of misconduct or proof that results do not exist elsewhere.'));
+  };
 
   async function load() {
     try {
@@ -58,12 +182,17 @@
       trialsUrl.searchParams.set('q', 'exercise');
       trialsUrl.searchParams.set('limit', '100');
       trialsUrl.searchParams.set('quality_rules', '20260930-audited-pilot-metrics');
-      const [response, trialsResponse] = await Promise.all([
+      const gapUrl = new URL(endpoint);
+      gapUrl.searchParams.set('view', 'trial-results-gap');
+      gapUrl.searchParams.set('q', 'exercise');
+      gapUrl.searchParams.set('quality_rules', '20260930-decision-views');
+      const [response, trialsResponse, gapResponse] = await Promise.all([
         fetch(dossierUrl, { headers: window.ilFnHeaders() }),
         fetch(trialsUrl, { headers: window.ilFnHeaders() }),
+        fetch(gapUrl, { headers: window.ilFnHeaders() }),
       ]);
-      if (!response.ok || !trialsResponse.ok) throw new Error(`Live index request failed with ${response.status}/${trialsResponse.status}`);
-      const [data, trialsData] = await Promise.all([response.json(), trialsResponse.json()]);
+      if (!response.ok || !trialsResponse.ok || !gapResponse.ok) throw new Error(`Live index request failed with ${response.status}/${trialsResponse.status}/${gapResponse.status}`);
+      const [data, trialsData, gapData] = await Promise.all([response.json(), trialsResponse.json(), gapResponse.json()]);
       const evidence = data.evidence || {};
       const overview = data.overview || {};
       const requiredCounts = ['research_total', 'human_evidence_total'];
@@ -89,6 +218,11 @@
         metric('People listed in trials', number.format(listedParticipants), '/trials?search=exercise&metric=enrollment', 'See listed enrollment →'),
         metric('Research activity', text(overview.trend_direction, 'Limited').replace(/^./, (value) => value.toUpperCase()), '/topics/exercise#topicTrend', 'View the trend →'),
       );
+      renderMaturity(evidence, exerciseTrials, activeTrials, gapData.summary || {});
+      renderPulse(data.timeline?.pulse);
+      renderTrialLandscape(exerciseTrials);
+      renderUniversityConnections(overview.university_connections);
+      renderResultsGap(gapData.summary || {});
       renderList('pilotResearch', research, (record) => item(date(record.published_on), text(record.title), record.source_url || `/research/${encodeURIComponent(record.id)}`), 'No current research example is available.');
       renderList('pilotTrials', exerciseTrials, (record) => item(text(record.overall_status), text(record.title), record.source_url || `/trials/${encodeURIComponent(record.id)}`), 'No current trial registration is available.');
       const universitiesSummary = document.getElementById('pilotUniversitiesSummary');
@@ -121,7 +255,7 @@
       fallback.style.gridColumn = '1 / -1';
       fallback.append(node('strong', '', 'Open'), node('span', '', 'Exercise Living Evidence Dossier'), node('small', '', 'View current research, trials, university activity, and evidence context →'));
       grid.append(fallback);
-      ['pilotResearch', 'pilotTrials', 'pilotUniversities', 'pilotChanges'].forEach((id) => {
+      ['pilotMaturity', 'pilotChangePulse', 'pilotTrialLandscape', 'pilotUniversityHeatmap', 'pilotResultsGap', 'pilotResearch', 'pilotTrials', 'pilotUniversities', 'pilotChanges'].forEach((id) => {
         const container = document.getElementById(id); clear(container); container.append(node('p', '', 'Live records will reappear when the source endpoint is available.'));
       });
       console.error(error);

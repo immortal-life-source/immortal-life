@@ -26,6 +26,32 @@ test('institutional pilot uses the live exercise dossier', () => {
   assert.match(html, /One of our 180 longevity topics/);
 });
 
+test('decision views remain source-linked and use the same Exercise cohorts as their destinations', () => {
+  for (const id of ['pilotMaturity', 'pilotChangePulse', 'pilotTrialLandscape', 'pilotUniversityHeatmap', 'pilotResultsGap']) {
+    assert.match(html, new RegExp(`id="${id}"`));
+  }
+  assert.match(script, /view', 'trial-results-gap'/);
+  assert.match(script, /gapUrl\.searchParams\.set\('q', 'exercise'\)/);
+  assert.match(script, /renderMaturity/);
+  assert.match(script, /renderPulse/);
+  assert.match(script, /renderTrialLandscape/);
+  assert.match(script, /renderUniversityConnections/);
+  assert.match(script, /renderResultsGap/);
+  assert.match(script, /\/trials\/results-gap\?search=exercise&status=possible-gap/);
+  assert.match(script, /\/universities\/\$\{encodeURIComponent\(university\.slug\)\}\?topic=/);
+  assert.match(intelligence, /university_connections: universityConnections/);
+  assert.match(intelligence, /previous_by_record_type/);
+  assert.match(intelligence, /const gapSearch = publicSearchTerm/);
+});
+
+test('decision views state their limits rather than turning activity into efficacy claims', () => {
+  assert.match(html, /Distinct record categories—not a conversion funnel/);
+  assert.match(html, /Activity is not a ranking of research quality/);
+  assert.match(script, /not whether the scientific conclusion improved/);
+  assert.match(script, /listed enrollment is not proof of completed participation/);
+  assert.match(script, /not an allegation of misconduct/);
+});
+
 test('institutional pilot explains the product and asks a concrete demo question', () => {
   assert.match(html, /Immortal\.life watches longevity research/i);
   assert.match(html, /Question to monitor: “What changed in exercise research for healthy ageing in the last six weeks/i);

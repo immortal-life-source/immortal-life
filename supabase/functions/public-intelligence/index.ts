@@ -342,9 +342,10 @@ Deno.serve(async (req) => {
     if (view === 'topic-dossier') {
       if (!topic) return response(req, { error: 'Topic is required' }, 400)
       const sixWeeksAgo = new Date(Date.now() - 42 * 86400000).toISOString()
+      const twelveWeeksAgo = new Date(Date.now() - 84 * 86400000).toISOString()
       const researchRelation = 'research_item_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
       const trialRelation = 'clinical_trial_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
-      const [researchResult, trialResult, topicResult, evidenceResult, overviewResult, timelineResult, sourcesResult, pilotResult, fundingResult, universityCountResult] = await Promise.all([
+      const [researchResult, trialResult, topicResult, evidenceResult, overviewResult, timelineResult, timelinePulseResult, sourcesResult, pilotResult, fundingResult, universityCountResult] = await Promise.all([
         supabase.from('research_items')
           .select(`id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,evidence_snapshot,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${researchRelation}`)
           .eq('publication_state', 'published').eq('research_item_topics.topic_slug', topic).eq('research_item_topics.is_published', true)
@@ -359,6 +360,9 @@ Deno.serve(async (req) => {
         supabase.from('intelligence_change_events')
           .select('id,event_type,importance,record_type,record_id,title,source_url,occurred_at,topic_slugs,metadata', { count: 'exact' })
           .neq('event_type', 'quality_state_changed').contains('topic_slugs', [topic]).gte('occurred_at', sixWeeksAgo).order('occurred_at', { ascending: false }).limit(250),
+        supabase.from('intelligence_change_events')
+          .select('event_type,record_type,occurred_at', { count: 'exact' })
+          .neq('event_type', 'quality_state_changed').contains('topic_slugs', [topic]).gte('occurred_at', twelveWeeksAgo).order('occurred_at', { ascending: false }).limit(2000),
         sourcesPromise,
         supabase.rpc('get_topic_dossier_pilot', { requested_topic: topic }),
         supabase.from('funding_award_topics').select('openalex_award_id', { count: 'exact', head: true }).eq('topic_slug', topic),
@@ -366,7 +370,7 @@ Deno.serve(async (req) => {
           .select('openalex_id,university_research_institutions!inner(is_eligible)', { count: 'exact', head: true })
           .eq('topic_slug', topic).gt('works_all_time', 0).eq('university_research_institutions.is_eligible', true),
       ])
-      for (const result of [researchResult, trialResult, topicResult, evidenceResult, overviewResult, timelineResult, sourcesResult, pilotResult, fundingResult, universityCountResult]) if (result.error) throw result.error
+      for (const result of [researchResult, trialResult, topicResult, evidenceResult, overviewResult, timelineResult, timelinePulseResult, sourcesResult, pilotResult, fundingResult, universityCountResult]) if (result.error) throw result.error
 
       const related = new Map<string, number>()
       for (const event of timelineResult.data ?? []) for (const slug of event.topic_slugs ?? []) if (slug !== topic) related.set(slug, (related.get(slug) ?? 0) + 1)
@@ -387,13 +391,64 @@ Deno.serve(async (req) => {
         ...record,
         evidence_snapshot: record.evidence_snapshot && Object.keys(record.evidence_snapshot).length ? record.evidence_snapshot : trialEvidenceSnapshot(record),
       }))
+      const pulseEvents = timelinePulseResult.data ?? []
+      const currentPulse = pulseEvents.filter((event: any) => String(event.occurred_at) >= sixWeeksAgo)
+      const previousPulse = pulseEvents.filter((event: any) => String(event.occurred_at) < sixWeeksAgo)
+      const pulseCounts = (events: any[]) => events.reduce((counts: Record<string, number>, event: any) => {
+        const key = String(event.record_type || 'other')
+        counts[key] = (counts[key] ?? 0) + 1
+        return counts
+      }, {})
+      let universityConnections: any = { topics: [], universities: [] }
+      const leadingSlugs = (overviewResult.data?.universities ?? []).slice(0, 5).map((university: any) => university.slug).filter(Boolean)
+      if (leadingSlugs.length) {
+        const connectionsResult = await supabase.from('university_research_institutions')
+          .select('slug,name,university_research_topic_metrics(topic_slug,works_five_year,works_two_year,intelligence_topics(name))')
+          .in('slug', leadingSlugs).eq('is_eligible', true)
+        if (connectionsResult.error) throw connectionsResult.error
+        const institutions = (connectionsResult.data ?? []).sort((left: any, right: any) => leadingSlugs.indexOf(left.slug) - leadingSlugs.indexOf(right.slug))
+        const topicTotals = new Map<string, { slug: string; name: string; total: number }>()
+        for (const institution of institutions) for (const metric of institution.university_research_topic_metrics ?? []) {
+          if (!metric.topic_slug || metric.topic_slug === topic) continue
+          const amount = Math.max(0, Number(metric.works_five_year) || 0)
+          if (!amount) continue
+          const current = topicTotals.get(metric.topic_slug) ?? { slug: metric.topic_slug, name: metric.intelligence_topics?.name || String(metric.topic_slug).replace(/-/g, ' '), total: 0 }
+          current.total += amount
+          topicTotals.set(metric.topic_slug, current)
+        }
+        const connectionTopics = [...topicTotals.values()].sort((left, right) => right.total - left.total || left.name.localeCompare(right.name)).slice(0, 5)
+        universityConnections = {
+          topics: connectionTopics,
+          universities: institutions.map((institution: any) => ({
+            slug: institution.slug,
+            name: institution.name,
+            values: Object.fromEntries(connectionTopics.map((connectionTopic) => {
+              const metric = (institution.university_research_topic_metrics ?? []).find((item: any) => item.topic_slug === connectionTopic.slug)
+              return [connectionTopic.slug, Math.max(0, Number(metric?.works_five_year) || 0)]
+            })),
+          })),
+        }
+      }
       return response(req, {
         generated_at: new Date().toISOString(),
         research,
         trials,
         evidence: evidenceResult.data ?? {},
-        overview: { ...(overviewResult.data ?? {}), university_total: universityCountResult.count ?? 0 },
-        timeline: { topic: topicResult.data, events: timelineResult.data ?? [], total_matching: timelineResult.count ?? (timelineResult.data ?? []).length, window_days: 42, related_topics: relatedTopics },
+        overview: { ...(overviewResult.data ?? {}), university_total: universityCountResult.count ?? 0, university_connections: universityConnections },
+        timeline: {
+          topic: topicResult.data,
+          events: timelineResult.data ?? [],
+          total_matching: timelineResult.count ?? (timelineResult.data ?? []).length,
+          window_days: 42,
+          related_topics: relatedTopics,
+          pulse: {
+            current_total: currentPulse.length,
+            previous_total: previousPulse.length,
+            current_by_record_type: pulseCounts(currentPulse),
+            previous_by_record_type: pulseCounts(previousPulse),
+            complete: Number(timelinePulseResult.count ?? pulseEvents.length) === pulseEvents.length,
+          },
+        },
         pilot: pilotResult.data ?? null,
         funding: { award_count: fundingResult.count ?? 0 },
         sources: (sourcesResult.data ?? []).map(publicSourceState),
@@ -401,6 +456,7 @@ Deno.serve(async (req) => {
     }
 
     if (view === 'trial-results-gap') {
+      const gapSearch = publicSearchTerm(url.searchParams.get('q'))
       // Read the completed cohort in bounded database pages, then classify it
       // in one cached public response. This avoids one database request per
       // visitor-visible card and keeps the monitor complete as history grows.
@@ -446,9 +502,17 @@ Deno.serve(async (req) => {
         }
       })
 
-      const countState = (state: string) => classified.filter((record: any) => record.result_state === state).length
+      let visibleClassified = topic
+        ? classified.filter((record: any) => record.clinical_trial_topics.some((relation: any) => relation.topic_slug === topic))
+        : classified
+      if (gapSearch) {
+        const needle = gapSearch.toLocaleLowerCase()
+        visibleClassified = visibleClassified.filter((record: any) => [record.title, record.sponsor, record.external_id]
+          .some((value) => String(value || '').toLocaleLowerCase().includes(needle)))
+      }
+      const countState = (state: string) => visibleClassified.filter((record: any) => record.result_state === state).length
       const yearMap = new Map<number, { year: number; completed: number; results_posted: number; possible_gaps: number; within_window: number }>()
-      for (const record of classified) {
+      for (const record of visibleClassified) {
         if (!record.completion_date || record.days_since_completion == null) continue
         const year = Number(String(record.completion_date).slice(0, 4))
         if (!Number.isFinite(year)) continue
@@ -468,19 +532,20 @@ Deno.serve(async (req) => {
           threshold_days: 365,
           cohort: 'Published longevity trial registrations with registry status Completed and at least one eligible public topic match.',
           possible_gap: 'No structured results are visible in the indexed registry record more than 365 days after its listed completion date.',
+          filter: { topic: topic || null, search: gapSearch || null },
         },
         summary: {
-          completed_trials: classified.length,
+          completed_trials: visibleClassified.length,
           results_posted: resultsPosted,
           possible_gaps: countState('possible-gap'),
           within_window: countState('within-window'),
           completion_date_unavailable: countState('date-unavailable'),
-          results_coverage_percent: classified.length ? Math.round((resultsPosted / classified.length) * 1000) / 10 : 0,
-          topics_represented: new Set(classified.flatMap((record: any) => record.clinical_trial_topics.map((relation: any) => relation.topic_slug))).size,
-          oldest_gap_days: classified.reduce((maximum: number, record: any) => Math.max(maximum, Number(record.gap_days ?? 0)), 0),
+          results_coverage_percent: visibleClassified.length ? Math.round((resultsPosted / visibleClassified.length) * 1000) / 10 : 0,
+          topics_represented: new Set(visibleClassified.flatMap((record: any) => record.clinical_trial_topics.map((relation: any) => relation.topic_slug))).size,
+          oldest_gap_days: visibleClassified.reduce((maximum: number, record: any) => Math.max(maximum, Number(record.gap_days ?? 0)), 0),
         },
         cohorts: [...yearMap.values()].sort((left, right) => right.year - left.year),
-        trials: classified.sort((left: any, right: any) => Number(right.gap_days ?? 0) - Number(left.gap_days ?? 0) || String(left.title).localeCompare(String(right.title))),
+        trials: visibleClassified.sort((left: any, right: any) => Number(right.gap_days ?? 0) - Number(left.gap_days ?? 0) || String(left.title).localeCompare(String(right.title))),
         sources: (sources ?? []).map(publicSourceState),
         interpretation_notice: 'A possible gap is an automated registry-transparency signal. It is not a finding of legal non-compliance, selective reporting, sponsor misconduct, or absence of results elsewhere.',
       })
