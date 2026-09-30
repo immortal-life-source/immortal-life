@@ -140,8 +140,8 @@ test('sponsor visibility explains what a registration represents', () => {
 
 test('pilot cache keys publish the sponsor and university count layout together', () => {
   assert.match(html, /institutional-pilot\.css\?v=20261001-driver-clarity/);
-  assert.match(html, /institutional-pilot\.js\?v=20261001-multi-topic/);
-  assert.match(pilotTwoHtml, /institutional-pilot\.js\?v=20261001-multi-topic/);
+  assert.match(html, /institutional-pilot\.js\?v=20261001-gap-focus/);
+  assert.match(pilotTwoHtml, /institutional-pilot\.js\?v=20261001-gap-focus/);
 });
 
 test('pilot two is a complete cognitive-training example with topic-filtered destinations', () => {
