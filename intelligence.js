@@ -2387,7 +2387,7 @@
 
   async function request(viewName, limit, params = {}) {
     const url = new URL(endpoint, window.location.origin);
-    url.searchParams.set('quality_rules', '20260927-readiness-gated-dossiers');
+    url.searchParams.set('quality_rules', '20260930-trial-pagination');
     url.searchParams.set('view', viewName);
     url.searchParams.set('limit', String(limit));
     Object.entries(params).forEach(([key, value]) => {

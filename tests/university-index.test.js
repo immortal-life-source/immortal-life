@@ -84,6 +84,6 @@ test('university page invalidates incomplete cached coverage snapshots', () => {
   const script = read('intelligence.js')
   const template = read('intelligence-template.html')
   assert.match(script, /immortal-life-public-intelligence-v7/)
-  assert.match(script, /20260927-readiness-gated-dossiers/)
+  assert.match(script, /20260930-trial-pagination/)
   assert.match(template, /intelligence\.js\?v=20260930-trial-pagination/)
 })

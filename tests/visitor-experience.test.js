@@ -406,7 +406,7 @@ test('senolytics pilots versioned cautious conclusions without silently rewritin
   assert.match(build, /What the evidence supports today/)
   assert.match(portal, /renderTopicPilot/)
   assert.match(portal, /cannot silently reverse the conclusion/)
-  assert.match(portal, /20260927-readiness-gated-dossiers/)
+  assert.match(portal, /20260930-trial-pagination/)
   assert.match(api, /get_topic_dossier_pilot/)
   assert.match(migration, /topic_dossier_versions/)
   assert.match(migration, /topic_dossier_change_candidates/)
