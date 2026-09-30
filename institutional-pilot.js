@@ -1,6 +1,17 @@
 (function institutionalPilot() {
   'use strict';
 
+  const pilotTopic = document.body.dataset.pilotTopic || 'exercise';
+  const pilotTopicName = document.body.dataset.pilotTopicName || 'Exercise';
+  const pilotTopicNameLower = document.body.dataset.pilotTopicNameLower || pilotTopicName.toLowerCase();
+  const pilotTopicEncoded = encodeURIComponent(pilotTopic);
+  const topicRoute = `/topics/${pilotTopicEncoded}`;
+  const researchRoute = (suffix = '') => `/research?topic=${pilotTopicEncoded}${suffix}`;
+  const trialRoute = (suffix = '') => `/trials?topic=${pilotTopicEncoded}${suffix}`;
+  const gapRoute = (suffix = '') => `/trials/results-gap?topic=${pilotTopicEncoded}${suffix}`;
+  const universityRoute = `/universities?topic=${pilotTopicEncoded}`;
+  const changesRoute = `/changes?topic=${pilotTopicEncoded}`;
+
   const menuButton = document.getElementById('pilotMenuButton');
   const nav = document.getElementById('pilotNav');
   if (menuButton && nav) {
@@ -51,7 +62,14 @@
     link.href = href;
     return link;
   };
-  const outcomeThemes = [
+  const outcomeThemes = pilotTopic === 'cognitive-training' ? [
+    { slug: 'memory-cognition', label: 'Memory, attention & executive function', pattern: /memory|cognit|attention|executive|processing speed|reasoning/i },
+    { slug: 'daily-function', label: 'Everyday function & independence', pattern: /activities of daily living|functional|independen|quality of life/i },
+    { slug: 'dementia-risk', label: 'MCI, dementia & cognitive decline', pattern: /dementia|alzheimer|mild cognitive impairment|\bMCI\b|cognitive decline/i },
+    { slug: 'brain-signals', label: 'Brain structure & neural activity', pattern: /\bMRI\b|imaging|\bEEG\b|brain|neural|neuroplastic/i },
+    { slug: 'mood-wellbeing', label: 'Mood & wellbeing', pattern: /depress|anxiety|well-being|wellbeing|mental health/i },
+    { slug: 'feasibility-safety', label: 'Feasibility, adherence & safety', pattern: /adverse|safety|adherence|feasib|tolerab/i },
+  ] : [
     { slug: 'function', label: 'Mobility, strength & independence', pattern: /mobility|physical function|walking|gait|strength|balance|frailty|disability|falls?|functional|activities of daily living/i },
     { slug: 'cognition', label: 'Cognition & mental health', pattern: /cognit|memory|mental health|depress|anxiety|psychological|well-being|wellbeing/i },
     { slug: 'cardiometabolic', label: 'Cardiovascular & metabolic health', pattern: /cardiovascular|blood pressure|metabolic|glucose|insulin|lipid|body composition|body mass|weight|vascular/i },
@@ -67,12 +85,12 @@
   const renderMaturity = (evidence, trials, activeTrials, gapSummary) => {
     const container = document.getElementById('pilotMaturity'); clear(container);
     const stages = [
-      ['Indexed research', Number(evidence.research_total) || 0, '/research?topic=exercise'],
-      ['Human studies', Number(evidence.human_evidence_total) || 0, '/research?topic=exercise&evidence=human'],
-      ['Trial registrations', trials.length, '/trials?search=exercise'],
-      ['Active trials', activeTrials.length, '/trials?search=exercise&status=active'],
-      ['Completed trials', Number(gapSummary.completed_trials) || 0, '/trials/results-gap?search=exercise'],
-      ['Structured results visible', Number(gapSummary.results_posted) || 0, '/trials/results-gap?search=exercise&status=results-posted'],
+      ['Indexed research', Number(evidence.research_total) || 0, researchRoute()],
+      ['Human studies', Number(evidence.human_evidence_total) || 0, researchRoute('&evidence=human')],
+      ['Trial registrations', trials.length, trialRoute()],
+      ['Active trials', activeTrials.length, trialRoute('&status=active')],
+      ['Completed trials', Number(gapSummary.completed_trials) || 0, gapRoute()],
+      ['Structured results visible', Number(gapSummary.results_posted) || 0, gapRoute('&status=results-posted')],
     ];
     stages.forEach(([label, value, href], index) => {
       const link = visualLink('maturity-stage', href);
@@ -96,7 +114,7 @@
       : delta === 0 ? 'Source activity was unchanged.' : `${formatCount(Math.abs(delta))} ${delta > 0 ? 'more' : 'fewer'} source events than in the preceding six weeks.`;
     container.append(summary);
     (pulse.baseline_ready === false ? [['Latest six weeks', current]] : [['Previous six weeks', previous], ['Latest six weeks', current]]).forEach(([label, value]) => {
-      const link = visualLink('comparison-bar', '/changes?topic=exercise');
+      const link = visualLink('comparison-bar', changesRoute);
       const copy = node('span'); copy.append(node('b', '', label), node('strong', '', formatCount(value)));
       const track = node('i'); const fill = node('em'); fill.style.width = `${Math.max(2, (Number(value) / maximum) * 100)}%`; track.append(fill);
       link.append(copy, track); container.append(link);
@@ -104,7 +122,7 @@
     const types = node('div', 'pulse-types');
     const typeLabels = { research: 'Research', research_item: 'Research', trial: 'Trials', clinical_trial: 'Trials', regulatory: 'Official notices', integrity: 'Corrections' };
     Object.entries(pulse.current_by_record_type || {}).sort((left, right) => Number(right[1]) - Number(left[1])).slice(0, 4).forEach(([key, value]) => {
-      const destination = /trial/i.test(key) ? '/trials?search=exercise' : /regulatory/i.test(key) ? '/regulatory?topic=exercise' : /integrity|correction|retraction/i.test(key) ? '/integrity?topic=exercise' : '/research?topic=exercise';
+      const destination = /trial/i.test(key) ? trialRoute() : /regulatory/i.test(key) ? `/regulatory?topic=${pilotTopicEncoded}` : /integrity|correction|retraction/i.test(key) ? `/integrity?topic=${pilotTopicEncoded}` : researchRoute();
       const link = visualLink('', destination); link.append(node('strong', '', formatCount(value)), node('span', '', typeLabels[key] || key.replace(/_/g, ' '))); types.append(link);
     });
     container.append(types, node('p', 'visual-footnote', 'This measures indexed source activity, not whether the scientific conclusion improved. A trend comparison appears only after both six-week windows contain indexed history.'));
@@ -112,9 +130,9 @@
   const renderTrialLandscape = (trials) => {
     const container = document.getElementById('pilotTrialLandscape'); clear(container);
     const groups = [
-      { label: 'Active or recruiting', test: /recruiting|active|enrolling/i, href: '/trials?search=exercise&status=active' },
-      { label: 'Completed', test: /^completed$/i, href: '/trials?search=exercise&status=Completed' },
-      { label: 'Stopped early', test: /terminated|withdrawn|suspended/i, href: '/trials?search=exercise' },
+      { label: 'Active or recruiting', test: /recruiting|active|enrolling/i, href: trialRoute('&status=active') },
+      { label: 'Completed', test: /^completed$/i, href: trialRoute('&status=Completed') },
+      { label: 'Stopped early', test: /terminated|withdrawn|suspended/i, href: trialRoute() },
     ];
     const assigned = new Set();
     const rows = groups.map((group) => {
@@ -122,7 +140,7 @@
       trials.forEach((trial, index) => { if (group.test.test(String(trial.overall_status || ''))) assigned.add(index); });
       return { ...group, records };
     });
-    rows.push({ label: 'Other registry status', href: '/trials?search=exercise', records: trials.filter((trial, index) => !assigned.has(index)) });
+    rows.push({ label: 'Other registry status', href: trialRoute(), records: trials.filter((trial, index) => !assigned.has(index)) });
     const maximum = Math.max(...rows.map((row) => row.records.length), 1);
     rows.forEach((row) => {
       const participants = row.records.reduce((sum, trial) => sum + Math.max(0, Number(trial.enrollment) || 0), 0);
@@ -147,9 +165,9 @@
     const enrollment = activeTrials.reduce((sum, trial) => sum + Math.max(0, Number(trial.enrollment) || 0), 0);
     const summary = node('div', 'geography-summary');
     [
-      [activeTrials.length, 'active trials', '/trials?search=exercise&status=active'],
-      [countries.length, 'countries represented', '/trials?search=exercise&status=active'],
-      [enrollment, 'participants listed', '/trials?search=exercise&status=active&metric=enrollment'],
+      [activeTrials.length, 'active trials', trialRoute('&status=active')],
+      [countries.length, 'countries represented', trialRoute('&status=active')],
+      [enrollment, 'participants listed', trialRoute('&status=active&metric=enrollment')],
     ].forEach(([value, label, href]) => {
       const link = visualLink('', href); link.append(node('strong', '', formatCount(value)), node('span', '', label)); summary.append(link);
     });
@@ -157,7 +175,7 @@
     const maximum = Math.max(...countries.map((entry) => entry[1]), 1);
     const list = node('div', 'geography-list');
     countries.slice(0, 6).forEach(([country, count]) => {
-      const link = visualLink('', `/trials?search=exercise&status=active&country=${encodeURIComponent(country)}`);
+      const link = visualLink('', trialRoute(`&status=active&country=${encodeURIComponent(country)}`));
       const label = node('span'); label.append(node('b', '', country), node('strong', '', formatCount(count)));
       const track = node('i'); const fill = node('em'); fill.style.width = `${Math.max(4, (count / maximum) * 100)}%`; track.append(fill);
       link.append(label, track); list.append(link);
@@ -178,7 +196,7 @@
     }
     const total = categories.reduce((sum, category) => sum + category[1], 0);
     categories.forEach(([label, value, evidenceType]) => {
-      const link = visualLink('evidence-mix-row', `/research?topic=exercise&evidence=${encodeURIComponent(evidenceType)}`);
+      const link = visualLink('evidence-mix-row', researchRoute(`&evidence=${encodeURIComponent(evidenceType)}`));
       const copy = node('span'); copy.append(node('b', '', label), node('strong', '', formatCount(value)));
       const track = node('i'); const fill = node('em'); fill.style.width = `${Math.max(3, (value / total) * 100)}%`; track.append(fill);
       link.append(copy, track); container.append(link);
@@ -195,7 +213,7 @@
       return;
     }
     themes.forEach((theme) => {
-      const link = visualLink('outcome-theme', `/trials?search=exercise&focus=${encodeURIComponent(theme.slug)}`);
+      const link = visualLink('outcome-theme', trialRoute(`&focus=${encodeURIComponent(theme.slug)}`));
       link.append(node('strong', '', formatCount(theme.count)), node('span', '', theme.label), node('small', '', 'Open matching registrations →'));
       container.append(link);
     });
@@ -205,16 +223,16 @@
     const sponsorCounts = new Map();
     trials.forEach((trial) => { if (trial.sponsor) sponsorCounts.set(trial.sponsor, (sponsorCounts.get(trial.sponsor) || 0) + 1); });
     const sponsors = [...sponsorCounts.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0])).slice(0, 4);
-    const sponsorGroup = node('section'); sponsorGroup.append(node('h5', '', 'Sponsors with the most Exercise-related clinical-trial registrations'));
+    const sponsorGroup = node('section'); sponsorGroup.append(node('h5', '', `Sponsors with the most ${pilotTopicName}-related clinical-trial registrations`));
     sponsors.forEach(([sponsor, count]) => {
-      const link = visualLink('driver-row', `/trials?search=exercise&sponsor=${encodeURIComponent(sponsor)}`);
+      const link = visualLink('driver-row', trialRoute(`&sponsor=${encodeURIComponent(sponsor)}`));
       link.append(node('span', '', sponsor), node('strong', '', `${formatCount(count)} ${count === 1 ? 'registration' : 'registrations'}`)); sponsorGroup.append(link);
     });
-    if (sponsors.length) sponsorGroup.append(node('p', 'driver-note', 'One registration is one clinical-study record matched to Exercise in the live trial index—not a paper, participant, or completed-study claim.'));
+    if (sponsors.length) sponsorGroup.append(node('p', 'driver-note', `One registration is one clinical-study record matched to ${pilotTopicName} in the live trial index—not a paper, participant, or completed-study claim.`));
     const universityGroup = node('section'); universityGroup.append(node('h5', '', 'Leading university profiles linked to this field'));
     universities.slice(0, 4).forEach((university) => {
       const location = [university.city, university.country_name || university.country_code].filter(Boolean).join(', ');
-      const link = visualLink('driver-row', `/universities/${encodeURIComponent(university.slug)}?topic=exercise`);
+      const link = visualLink('driver-row', `/universities/${encodeURIComponent(university.slug)}?topic=${pilotTopicEncoded}`);
       link.append(node('span', '', university.name), node('strong', '', location || 'Open profile')); universityGroup.append(link);
     });
     if (!sponsors.length && !universities.length) {
@@ -239,7 +257,7 @@
     head.append(headRow); table.append(head);
     const body = node('tbody');
     universities.forEach((university) => {
-      const row = node('tr'); const label = node('th'); const profile = visualLink('', `/universities/${encodeURIComponent(university.slug)}?topic=exercise`); profile.textContent = university.name; label.append(profile); row.append(label);
+      const row = node('tr'); const label = node('th'); const profile = visualLink('', `/universities/${encodeURIComponent(university.slug)}?topic=${pilotTopicEncoded}`); profile.textContent = university.name; label.append(profile); row.append(label);
       topics.forEach((topic) => {
         const value = Number(university.values?.[topic.slug]) || 0;
         const cell = node('td'); const link = visualLink('heat-cell', `/universities/${encodeURIComponent(university.slug)}?topic=${encodeURIComponent(topic.slug)}`);
@@ -257,7 +275,7 @@
     const within = Number(summary.within_window) || 0;
     const unavailable = Number(summary.completion_date_unavailable) || 0;
     if (!completed) {
-      container.append(node('p', 'visual-empty', 'No completed Exercise trial registrations are present in this exact text-matched cohort.'));
+      container.append(node('p', 'visual-empty', `No completed ${pilotTopicName} trial registrations are present in this topic-matched cohort.`));
       return;
     }
     const bar = node('div', 'results-segments');
@@ -268,10 +286,10 @@
     container.append(bar);
     const cards = node('div', 'results-cards');
     [
-      ['Completed registrations', completed, '/trials/results-gap?search=exercise'],
-      ['Structured results visible', posted, '/trials/results-gap?search=exercise&status=results-posted'],
-      ['Possible reporting gap', possible, '/trials/results-gap?search=exercise&status=possible-gap'],
-      ['Still within 365-day window', within, '/trials/results-gap?search=exercise&status=within-window'],
+      ['Completed registrations', completed, gapRoute()],
+      ['Structured results visible', posted, gapRoute('&status=results-posted')],
+      ['Possible reporting gap', possible, gapRoute('&status=possible-gap')],
+      ['Still within 365-day window', within, gapRoute('&status=within-window')],
     ].forEach(([label, value, href]) => { const link = visualLink('result-card', href); link.append(node('strong', '', formatCount(value)), node('span', '', label)); cards.append(link); });
     container.append(cards, node('p', 'visual-footnote', 'A possible gap means no structured result was visible in the indexed registry record more than 365 days after listed completion. It is not an allegation of misconduct or proof that results do not exist elsewhere.'));
   };
@@ -280,17 +298,17 @@
     try {
       const dossierUrl = new URL(endpoint);
       dossierUrl.searchParams.set('view', 'topic-dossier');
-      dossierUrl.searchParams.set('topic', 'exercise');
+      dossierUrl.searchParams.set('topic', pilotTopic);
       dossierUrl.searchParams.set('limit', '12');
       dossierUrl.searchParams.set('quality_rules', '20260930-field-context');
       const trialsUrl = new URL(endpoint);
       trialsUrl.searchParams.set('view', 'trials');
-      trialsUrl.searchParams.set('q', 'exercise');
+      trialsUrl.searchParams.set('topic', pilotTopic);
       trialsUrl.searchParams.set('limit', '100');
       trialsUrl.searchParams.set('quality_rules', '20260930-field-context');
       const gapUrl = new URL(endpoint);
       gapUrl.searchParams.set('view', 'trial-results-gap');
-      gapUrl.searchParams.set('q', 'exercise');
+      gapUrl.searchParams.set('topic', pilotTopic);
       gapUrl.searchParams.set('quality_rules', '20260930-decision-views');
       const [response, trialsResponse, gapResponse] = await Promise.all([
         fetch(dossierUrl, { headers: window.ilFnHeaders() }),
@@ -302,11 +320,11 @@
       const evidence = data.evidence || {};
       const overview = data.overview || {};
       const requiredCounts = ['research_total', 'human_evidence_total'];
-      const exerciseTrials = Array.isArray(trialsData.trials) ? trialsData.trials : [];
-      const activeTrials = exerciseTrials.filter((record) => /recruiting|active|enrolling/i.test(String(record.overall_status || '')));
-      const listedParticipants = exerciseTrials.reduce((sum, record) => sum + Math.max(0, Number(record.enrollment) || 0), 0);
+      const topicTrials = Array.isArray(trialsData.trials) ? trialsData.trials : [];
+      const activeTrials = topicTrials.filter((record) => /recruiting|active|enrolling/i.test(String(record.overall_status || '')));
+      const listedParticipants = topicTrials.reduce((sum, record) => sum + Math.max(0, Number(record.enrollment) || 0), 0);
       if (requiredCounts.some((field) => !Number.isFinite(Number(evidence[field])) || Number(evidence[field]) <= 0)
-        || !exerciseTrials.length || !activeTrials.length || !listedParticipants) {
+        || !topicTrials.length || !activeTrials.length || !listedParticipants) {
         throw new Error('The live pilot snapshot is incomplete');
       }
       const research = Array.isArray(data.research) ? data.research : [];
@@ -317,57 +335,57 @@
       const grid = document.getElementById('metricGrid');
       clear(grid);
       grid.append(
-        metric('Indexed research', number.format(Number(evidence.research_total || 0)), '/research?topic=exercise', 'See the research →'),
-        metric('Human studies', number.format(Number(evidence.human_evidence_total || 0)), '/research?topic=exercise&evidence=human', 'See the human studies →'),
-        metric('Exercise-related trials', number.format(exerciseTrials.length), '/trials?search=exercise', 'See trial registrations →'),
-        metric('Active trials', number.format(activeTrials.length), '/trials?search=exercise&status=active', 'See active trials →'),
-        metric('People listed in trials', number.format(listedParticipants), '/trials?search=exercise&metric=enrollment', 'See listed enrollment →'),
-        metric('Research activity', text(overview.trend_direction, 'Limited').replace(/^./, (value) => value.toUpperCase()), '/topics/exercise#topicTrend', 'View the trend →'),
+        metric('Indexed research', number.format(Number(evidence.research_total || 0)), researchRoute(), 'See the research →'),
+        metric('Human studies', number.format(Number(evidence.human_evidence_total || 0)), researchRoute('&evidence=human'), 'See the human studies →'),
+        metric(`${pilotTopicName}-related trials`, number.format(topicTrials.length), trialRoute(), 'See trial registrations →'),
+        metric('Active trials', number.format(activeTrials.length), trialRoute('&status=active'), 'See active trials →'),
+        metric('People listed in trials', number.format(listedParticipants), trialRoute('&metric=enrollment'), 'See listed enrollment →'),
+        metric('Research activity', text(overview.trend_direction, 'Limited').replace(/^./, (value) => value.toUpperCase()), `${topicRoute}#topicTrend`, 'View the trend →'),
       );
-      renderMaturity(evidence, exerciseTrials, activeTrials, gapData.summary || {});
+      renderMaturity(evidence, topicTrials, activeTrials, gapData.summary || {});
       renderPulse(data.timeline?.pulse);
-      renderTrialLandscape(exerciseTrials);
+      renderTrialLandscape(topicTrials);
       renderTrialGeography(activeTrials);
       renderEvidenceMix(evidence);
-      renderOutcomeThemes(exerciseTrials);
-      renderFieldDrivers(exerciseTrials, universities);
+      renderOutcomeThemes(topicTrials);
+      renderFieldDrivers(topicTrials, universities);
       renderUniversityConnections(overview.university_connections);
       renderResultsGap(gapData.summary || {});
       renderList('pilotResearch', research, (record) => item(date(record.published_on), text(record.title), record.source_url || `/research/${encodeURIComponent(record.id)}`), 'No current research example is available.');
-      renderList('pilotTrials', exerciseTrials, (record) => item(text(record.overall_status), text(record.title), record.source_url || `/trials/${encodeURIComponent(record.id)}`), 'No current trial registration is available.');
+      renderList('pilotTrials', topicTrials, (record) => item(text(record.overall_status), text(record.title), record.source_url || `/trials/${encodeURIComponent(record.id)}`), 'No current trial registration is available.');
       const universitiesSummary = document.getElementById('pilotUniversitiesSummary');
       if (universitiesSummary) {
         const visible = Math.min(3, universities.length);
         const roundedUniversityTotal = universityTotal >= 1000 ? Math.floor(universityTotal / 100) * 100 : universityTotal;
         universitiesSummary.textContent = universityTotal
-          ? `${visible === universityTotal ? `Showing all ${number.format(universityTotal)}` : `Showing 3 leading profiles from ${universityTotal >= 1000 ? 'more than ' : ''}${number.format(roundedUniversityTotal)}`} universities currently linked to Exercise research. Open the complete topic view to browse the full filtered index.`
-          : 'No university profile is currently linked to Exercise research.';
+          ? `${visible === universityTotal ? `Showing all ${number.format(universityTotal)}` : `Showing 3 leading profiles from ${universityTotal >= 1000 ? 'more than ' : ''}${number.format(roundedUniversityTotal)}`} universities currently linked to ${pilotTopicName} research. Open the complete topic view to browse the full filtered index.`
+          : `No university profile is currently linked to ${pilotTopicName} research.`;
       }
       renderList('pilotUniversities', universities, (record) => {
         const location = [record.city, record.country_name || record.country_code].filter(Boolean).join(', ');
-        const link = item(location || 'Exercise topic profile', text(record.name), `/universities/${encodeURIComponent(record.slug)}?topic=exercise`);
+        const link = item(location || `${pilotTopicName} topic profile`, text(record.name), `/universities/${encodeURIComponent(record.slug)}?topic=${pilotTopicEncoded}`);
         link.classList.add('has-count');
         const count = Math.max(0, Number(record.works_all_time) || 0);
-        link.append(node('span', 'live-item-count', `${formatCount(count)} ${count === 1 ? 'Exercise work link' : 'Exercise work links'}`));
+        link.append(node('span', 'live-item-count', `${formatCount(count)} ${count === 1 ? `${pilotTopicName} work link` : `${pilotTopicName} work links`}`));
         return link;
       }, 'No topic-specific university activity is currently available.');
       const changesSummary = document.getElementById('pilotChangesSummary');
       if (changesSummary) {
         const visible = Math.min(3, events.length);
         changesSummary.textContent = eventTotal
-          ? `${visible === eventTotal ? `Showing all ${number.format(eventTotal)}` : `Showing the ${number.format(visible)} newest of ${number.format(eventTotal)}`} source-level changes recorded for Exercise in the last six weeks. A new or updated record does not necessarily change the scientific conclusion.`
-          : 'No source-level change is currently recorded for Exercise in the last six weeks.';
+          ? `${visible === eventTotal ? `Showing all ${number.format(eventTotal)}` : `Showing the ${number.format(visible)} newest of ${number.format(eventTotal)}`} source-level changes recorded for ${pilotTopicName} in the last six weeks. A new or updated record does not necessarily change the scientific conclusion.`
+          : `No source-level change is currently recorded for ${pilotTopicName} in the last six weeks.`;
       }
-      renderList('pilotChanges', events, (record) => item(date(record.occurred_at), text(record.title), record.source_url || '/changes?topic=exercise'), 'No source-level change is currently recorded.');
+      renderList('pilotChanges', events, (record) => item(date(record.occurred_at), text(record.title), record.source_url || changesRoute), 'No source-level change is currently recorded.');
       status.classList.add('is-live');
       status.querySelector('span').textContent = `Live index snapshot generated ${date(data.generated_at)} · open any item to inspect its source.`;
     } catch (error) {
       status.classList.add('is-error');
-      status.querySelector('span').textContent = 'The live snapshot is temporarily unavailable. The complete exercise dossier remains available.';
+      status.querySelector('span').textContent = `The live snapshot is temporarily unavailable. The complete ${pilotTopicNameLower} dossier remains available.`;
       const grid = document.getElementById('metricGrid'); clear(grid);
-      const fallback = node('a', 'metric-card'); fallback.href = '/topics/exercise';
+      const fallback = node('a', 'metric-card'); fallback.href = topicRoute;
       fallback.style.gridColumn = '1 / -1';
-      fallback.append(node('strong', '', 'Open'), node('span', '', 'Exercise Living Evidence Dossier'), node('small', '', 'View current research, trials, university activity, and evidence context →'));
+      fallback.append(node('strong', '', 'Open'), node('span', '', `${pilotTopicName} Living Evidence Dossier`), node('small', '', 'View current research, trials, university activity, and evidence context →'));
       grid.append(fallback);
       ['pilotMaturity', 'pilotChangePulse', 'pilotTrialLandscape', 'pilotTrialGeography', 'pilotEvidenceMix', 'pilotOutcomeThemes', 'pilotFieldDrivers', 'pilotUniversityHeatmap', 'pilotResultsGap', 'pilotResearch', 'pilotTrials', 'pilotUniversities', 'pilotChanges'].forEach((id) => {
         const container = document.getElementById(id); clear(container); container.append(node('p', '', 'Live records will reappear when the source endpoint is available.'));

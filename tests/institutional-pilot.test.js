@@ -5,6 +5,7 @@ const path = require('node:path');
 
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'institutional-pilot.html'), 'utf8');
+const pilotTwoHtml = fs.readFileSync(path.join(root, 'institutional-pilot2.html'), 'utf8');
 const stylesheet = fs.readFileSync(path.join(root, 'institutional-pilot.css'), 'utf8');
 const script = fs.readFileSync(path.join(root, 'institutional-pilot.js'), 'utf8');
 const playbook = fs.readFileSync(path.join(root, 'docs', 'institutional-pilot-playbook.md'), 'utf8');
@@ -17,15 +18,19 @@ const intelligence = fs.readFileSync(path.join(root, 'supabase', 'functions', 'p
 
 test('institutional pilot is unlisted and excluded from indexing', () => {
   assert.match(html, /noindex, nofollow, noarchive/);
+  assert.match(pilotTwoHtml, /noindex, nofollow, noarchive/);
   assert.match(build, /institutional-pilot\.html/);
-  assert.match(build, /'institutional-pilot\.html'\]\s*\.includes\(name\)/);
+  assert.match(build, /'institutional-pilot\.html', 'institutional-pilot2\.html'\]\s*\.includes\(name\)/);
 });
 
-test('institutional pilot uses the live exercise dossier', () => {
+test('institutional pilots use one topic-configurable live dossier renderer', () => {
   assert.match(script, /view', 'topic-dossier'/);
-  assert.match(script, /topic', 'exercise'/);
+  assert.match(script, /topic', pilotTopic/);
   assert.match(script, /source_url/);
   assert.match(html, /One of our 180 longevity topics/);
+  assert.match(html, /data-pilot-topic="exercise"/);
+  assert.match(pilotTwoHtml, /data-pilot-topic="cognitive-training"/);
+  assert.match(pilotTwoHtml, /is the field producing decision-ready human evidence/);
 });
 
 test('decision views remain source-linked and use the same Exercise cohorts as their destinations', () => {
@@ -33,7 +38,7 @@ test('decision views remain source-linked and use the same Exercise cohorts as t
     assert.match(html, new RegExp(`id="${id}"`));
   }
   assert.match(script, /view', 'trial-results-gap'/);
-  assert.match(script, /gapUrl\.searchParams\.set\('q', 'exercise'\)/);
+  assert.match(script, /gapUrl\.searchParams\.set\('topic', pilotTopic\)/);
   assert.match(script, /quality_rules', '20260930-field-context'/);
   assert.match(script, /renderMaturity/);
   assert.match(script, /renderPulse/);
@@ -44,7 +49,7 @@ test('decision views remain source-linked and use the same Exercise cohorts as t
   assert.match(script, /renderFieldDrivers/);
   assert.match(script, /renderUniversityConnections/);
   assert.match(script, /renderResultsGap/);
-  assert.match(script, /\/trials\/results-gap\?search=exercise&status=possible-gap/);
+  assert.match(script, /gapRoute\('&status=possible-gap'\)/);
   assert.match(script, /\/universities\/\$\{encodeURIComponent\(university\.slug\)\}\?topic=/);
   assert.match(intelligence, /university_connections: universityConnections/);
   assert.match(intelligence, /previous_by_record_type/);
@@ -95,47 +100,66 @@ test('pilot hero fits the first screen and uses one display scale for its key qu
 test('institutional pilot never presents an incomplete zero-filled snapshot as a successful example', () => {
   assert.match(script, /requiredCounts/);
   assert.match(script, /Number\(evidence\[field\]\) <= 0/);
-  assert.match(script, /searchParams\.set\('q', 'exercise'\)/);
-  assert.match(script, /exerciseTrials\.length/);
+  assert.match(script, /trialsUrl\.searchParams\.set\('topic', pilotTopic\)/);
+  assert.match(script, /topicTrials\.length/);
   assert.match(script, /listedParticipants/);
-  assert.match(script, /\/trials\?search=exercise/);
+  assert.match(script, /trialRoute/);
   assert.match(script, /status=active/);
   assert.match(script, /The live pilot snapshot is incomplete/);
 });
 
 test('trial metric destinations open visibly filtered results', () => {
-  assert.match(script, /Exercise-related trials'[\s\S]*\/trials\?search=exercise/);
-  assert.match(script, /Active trials'[\s\S]*\/trials\?search=exercise&status=active/);
-  assert.match(script, /People listed in trials'[\s\S]*\/trials\?search=exercise&metric=enrollment/);
+  assert.match(script, /metric\(`\$\{pilotTopicName\}-related trials`[\s\S]*trialRoute\(\)/);
+  assert.match(script, /Active trials'[\s\S]*trialRoute\('&status=active'\)/);
+  assert.match(script, /People listed in trials'[\s\S]*trialRoute\('&metric=enrollment'\)/);
 });
 
 test('research metric destinations open the matching evidence set', () => {
-  assert.match(script, /Indexed research'[\s\S]*\/research\?topic=exercise/);
-  assert.match(script, /Human studies'[\s\S]*\/research\?topic=exercise&evidence=human/);
+  assert.match(script, /Indexed research'[\s\S]*researchRoute\(\)/);
+  assert.match(script, /Human studies'[\s\S]*researchRoute\('&evidence=human'\)/);
   assert.match(proxy, /'evidence', 'access'/);
   assert.match(proxy, /view === 'research' && \(query\.evidence \|\| query\.access\)\) return null/);
   assert.match(proxy, /filteredResearch/);
 });
 
 test('university examples show verified topic work-link totals and open matching profiles', () => {
-  assert.match(script, /universities\/\$\{encodeURIComponent\(record\.slug\)\}\?topic=exercise/);
+  assert.match(script, /universities\/\$\{encodeURIComponent\(record\.slug\)\}\?topic=\$\{pilotTopicEncoded\}/);
   assert.match(script, /record\.city/);
   assert.match(script, /record\.works_all_time/);
-  assert.match(script, /Exercise work link/);
+  assert.match(script, /pilotTopicName} work link/);
   assert.match(script, /live-item-count/);
   assert.match(script, /universityTotal/);
   assert.match(script, /Showing 3 leading profiles/);
 });
 
 test('sponsor visibility explains what a registration represents', () => {
-  assert.match(script, /Sponsors with the most Exercise-related clinical-trial registrations/);
-  assert.match(script, /One registration is one clinical-study record matched to Exercise/);
+  assert.match(script, /Sponsors with the most \$\{pilotTopicName\}-related clinical-trial registrations/);
+  assert.match(script, /One registration is one clinical-study record matched to \$\{pilotTopicName\}/);
   assert.match(script, /not a paper, participant, or completed-study claim/);
 });
 
 test('pilot cache keys publish the sponsor and university count layout together', () => {
   assert.match(html, /institutional-pilot\.css\?v=20261001-driver-clarity/);
-  assert.match(html, /institutional-pilot\.js\?v=20261001-driver-clarity/);
+  assert.match(html, /institutional-pilot\.js\?v=20261001-multi-topic/);
+  assert.match(pilotTwoHtml, /institutional-pilot\.js\?v=20261001-multi-topic/);
+});
+
+test('pilot two is a complete cognitive-training example with topic-filtered destinations', () => {
+  assert.match(pilotTwoHtml, /Cognitive Training Intelligence Pilot/);
+  assert.match(pilotTwoHtml, /What changed in cognitive-training research for healthy ageing in the last six weeks/);
+  assert.match(pilotTwoHtml, /\/trials\?topic=cognitive-training/);
+  assert.match(pilotTwoHtml, /\/trials\/results-gap\?topic=cognitive-training/);
+  assert.match(pilotTwoHtml, /\/research\?topic=cognitive-training/);
+  assert.match(pilotTwoHtml, /\/universities\?topic=cognitive-training/);
+  assert.match(pilotTwoHtml, /\/changes\?topic=cognitive-training/);
+  assert.doesNotMatch(pilotTwoHtml, /search=exercise|topic=exercise/);
+});
+
+test('cognitive-training outcome links map to supported portal filters', () => {
+  for (const slug of ['memory-cognition', 'daily-function', 'dementia-risk', 'brain-signals', 'mood-wellbeing', 'feasibility-safety']) {
+    assert.match(script, new RegExp(`slug: '${slug}'`));
+    assert.match(portal, new RegExp(`'${slug}'`));
+  }
 });
 
 test('pilot changes are explicitly a six-week topic window with a visible preview count', () => {

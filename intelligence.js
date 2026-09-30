@@ -1033,6 +1033,12 @@
     biomarkers: /biomarker|inflamm|oxidative|epigen|telomere|biological age|mitochond|microvascular/i,
     sleep: /sleep|fatigue|recovery/i,
     safety: /adverse|safety|tolerab|injur/i,
+    'memory-cognition': /memory|cognit|attention|executive|processing speed|reasoning/i,
+    'daily-function': /activities of daily living|functional|independen|quality of life/i,
+    'dementia-risk': /dementia|alzheimer|mild cognitive impairment|\bMCI\b|cognitive decline/i,
+    'brain-signals': /\bMRI\b|imaging|\bEEG\b|brain|neural|neuroplastic/i,
+    'mood-wellbeing': /depress|anxiety|well-being|wellbeing|mental health/i,
+    'feasibility-safety': /adverse|safety|adherence|feasib|tolerab/i,
   };
   const trialFocusLabels = {
     function: 'Mobility, strength and independence',
@@ -1041,6 +1047,12 @@
     biomarkers: 'Biological markers of ageing',
     sleep: 'Sleep, fatigue and recovery',
     safety: 'Safety, tolerability and injury',
+    'memory-cognition': 'Memory, attention and executive function',
+    'daily-function': 'Everyday function and independence',
+    'dementia-risk': 'MCI, dementia and cognitive decline',
+    'brain-signals': 'Brain structure and neural activity',
+    'mood-wellbeing': 'Mood and wellbeing',
+    'feasibility-safety': 'Feasibility, adherence and safety',
   };
   let trialFocusFilter = '';
   let trialSponsorFilter = '';

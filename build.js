@@ -33,6 +33,7 @@ const staticAssets = [
   'intelligence.css',
   'intelligence.js',
   'institutional-pilot.html',
+  'institutional-pilot2.html',
   'institutional-pilot.css',
   'institutional-pilot.js',
   'favicon.ico',
@@ -474,7 +475,7 @@ const sitemapDirectory = path.join(outputDir, 'sitemaps');
 fs.mkdirSync(sitemapDirectory, { recursive: true });
 const sitemapUrlset = (urls) => `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((url) => `  <url><loc>${site}${url}</loc></url>`).join('\n')}\n</urlset>\n`;
 const staticRoutes = fs.readdirSync(outputDir)
-  .filter((name) => name.endsWith('.html') && !['auth-x.html', 'auth-linkedin.html', 'confirmed.html', 'unsubscribed.html', 'institutional-pilot.html'].includes(name))
+  .filter((name) => name.endsWith('.html') && !['auth-x.html', 'auth-linkedin.html', 'confirmed.html', 'unsubscribed.html', 'institutional-pilot.html', 'institutional-pilot2.html'].includes(name))
   .map((name) => {
     if (name === 'index.html') return '/';
     if (name === 'trial-results-gap.html') return '/trials/results-gap';
