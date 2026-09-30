@@ -94,8 +94,9 @@
       const universitiesSummary = document.getElementById('pilotUniversitiesSummary');
       if (universitiesSummary) {
         const visible = Math.min(3, universities.length);
+        const roundedUniversityTotal = universityTotal >= 1000 ? Math.floor(universityTotal / 100) * 100 : universityTotal;
         universitiesSummary.textContent = universityTotal
-          ? `${visible === universityTotal ? `Showing all ${number.format(universityTotal)}` : `Showing 3 leading profiles from ${number.format(universityTotal)}`} universities currently linked to Exercise research. Open the complete topic view to browse the full filtered index.`
+          ? `${visible === universityTotal ? `Showing all ${number.format(universityTotal)}` : `Showing 3 leading profiles from ${universityTotal >= 1000 ? 'more than ' : ''}${number.format(roundedUniversityTotal)}`} universities currently linked to Exercise research. Open the complete topic view to browse the full filtered index.`
           : 'No university profile is currently linked to Exercise research.';
       }
       renderList('pilotUniversities', universities, (record) => {
