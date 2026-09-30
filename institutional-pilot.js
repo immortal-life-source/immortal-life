@@ -48,22 +48,32 @@
 
   async function load() {
     try {
-      const url = new URL(endpoint);
-      url.searchParams.set('view', 'topic-dossier');
-      url.searchParams.set('topic', 'exercise');
-      url.searchParams.set('limit', '12');
-      url.searchParams.set('quality_rules', '20260916b');
-      const response = await fetch(url, { headers: window.ilFnHeaders() });
-      if (!response.ok) throw new Error(`Live index request failed with ${response.status}`);
-      const data = await response.json();
+      const dossierUrl = new URL(endpoint);
+      dossierUrl.searchParams.set('view', 'topic-dossier');
+      dossierUrl.searchParams.set('topic', 'exercise');
+      dossierUrl.searchParams.set('limit', '12');
+      dossierUrl.searchParams.set('quality_rules', '20260916b');
+      const trialsUrl = new URL(endpoint);
+      trialsUrl.searchParams.set('view', 'trials');
+      trialsUrl.searchParams.set('q', 'exercise');
+      trialsUrl.searchParams.set('limit', '100');
+      const [response, trialsResponse] = await Promise.all([
+        fetch(dossierUrl, { headers: window.ilFnHeaders() }),
+        fetch(trialsUrl, { headers: window.ilFnHeaders() }),
+      ]);
+      if (!response.ok || !trialsResponse.ok) throw new Error(`Live index request failed with ${response.status}/${trialsResponse.status}`);
+      const [data, trialsData] = await Promise.all([response.json(), trialsResponse.json()]);
       const evidence = data.evidence || {};
       const overview = data.overview || {};
-      const requiredCounts = ['research_total', 'human_evidence_total', 'trial_total', 'recruiting_trials', 'registered_enrollment'];
-      if (requiredCounts.some((field) => !Number.isFinite(Number(evidence[field])) || Number(evidence[field]) <= 0)) {
+      const requiredCounts = ['research_total', 'human_evidence_total'];
+      const exerciseTrials = Array.isArray(trialsData.trials) ? trialsData.trials : [];
+      const activeTrials = exerciseTrials.filter((record) => /recruiting|active|enrolling/i.test(String(record.overall_status || '')));
+      const listedParticipants = exerciseTrials.reduce((sum, record) => sum + Math.max(0, Number(record.enrollment) || 0), 0);
+      if (requiredCounts.some((field) => !Number.isFinite(Number(evidence[field])) || Number(evidence[field]) <= 0)
+        || !exerciseTrials.length || !activeTrials.length || !listedParticipants) {
         throw new Error('The live pilot snapshot is incomplete');
       }
       const research = Array.isArray(data.research) ? data.research : [];
-      const trials = Array.isArray(data.trials) ? data.trials : [];
       const universities = Array.isArray(overview.universities) ? overview.universities : [];
       const events = Array.isArray(data.timeline?.events) ? data.timeline.events : [];
       const grid = document.getElementById('metricGrid');
@@ -71,13 +81,13 @@
       grid.append(
         metric('Indexed research', number.format(Number(evidence.research_total || 0)), '/research?topic=exercise', 'See the research →'),
         metric('Human studies', number.format(Number(evidence.human_evidence_total || 0)), '/topics/exercise#dossier-human-evidence', 'See the human studies →'),
-        metric('Registered trials', number.format(Number(evidence.trial_total || 0)), '/trials?topic=exercise', 'See trial registrations →'),
-        metric('Active trials', number.format(Number(evidence.recruiting_trials || 0)), '/trials?topic=exercise&status=Recruiting', 'See active trials →'),
-        metric('People listed in trials', number.format(Number(evidence.registered_enrollment || 0)), '/topics/exercise#dossier-trials', 'See participant totals →'),
+        metric('Exercise-related trials', number.format(exerciseTrials.length), '/trials?q=exercise', 'See trial registrations →'),
+        metric('Active trials', number.format(activeTrials.length), '/trials?q=exercise', 'See current statuses →'),
+        metric('People listed in trials', number.format(listedParticipants), '/trials?q=exercise', 'See listed enrollment →'),
         metric('Research activity', text(overview.trend_direction, 'Limited').replace(/^./, (value) => value.toUpperCase()), '/topics/exercise#topicTrend', 'View the trend →'),
       );
       renderList('pilotResearch', research, (record) => item(date(record.published_on), text(record.title), record.source_url || `/research/${encodeURIComponent(record.id)}`), 'No current research example is available.');
-      renderList('pilotTrials', trials, (record) => item(text(record.overall_status), text(record.title), record.source_url || `/trials/${encodeURIComponent(record.id)}`), 'No current trial registration is available.');
+      renderList('pilotTrials', exerciseTrials, (record) => item(text(record.overall_status), text(record.title), record.source_url || `/trials/${encodeURIComponent(record.id)}`), 'No current trial registration is available.');
       renderList('pilotUniversities', universities, (record) => item(number.format(Number(record.works_all_time || 0)) + ' work links', text(record.name), `/universities/${encodeURIComponent(record.slug)}?topic=exercise`), 'No topic-specific university activity is currently available.');
       renderList('pilotChanges', events, (record) => item(date(record.occurred_at), text(record.title), record.source_url || '/changes?topic=exercise'), 'No source-level change is currently recorded.');
       status.classList.add('is-live');

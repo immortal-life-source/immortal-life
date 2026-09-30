@@ -32,6 +32,9 @@ test('institutional pilot explains the product and asks a concrete demo question
 test('institutional pilot never presents an incomplete zero-filled snapshot as a successful example', () => {
   assert.match(script, /requiredCounts/);
   assert.match(script, /Number\(evidence\[field\]\) <= 0/);
+  assert.match(script, /searchParams\.set\('q', 'exercise'\)/);
+  assert.match(script, /exerciseTrials\.length/);
+  assert.match(script, /listedParticipants/);
   assert.match(script, /The live pilot snapshot is incomplete/);
 });
 
