@@ -1026,6 +1026,33 @@
     return `${record.title || ''} ${record.sponsor || ''} ${record.external_id || ''}`.toLowerCase();
   }
 
+  const trialFocusPatterns = {
+    function: /mobility|physical function|walking|gait|strength|balance|frailty|disability|falls?|functional|activities of daily living/i,
+    cognition: /cognit|memory|mental health|depress|anxiety|psychological|well-being|wellbeing/i,
+    cardiometabolic: /cardiovascular|blood pressure|metabolic|glucose|insulin|lipid|body composition|body mass|weight|vascular/i,
+    biomarkers: /biomarker|inflamm|oxidative|epigen|telomere|biological age|mitochond|microvascular/i,
+    sleep: /sleep|fatigue|recovery/i,
+    safety: /adverse|safety|tolerab|injur/i,
+  };
+  const trialFocusLabels = {
+    function: 'Mobility, strength and independence',
+    cognition: 'Cognition and mental health',
+    cardiometabolic: 'Cardiovascular and metabolic health',
+    biomarkers: 'Biological markers of ageing',
+    sleep: 'Sleep, fatigue and recovery',
+    safety: 'Safety, tolerability and injury',
+  };
+  let trialFocusFilter = '';
+  let trialSponsorFilter = '';
+
+  function trialStructuredText(record) {
+    return [
+      record.title,
+      ...(Array.isArray(record.evidence_snapshot?.intervention) ? record.evidence_snapshot.intervention : []),
+      ...(Array.isArray(record.evidence_snapshot?.outcomes_measured) ? record.evidence_snapshot.outcomes_measured : []),
+    ].filter(Boolean).join(' ');
+  }
+
   function isActiveTrial(record) {
     return /recruiting|active|enrolling/i.test(String(record?.overall_status || ''));
   }
@@ -1036,12 +1063,15 @@
     const status = elements.trialStatus?.value || '';
     const phase = elements.trialPhase?.value || '';
     const country = elements.trialCountry?.value || '';
+    const focusPattern = trialFocusPatterns[trialFocusFilter];
     const filtered = searchableTrials.filter((record) =>
       (!query || trialSearchText(record).includes(query)) &&
       includesTopic(record, 'clinical_trial_topics', topic) &&
       (!status || (status === 'active' ? isActiveTrial(record) : record.overall_status === status)) &&
       (!phase || (record.phases || []).includes(phase)) &&
-      (!country || (record.countries || []).includes(country))
+      (!country || (record.countries || []).includes(country)) &&
+      (!focusPattern || focusPattern.test(trialStructuredText(record))) &&
+      (!trialSponsorFilter || record.sponsor === trialSponsorFilter)
     );
     drawTrials(filtered, 'No clinical trial matches these filters. Try a broader search or clear one of the filters.');
     if (elements.trialResult) {
@@ -1051,7 +1081,9 @@
       const enrollmentSummary = requestedMetric === 'enrollment'
         ? ` Listed enrollment across ${filtered.length < trialTotal ? 'these loaded matches' : 'these matches'}: ${numberFormatter.format(listedEnrollment)} people.`
         : '';
-      elements.trialResult.textContent = resultSummary + enrollmentSummary;
+      const focusSummary = focusPattern ? ` Study theme: ${trialFocusLabels[trialFocusFilter]}.` : '';
+      const sponsorSummary = trialSponsorFilter ? ` Sponsor: ${trialSponsorFilter}.` : '';
+      elements.trialResult.textContent = resultSummary + enrollmentSummary + focusSummary + sponsorSummary;
     }
   }
 
@@ -1070,6 +1102,8 @@
     elements.trialStatus.value = trialParameters.get('status')?.trim() || '';
     elements.trialPhase.value = trialParameters.get('phase')?.trim() || '';
     elements.trialCountry.value = trialParameters.get('country')?.trim() || '';
+    trialFocusFilter = trialParameters.get('focus')?.trim() || '';
+    trialSponsorFilter = trialParameters.get('sponsor')?.trim() || '';
     elements.trialControls.addEventListener('input', () => {
       filterTrialRecords();
       window.clearTimeout(trialSearchTimer);
@@ -1081,6 +1115,11 @@
       elements.trialStatus.value = '';
       elements.trialPhase.value = '';
       elements.trialCountry.value = '';
+      trialFocusFilter = '';
+      trialSponsorFilter = '';
+      const clearedUrl = new URL(location.href);
+      clearedUrl.search = '';
+      window.history.replaceState({}, '', clearedUrl);
       filterTrialRecords();
       reloadTrials().catch((error) => console.error('Trial search failed:', error));
       elements.trialSearch.focus();

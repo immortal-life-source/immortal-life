@@ -27,15 +27,19 @@ test('institutional pilot uses the live exercise dossier', () => {
 });
 
 test('decision views remain source-linked and use the same Exercise cohorts as their destinations', () => {
-  for (const id of ['pilotMaturity', 'pilotChangePulse', 'pilotTrialLandscape', 'pilotUniversityHeatmap', 'pilotResultsGap']) {
+  for (const id of ['pilotMaturity', 'pilotChangePulse', 'pilotTrialLandscape', 'pilotTrialGeography', 'pilotEvidenceMix', 'pilotOutcomeThemes', 'pilotFieldDrivers', 'pilotUniversityHeatmap', 'pilotResultsGap']) {
     assert.match(html, new RegExp(`id="${id}"`));
   }
   assert.match(script, /view', 'trial-results-gap'/);
   assert.match(script, /gapUrl\.searchParams\.set\('q', 'exercise'\)/);
-  assert.match(script, /quality_rules', '20260930-decision-views-b'/);
+  assert.match(script, /quality_rules', '20260930-field-context'/);
   assert.match(script, /renderMaturity/);
   assert.match(script, /renderPulse/);
   assert.match(script, /renderTrialLandscape/);
+  assert.match(script, /renderTrialGeography/);
+  assert.match(script, /renderEvidenceMix/);
+  assert.match(script, /renderOutcomeThemes/);
+  assert.match(script, /renderFieldDrivers/);
   assert.match(script, /renderUniversityConnections/);
   assert.match(script, /renderResultsGap/);
   assert.match(script, /\/trials\/results-gap\?search=exercise&status=possible-gap/);
@@ -46,6 +50,18 @@ test('decision views remain source-linked and use the same Exercise cohorts as t
   assert.match(intelligence, /const gapSearch = publicSearchTerm/);
 });
 
+test('new field-context views link every aggregate to its matching source cohort', () => {
+  assert.match(script, /status=active&country=\$\{encodeURIComponent\(country\)\}/);
+  assert.match(script, /evidence=\$\{encodeURIComponent\(evidenceType\)\}/);
+  assert.match(script, /focus=\$\{encodeURIComponent\(theme\.slug\)\}/);
+  assert.match(script, /sponsor=\$\{encodeURIComponent\(sponsor\)\}/);
+  assert.match(portal, /trialFocusPatterns/);
+  assert.match(portal, /trialSponsorFilter/);
+  assert.match(portal, /trialStructuredText/);
+  assert.match(portal, /Study theme:/);
+  assert.match(portal, /Sponsor:/);
+});
+
 test('decision views state their limits rather than turning activity into efficacy claims', () => {
   assert.match(html, /Distinct record categories—not a conversion funnel/);
   assert.match(html, /Activity is not a ranking of research quality/);
@@ -53,6 +69,9 @@ test('decision views state their limits rather than turning activity into effica
   assert.match(script, /baseline is not mature enough for an acceleration claim/);
   assert.match(script, /listed enrollment is not proof of completed participation/);
   assert.match(script, /not an allegation of misconduct/);
+  assert.match(script, /not effectiveness scores/);
+  assert.match(script, /is not allocated between countries/);
+  assert.match(html, /indexed activity, not a ranking of scientific quality/);
 });
 
 test('institutional pilot explains the product and asks a concrete demo question', () => {

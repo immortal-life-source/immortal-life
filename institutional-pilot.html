@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="icon" href="/favicon.ico" type="image/x-icon" />
-  <link rel="stylesheet" href="/institutional-pilot.css?v=20260930-decision-views" />
+  <link rel="stylesheet" href="/institutional-pilot.css?v=20260930-field-context" />
 </head>
 <body>
   <header class="pilot-header">
@@ -56,7 +56,7 @@
       <section class="decision-story" aria-labelledby="decisionStoryTitle">
         <div class="decision-story-heading">
           <div><span class="eyebrow">Decision view</span><h3 id="decisionStoryTitle">See how the field is moving—not only how many records exist.</h3></div>
-          <p>These views connect research maturity, recent activity, trial progress, university specialisation, and missing results. Every interactive element opens the records behind it.</p>
+          <p>These views connect research maturity, recent activity, trial progress, geography, study questions, institutions, and missing results. Every interactive element opens the records behind it.</p>
         </div>
         <div class="decision-visual-grid">
           <article class="decision-visual decision-visual--wide">
@@ -71,6 +71,24 @@
           <article class="decision-visual">
             <div class="visual-heading"><div><span>Trial landscape</span><h4>Where do the registered studies stand?</h4></div><a href="/trials?search=exercise">Open trials</a></div>
             <div id="pilotTrialLandscape" class="landscape-bars"><p>Loading trial status…</p></div>
+          </article>
+          <article class="decision-visual">
+            <div class="visual-heading"><div><span>Global footprint</span><h4>Where are active Exercise trials happening?</h4></div><a href="/trials?search=exercise&amp;status=active">Open active trials</a></div>
+            <div id="pilotTrialGeography" class="pilot-geography"><p>Loading trial locations…</p></div>
+          </article>
+          <article class="decision-visual">
+            <div class="visual-heading"><div><span>Evidence composition</span><h4>What kind of Exercise evidence exists?</h4></div><a href="/research?topic=exercise">Open research</a></div>
+            <div id="pilotEvidenceMix" class="evidence-mix"><p>Loading evidence types…</p></div>
+          </article>
+          <article class="decision-visual decision-visual--wide">
+            <div class="visual-heading"><div><span>Questions being studied</span><h4>What are Exercise trials actually measuring?</h4></div><a href="/trials?search=exercise">Inspect registrations</a></div>
+            <p class="visual-note">Themes are identified from structured registry outcomes, interventions, and titles. One registration can contribute to several themes.</p>
+            <div id="pilotOutcomeThemes" class="outcome-themes"><p>Loading study themes…</p></div>
+          </article>
+          <article class="decision-visual decision-visual--wide">
+            <div class="visual-heading"><div><span>Who is driving the field</span><h4>Which sponsors and universities are most visible?</h4></div><a href="/universities?topic=exercise">Open complete field view</a></div>
+            <p class="visual-note">This is indexed activity, not a ranking of scientific quality, teaching, or institutional performance.</p>
+            <div id="pilotFieldDrivers" class="field-drivers"><p>Loading organisations…</p></div>
           </article>
           <article class="decision-visual decision-visual--wide">
             <div class="visual-heading"><div><span>University connections</span><h4>What adjacent longevity fields connect the leading institutions?</h4></div><a href="/universities?topic=exercise">Open university view</a></div>
@@ -171,6 +189,6 @@
 
   <footer><p>Automated, source-linked research intelligence. Not medical advice, diagnosis, or treatment guidance.</p><div><a href="/methodology">Methodology</a><a href="/resources">Sources</a><a href="/privacy">Privacy</a><a href="mailto:hello@immortal.life">Contact</a></div></footer>
   <script src="/il-config.js"></script>
-  <script src="/institutional-pilot.js?v=20260930-decision-views-c" defer></script>
+  <script src="/institutional-pilot.js?v=20260930-field-context" defer></script>
 </body>
 </html>

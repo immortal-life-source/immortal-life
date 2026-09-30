@@ -51,6 +51,19 @@
     link.href = href;
     return link;
   };
+  const outcomeThemes = [
+    { slug: 'function', label: 'Mobility, strength & independence', pattern: /mobility|physical function|walking|gait|strength|balance|frailty|disability|falls?|functional|activities of daily living/i },
+    { slug: 'cognition', label: 'Cognition & mental health', pattern: /cognit|memory|mental health|depress|anxiety|psychological|well-being|wellbeing/i },
+    { slug: 'cardiometabolic', label: 'Cardiovascular & metabolic health', pattern: /cardiovascular|blood pressure|metabolic|glucose|insulin|lipid|body composition|body mass|weight|vascular/i },
+    { slug: 'biomarkers', label: 'Biological markers of ageing', pattern: /biomarker|inflamm|oxidative|epigen|telomere|biological age|mitochond|microvascular/i },
+    { slug: 'sleep', label: 'Sleep, fatigue & recovery', pattern: /sleep|fatigue|recovery/i },
+    { slug: 'safety', label: 'Safety, tolerability & injury', pattern: /adverse|safety|tolerab|injur/i },
+  ];
+  const trialEvidenceText = (trial) => [
+    trial.title,
+    ...(Array.isArray(trial.evidence_snapshot?.intervention) ? trial.evidence_snapshot.intervention : []),
+    ...(Array.isArray(trial.evidence_snapshot?.outcomes_measured) ? trial.evidence_snapshot.outcomes_measured : []),
+  ].filter(Boolean).join(' ');
   const renderMaturity = (evidence, trials, activeTrials, gapSummary) => {
     const container = document.getElementById('pilotMaturity'); clear(container);
     const stages = [
@@ -120,6 +133,96 @@
     });
     container.append(node('p', 'visual-footnote', 'Status and participant totals come from registry records; listed enrollment is not proof of completed participation.'));
   };
+  const renderTrialGeography = (activeTrials) => {
+    const container = document.getElementById('pilotTrialGeography'); clear(container);
+    const countryCounts = new Map();
+    activeTrials.forEach((trial) => (Array.isArray(trial.countries) ? trial.countries : []).forEach((country) => {
+      if (country) countryCounts.set(country, (countryCounts.get(country) || 0) + 1);
+    }));
+    const countries = [...countryCounts.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
+    if (!countries.length) {
+      container.append(node('p', 'visual-empty', 'No reusable location data is available for the active registrations.'));
+      return;
+    }
+    const enrollment = activeTrials.reduce((sum, trial) => sum + Math.max(0, Number(trial.enrollment) || 0), 0);
+    const summary = node('div', 'geography-summary');
+    [
+      [activeTrials.length, 'active trials', '/trials?search=exercise&status=active'],
+      [countries.length, 'countries represented', '/trials?search=exercise&status=active'],
+      [enrollment, 'participants listed', '/trials?search=exercise&status=active&metric=enrollment'],
+    ].forEach(([value, label, href]) => {
+      const link = visualLink('', href); link.append(node('strong', '', formatCount(value)), node('span', '', label)); summary.append(link);
+    });
+    container.append(summary);
+    const maximum = Math.max(...countries.map((entry) => entry[1]), 1);
+    const list = node('div', 'geography-list');
+    countries.slice(0, 6).forEach(([country, count]) => {
+      const link = visualLink('', `/trials?search=exercise&status=active&country=${encodeURIComponent(country)}`);
+      const label = node('span'); label.append(node('b', '', country), node('strong', '', formatCount(count)));
+      const track = node('i'); const fill = node('em'); fill.style.width = `${Math.max(4, (count / maximum) * 100)}%`; track.append(fill);
+      link.append(label, track); list.append(link);
+    });
+    container.append(list, node('p', 'visual-footnote', 'Countries reflect registry locations. Listed enrollment is global to each registration and is not allocated between countries.'));
+  };
+  const renderEvidenceMix = (evidence) => {
+    const container = document.getElementById('pilotEvidenceMix'); clear(container);
+    const categories = [
+      ['Randomized human research', Number(evidence.randomized_human_total) || 0, 'randomized-human'],
+      ['Human evidence syntheses', Number(evidence.human_synthesis_total) || 0, 'human-synthesis'],
+      ['Other human studies', Number(evidence.research_by_stage?.['human-study']) || 0, 'human-study'],
+      ['Preclinical research', Number(evidence.preclinical_total) || 0, 'preclinical'],
+    ].filter((category) => category[1] > 0);
+    if (!categories.length) {
+      container.append(node('p', 'visual-empty', 'Evidence categories are still being classified.'));
+      return;
+    }
+    const total = categories.reduce((sum, category) => sum + category[1], 0);
+    categories.forEach(([label, value, evidenceType]) => {
+      const link = visualLink('evidence-mix-row', `/research?topic=exercise&evidence=${encodeURIComponent(evidenceType)}`);
+      const copy = node('span'); copy.append(node('b', '', label), node('strong', '', formatCount(value)));
+      const track = node('i'); const fill = node('em'); fill.style.width = `${Math.max(3, (value / total) * 100)}%`; track.append(fill);
+      link.append(copy, track); container.append(link);
+    });
+    container.append(node('p', 'visual-footnote', 'These are evidence categories, not effectiveness scores. A record can identify a study design without providing reusable findings.'));
+  };
+  const renderOutcomeThemes = (trials) => {
+    const container = document.getElementById('pilotOutcomeThemes'); clear(container);
+    const themes = outcomeThemes.map((theme) => ({ ...theme, count: trials.filter((trial) => theme.pattern.test(trialEvidenceText(trial))).length }))
+      .filter((theme) => theme.count > 0)
+      .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label));
+    if (!themes.length) {
+      container.append(node('p', 'visual-empty', 'Structured outcome themes are not available yet.'));
+      return;
+    }
+    themes.forEach((theme) => {
+      const link = visualLink('outcome-theme', `/trials?search=exercise&focus=${encodeURIComponent(theme.slug)}`);
+      link.append(node('strong', '', formatCount(theme.count)), node('span', '', theme.label), node('small', '', 'Open matching registrations →'));
+      container.append(link);
+    });
+  };
+  const renderFieldDrivers = (trials, universities) => {
+    const container = document.getElementById('pilotFieldDrivers'); clear(container);
+    const sponsorCounts = new Map();
+    trials.forEach((trial) => { if (trial.sponsor) sponsorCounts.set(trial.sponsor, (sponsorCounts.get(trial.sponsor) || 0) + 1); });
+    const sponsors = [...sponsorCounts.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0])).slice(0, 4);
+    const sponsorGroup = node('section'); sponsorGroup.append(node('h5', '', 'Sponsors with the most matched registrations'));
+    sponsors.forEach(([sponsor, count]) => {
+      const link = visualLink('driver-row', `/trials?search=exercise&sponsor=${encodeURIComponent(sponsor)}`);
+      link.append(node('span', '', sponsor), node('strong', '', `${formatCount(count)} ${count === 1 ? 'registration' : 'registrations'}`)); sponsorGroup.append(link);
+    });
+    const universityGroup = node('section'); universityGroup.append(node('h5', '', 'Leading university profiles linked to this field'));
+    universities.slice(0, 4).forEach((university) => {
+      const location = [university.city, university.country_name || university.country_code].filter(Boolean).join(', ');
+      const link = visualLink('driver-row', `/universities/${encodeURIComponent(university.slug)}?topic=exercise`);
+      link.append(node('span', '', university.name), node('strong', '', location || 'Open profile')); universityGroup.append(link);
+    });
+    if (!sponsors.length && !universities.length) {
+      container.append(node('p', 'visual-empty', 'Organisation data is still being resolved.'));
+      return;
+    }
+    if (sponsors.length) container.append(sponsorGroup);
+    if (universities.length) container.append(universityGroup);
+  };
   const renderUniversityConnections = (connections) => {
     const container = document.getElementById('pilotUniversityHeatmap'); clear(container);
     const topics = Array.isArray(connections?.topics) ? connections.topics : [];
@@ -178,12 +281,12 @@
       dossierUrl.searchParams.set('view', 'topic-dossier');
       dossierUrl.searchParams.set('topic', 'exercise');
       dossierUrl.searchParams.set('limit', '12');
-      dossierUrl.searchParams.set('quality_rules', '20260930-decision-views-b');
+      dossierUrl.searchParams.set('quality_rules', '20260930-field-context');
       const trialsUrl = new URL(endpoint);
       trialsUrl.searchParams.set('view', 'trials');
       trialsUrl.searchParams.set('q', 'exercise');
       trialsUrl.searchParams.set('limit', '100');
-      trialsUrl.searchParams.set('quality_rules', '20260930-decision-views-b');
+      trialsUrl.searchParams.set('quality_rules', '20260930-field-context');
       const gapUrl = new URL(endpoint);
       gapUrl.searchParams.set('view', 'trial-results-gap');
       gapUrl.searchParams.set('q', 'exercise');
@@ -223,6 +326,10 @@
       renderMaturity(evidence, exerciseTrials, activeTrials, gapData.summary || {});
       renderPulse(data.timeline?.pulse);
       renderTrialLandscape(exerciseTrials);
+      renderTrialGeography(activeTrials);
+      renderEvidenceMix(evidence);
+      renderOutcomeThemes(exerciseTrials);
+      renderFieldDrivers(exerciseTrials, universities);
       renderUniversityConnections(overview.university_connections);
       renderResultsGap(gapData.summary || {});
       renderList('pilotResearch', research, (record) => item(date(record.published_on), text(record.title), record.source_url || `/research/${encodeURIComponent(record.id)}`), 'No current research example is available.');
@@ -257,7 +364,7 @@
       fallback.style.gridColumn = '1 / -1';
       fallback.append(node('strong', '', 'Open'), node('span', '', 'Exercise Living Evidence Dossier'), node('small', '', 'View current research, trials, university activity, and evidence context →'));
       grid.append(fallback);
-      ['pilotMaturity', 'pilotChangePulse', 'pilotTrialLandscape', 'pilotUniversityHeatmap', 'pilotResultsGap', 'pilotResearch', 'pilotTrials', 'pilotUniversities', 'pilotChanges'].forEach((id) => {
+      ['pilotMaturity', 'pilotChangePulse', 'pilotTrialLandscape', 'pilotTrialGeography', 'pilotEvidenceMix', 'pilotOutcomeThemes', 'pilotFieldDrivers', 'pilotUniversityHeatmap', 'pilotResultsGap', 'pilotResearch', 'pilotTrials', 'pilotUniversities', 'pilotChanges'].forEach((id) => {
         const container = document.getElementById(id); clear(container); container.append(node('p', '', 'Live records will reappear when the source endpoint is available.'));
       });
       console.error(error);
