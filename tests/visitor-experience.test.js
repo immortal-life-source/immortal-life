@@ -27,6 +27,12 @@ test('changes-page totals are direct links to their relevant indexes', async () 
   assert.match(css, /\.report-metric:hover/)
 })
 
+test('shared portal script does not fail on informational pages without portal regions', async () => {
+  const [portal, template] = await Promise.all([read('intelligence.js'), read('content-template.html')])
+  assert.match(portal, /if \(!elements\.loading \|\| !elements\.error\) return/)
+  assert.match(template, /intelligence\.js\?v=20260930-content-guard/)
+})
+
 test('topic catalogue is compact, searchable, visual, and does not bury research or trials', async () => {
   const [template, portal, css, build] = await Promise.all([read('intelligence-template.html'), read('intelligence.js'), read('intelligence.css'), read('build.js')])
   assert.match(template, /id="topicSearch"/)

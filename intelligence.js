@@ -2417,6 +2417,10 @@
   }
 
   async function load() {
+    // Informational pages reuse this script for shared navigation behavior but
+    // do not include the intelligence portal's loading and error regions.
+    // Leave those pages alone instead of creating an unhandled promise error.
+    if (!elements.loading || !elements.error) return;
     elements.loading.hidden = false;
     elements.error.hidden = true;
     try {
