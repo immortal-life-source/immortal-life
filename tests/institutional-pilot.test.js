@@ -36,18 +36,18 @@ test('institutional pilot explains the product and asks a concrete demo question
 test('institutional pilot never presents an incomplete zero-filled snapshot as a successful example', () => {
   assert.match(script, /requiredCounts/);
   assert.match(script, /Number\(evidence\[field\]\) <= 0/);
-  assert.match(script, /searchParams\.set\('topic', 'exercise'\)/);
+  assert.match(script, /searchParams\.set\('q', 'exercise'\)/);
   assert.match(script, /exerciseTrials\.length/);
   assert.match(script, /listedParticipants/);
-  assert.match(script, /\/trials\?topic=exercise/);
+  assert.match(script, /\/trials\?search=exercise/);
   assert.match(script, /status=active/);
   assert.match(script, /The live pilot snapshot is incomplete/);
 });
 
 test('trial metric destinations open visibly filtered results', () => {
-  assert.match(script, /Exercise-related trials'[\s\S]*\/trials\?topic=exercise/);
-  assert.match(script, /Active trials'[\s\S]*\/trials\?topic=exercise&status=active/);
-  assert.match(script, /People listed in trials'[\s\S]*\/trials\?topic=exercise&metric=enrollment/);
+  assert.match(script, /Exercise-related trials'[\s\S]*\/trials\?search=exercise/);
+  assert.match(script, /Active trials'[\s\S]*\/trials\?search=exercise&status=active/);
+  assert.match(script, /People listed in trials'[\s\S]*\/trials\?search=exercise&metric=enrollment/);
 });
 
 test('research metric destinations open the matching evidence set', () => {
@@ -72,11 +72,12 @@ test('pilot changes are explicitly a six-week topic window with a visible previe
   assert.match(script, /does not necessarily change the scientific conclusion/);
   assert.match(intelligence, /42 \* 86400000/);
   assert.match(intelligence, /contains\('topic_slugs', \[topic\]\)\.gte\('occurred_at', sixWeeksAgo\)/);
+  assert.match(intelligence, /total_matching: timelineResult\.count/);
   assert.match(pages, /query = query\.contains\('topic_slugs', \[topic\]\)/);
   assert.match(pages, /changesPage\(supabase, url\)/);
 });
 
-test('legacy q trial links remain filtered while new pilot links use exact topic taxonomy', () => {
+test('legacy q trial links and current search links both remain filtered', () => {
   assert.match(portal, /trialParameters\.get\('search'\).*trialParameters\.get\('q'\)/);
   assert.match(portal, /params\.get\('search'\).*params\.get\('q'\)/);
 });

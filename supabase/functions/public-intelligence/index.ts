@@ -357,7 +357,7 @@ Deno.serve(async (req) => {
         supabase.rpc('get_topic_evidence_snapshot', { requested_topic: topic }),
         supabase.rpc('get_topic_reader_overview', { requested_topic: topic }),
         supabase.from('intelligence_change_events')
-          .select('id,event_type,importance,record_type,record_id,title,source_url,occurred_at,topic_slugs,metadata')
+          .select('id,event_type,importance,record_type,record_id,title,source_url,occurred_at,topic_slugs,metadata', { count: 'exact' })
           .neq('event_type', 'quality_state_changed').contains('topic_slugs', [topic]).gte('occurred_at', sixWeeksAgo).order('occurred_at', { ascending: false }).limit(250),
         sourcesPromise,
         supabase.rpc('get_topic_dossier_pilot', { requested_topic: topic }),
@@ -393,7 +393,7 @@ Deno.serve(async (req) => {
         trials,
         evidence: evidenceResult.data ?? {},
         overview: { ...(overviewResult.data ?? {}), university_total: universityCountResult.count ?? 0 },
-        timeline: { topic: topicResult.data, events: timelineResult.data ?? [], related_topics: relatedTopics },
+        timeline: { topic: topicResult.data, events: timelineResult.data ?? [], total_matching: timelineResult.count ?? (timelineResult.data ?? []).length, window_days: 42, related_topics: relatedTopics },
         pilot: pilotResult.data ?? null,
         funding: { award_count: fundingResult.count ?? 0 },
         sources: (sourcesResult.data ?? []).map(publicSourceState),
