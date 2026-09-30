@@ -51,6 +51,8 @@ test('research metric destinations open the matching evidence set', () => {
   assert.match(script, /Indexed research'[\s\S]*\/research\?topic=exercise/);
   assert.match(script, /Human studies'[\s\S]*\/research\?topic=exercise&evidence=human/);
   assert.match(proxy, /'evidence', 'access'/);
+  assert.match(proxy, /view === 'research' && \(query\.evidence \|\| query\.access\)\) return null/);
+  assert.match(proxy, /filteredResearch/);
 });
 
 test('institutional pilot states commercial and medical boundaries', () => {

@@ -134,6 +134,10 @@ async function topicDossierFallback(query, limit) {
 async function sourceFallback(query) {
   const view = String(query.view || 'overview');
   const limit = query.limit;
+  // A filtered evidence view promises a classified subset of the verified
+  // index. A broad upstream source search cannot preserve that promise, so it
+  // must fail closed instead of silently showing unrelated records.
+  if (view === 'research' && (query.evidence || query.access)) return null;
   if (view === 'research') return researchFallback(query, limit);
   if (view === 'trials') return trialsFallback(query, limit);
   if (view === 'universities') return universitiesFallback(query, limit);
@@ -169,7 +173,8 @@ module.exports = async function intelligenceProxy(request, response) {
   // aborting that early cached a 100-row OpenAlex sample as if it were the
   // complete index. Keep the proxy responsive, but allow the authoritative
   // aggregate enough time to answer.
-  const slowAggregate = ['universities', 'topic-dossier', 'trial-results-gap', 'funding'].includes(request.query?.view);
+  const filteredResearch = request.query?.view === 'research' && Boolean(request.query?.q || request.query?.topic || request.query?.evidence || request.query?.access);
+  const slowAggregate = filteredResearch || ['universities', 'topic-dossier', 'trial-results-gap', 'funding'].includes(request.query?.view);
   const timeout = setTimeout(() => controller.abort(), slowAggregate ? 9000 : 3500);
   try {
     const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';

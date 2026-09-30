@@ -2405,7 +2405,8 @@
     if (topicSlug) url.searchParams.set('topic', topicSlug);
     const cached = await readCachedRequest(url);
     if (cached) return cached;
-    const res = await fetchWithDeadline(url, ['topic-dossier', 'trial-results-gap', 'funding'].includes(viewName) ? 10000 : 6500);
+    const filteredResearch = viewName === 'research' && Boolean(params.q || params.topic || params.evidence || params.access);
+    const res = await fetchWithDeadline(url, filteredResearch || ['topic-dossier', 'trial-results-gap', 'funding'].includes(viewName) ? 10000 : 6500);
     if (res.ok) {
       const data = await res.json();
       await writeCachedRequest(url, data);

@@ -215,6 +215,7 @@ test('research and trials use complete searchable filter systems', async () => {
 test('public data views recover from brief Edge Function saturation', async () => {
   const [portal, proxy, vercel] = await Promise.all([read('intelligence.js'), read('api/intelligence.js'), read('vercel.json')])
   assert.match(portal, /fetchWithDeadline/)
+  assert.match(portal, /filteredResearch/)
   assert.match(portal, /immortal-life-public-intelligence-v8/)
   assert.match(portal, /const endpoint = '\/api\/intelligence'/)
   assert.match(portal, /new URL\(endpoint, window\.location\.origin\)/)
