@@ -149,6 +149,7 @@ test('pilot two is a complete cognitive-training example with topic-filtered des
   assert.match(pilotTwoHtml, /What changed in cognitive-training research for healthy ageing in the last six weeks/);
   assert.match(pilotTwoHtml, /\/trials\?topic=cognitive-training/);
   assert.match(pilotTwoHtml, /\/trials\/results-gap\?topic=cognitive-training/);
+  assert.match(script, /#resultsGapControls/);
   assert.match(pilotTwoHtml, /\/research\?topic=cognitive-training/);
   assert.match(pilotTwoHtml, /\/universities\?topic=cognitive-training/);
   assert.match(pilotTwoHtml, /\/changes\?topic=cognitive-training/);

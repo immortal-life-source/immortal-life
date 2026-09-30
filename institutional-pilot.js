@@ -8,7 +8,7 @@
   const topicRoute = `/topics/${pilotTopicEncoded}`;
   const researchRoute = (suffix = '') => `/research?topic=${pilotTopicEncoded}${suffix}`;
   const trialRoute = (suffix = '') => `/trials?topic=${pilotTopicEncoded}${suffix}`;
-  const gapRoute = (suffix = '') => `/trials/results-gap?topic=${pilotTopicEncoded}${suffix}`;
+  const gapRoute = (suffix = '') => `/trials/results-gap?topic=${pilotTopicEncoded}${suffix}#resultsGapControls`;
   const universityRoute = `/universities?topic=${pilotTopicEncoded}`;
   const changesRoute = `/changes?topic=${pilotTopicEncoded}`;
 
