@@ -15,11 +15,11 @@ test('institutional pilot is unlisted and excluded from indexing', () => {
   assert.match(build, /'institutional-pilot\.html'\]\s*\.includes\(name\)/);
 });
 
-test('institutional pilot uses the live senolytics dossier', () => {
+test('institutional pilot uses the live exercise dossier', () => {
   assert.match(script, /view', 'topic-dossier'/);
-  assert.match(script, /topic', 'senolytics'/);
+  assert.match(script, /topic', 'exercise'/);
   assert.match(script, /source_url/);
-  assert.match(html, /Live demonstration · Senolytics/);
+  assert.match(html, /Live demonstration · Exercise/);
 });
 
 test('institutional pilot states commercial and medical boundaries', () => {

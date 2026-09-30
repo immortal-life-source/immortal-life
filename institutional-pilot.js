@@ -50,7 +50,7 @@
     try {
       const url = new URL(endpoint);
       url.searchParams.set('view', 'topic-dossier');
-      url.searchParams.set('topic', 'senolytics');
+      url.searchParams.set('topic', 'exercise');
       url.searchParams.set('limit', '12');
       url.searchParams.set('quality_rules', '20260916b');
       const response = await fetch(url, { headers: window.ilFnHeaders() });
@@ -65,26 +65,26 @@
       const grid = document.getElementById('metricGrid');
       clear(grid);
       grid.append(
-        metric('Research records', number.format(Number(evidence.research_total || 0)), '/research?topic=senolytics', 'Inspect the records →'),
-        metric('Human evidence', number.format(Number(evidence.human_evidence_total || 0)), '/topics/senolytics#dossier-human-evidence', 'Read the context →'),
-        metric('Clinical trials', number.format(Number(evidence.trial_total || 0)), '/trials?topic=senolytics', 'Open registrations →'),
-        metric('Recruiting or active', number.format(Number(evidence.recruiting_trials || 0)), '/trials?topic=senolytics&status=Recruiting', 'Filter the radar →'),
-        metric('Participants listed', number.format(Number(evidence.registered_enrollment || 0)), '/topics/senolytics#dossier-trials', 'Planned or actual →'),
-        metric('Current trend', text(overview.trend_direction, 'Limited').replace(/^./, (value) => value.toUpperCase()), '/topics/senolytics#topicTrend', 'Publication activity →'),
+        metric('Research records', number.format(Number(evidence.research_total || 0)), '/research?topic=exercise', 'Inspect the records →'),
+        metric('Human evidence', number.format(Number(evidence.human_evidence_total || 0)), '/topics/exercise#dossier-human-evidence', 'Read the context →'),
+        metric('Clinical trials', number.format(Number(evidence.trial_total || 0)), '/trials?topic=exercise', 'Open registrations →'),
+        metric('Recruiting or active', number.format(Number(evidence.recruiting_trials || 0)), '/trials?topic=exercise&status=Recruiting', 'Filter the radar →'),
+        metric('Participants listed', number.format(Number(evidence.registered_enrollment || 0)), '/topics/exercise#dossier-trials', 'Planned or actual →'),
+        metric('Current trend', text(overview.trend_direction, 'Limited').replace(/^./, (value) => value.toUpperCase()), '/topics/exercise#topicTrend', 'Publication activity →'),
       );
       renderList('pilotResearch', research, (record) => item(date(record.published_on), text(record.title), record.source_url || `/research/${encodeURIComponent(record.id)}`), 'No current research example is available.');
       renderList('pilotTrials', trials, (record) => item(text(record.overall_status), text(record.title), record.source_url || `/trials/${encodeURIComponent(record.id)}`), 'No current trial registration is available.');
-      renderList('pilotUniversities', universities, (record) => item(number.format(Number(record.works_all_time || 0)) + ' work links', text(record.name), `/universities/${encodeURIComponent(record.slug)}?topic=senolytics`), 'No topic-specific university activity is currently available.');
-      renderList('pilotChanges', events, (record) => item(date(record.occurred_at), text(record.title), record.source_url || '/changes?topic=senolytics'), 'No source-level change is currently recorded.');
+      renderList('pilotUniversities', universities, (record) => item(number.format(Number(record.works_all_time || 0)) + ' work links', text(record.name), `/universities/${encodeURIComponent(record.slug)}?topic=exercise`), 'No topic-specific university activity is currently available.');
+      renderList('pilotChanges', events, (record) => item(date(record.occurred_at), text(record.title), record.source_url || '/changes?topic=exercise'), 'No source-level change is currently recorded.');
       status.classList.add('is-live');
       status.querySelector('span').textContent = `Live index snapshot generated ${date(data.generated_at)} · open any item to inspect its source.`;
     } catch (error) {
       status.classList.add('is-error');
-      status.querySelector('span').textContent = 'The live snapshot is temporarily unavailable. The complete senolytics dossier remains available.';
+      status.querySelector('span').textContent = 'The live snapshot is temporarily unavailable. The complete exercise dossier remains available.';
       const grid = document.getElementById('metricGrid'); clear(grid);
-      const fallback = node('a', 'metric-card'); fallback.href = '/topics/senolytics';
+      const fallback = node('a', 'metric-card'); fallback.href = '/topics/exercise';
       fallback.style.gridColumn = '1 / -1';
-      fallback.append(node('strong', '', 'Open'), node('span', '', 'Senolytics Living Evidence Dossier'), node('small', '', 'View current research, trials, university activity, and evidence context →'));
+      fallback.append(node('strong', '', 'Open'), node('span', '', 'Exercise Living Evidence Dossier'), node('small', '', 'View current research, trials, university activity, and evidence context →'));
       grid.append(fallback);
       ['pilotResearch', 'pilotTrials', 'pilotUniversities', 'pilotChanges'].forEach((id) => {
         const container = document.getElementById(id); clear(container); container.append(node('p', '', 'Live records will reappear when the source endpoint is available.'));

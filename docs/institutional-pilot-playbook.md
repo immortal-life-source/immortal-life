@@ -137,7 +137,7 @@ No message should be sent until the user selects the recipient and expressly app
 
 Subject: A six-week longevity intelligence pilot for [organisation]
 
-> I am building Immortal.life, a global, source-linked longevity intelligence index. We are inviting a small number of founding organisations to test a six-week monitoring pilot around five to ten questions that matter to their work. The pilot combines a baseline evidence and trial landscape, weekly meaningful-change briefs, university activity, and integrity or regulatory signals. I prepared a live senolytics demonstration here: [private pilot URL]. If this addresses a real monitoring problem for [organisation], I would value a 20-minute conversation.
+> I am building Immortal.life, a global, source-linked longevity intelligence index. We are inviting a small number of founding organisations to test a six-week monitoring pilot around five to ten questions that matter to their work. The pilot combines a baseline evidence and trial landscape, weekly meaningful-change briefs, university activity, and integrity or regulatory signals. I prepared a live exercise-research demonstration here: [private pilot URL]. If this addresses a real monitoring problem for [organisation], I would value a 20-minute conversation.
 
 ### Follow-up
 
