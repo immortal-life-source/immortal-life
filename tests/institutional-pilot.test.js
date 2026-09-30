@@ -19,14 +19,20 @@ test('institutional pilot uses the live exercise dossier', () => {
   assert.match(script, /view', 'topic-dossier'/);
   assert.match(script, /topic', 'exercise'/);
   assert.match(script, /source_url/);
-  assert.match(html, /Live example · Exercise and healthy ageing/);
+  assert.match(html, /One of our 180 longevity topics/);
 });
 
 test('institutional pilot explains the product and asks a concrete demo question', () => {
   assert.match(html, /Immortal\.life watches longevity research/i);
-  assert.match(html, /What changed in exercise research for healthy ageing/i);
-  assert.match(html, /Every number opens its sources/i);
+  assert.match(html, /Question to monitor: “What changed in exercise research for healthy ageing in the last six weeks/i);
+  assert.match(html, /Every number is linked to its sources/i);
   assert.match(html, /This is not a data dump/i);
+});
+
+test('institutional pilot never presents an incomplete zero-filled snapshot as a successful example', () => {
+  assert.match(script, /requiredCounts/);
+  assert.match(script, /Number\(evidence\[field\]\) <= 0/);
+  assert.match(script, /The live pilot snapshot is incomplete/);
 });
 
 test('institutional pilot states commercial and medical boundaries', () => {

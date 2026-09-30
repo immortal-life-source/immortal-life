@@ -58,6 +58,10 @@
       const data = await response.json();
       const evidence = data.evidence || {};
       const overview = data.overview || {};
+      const requiredCounts = ['research_total', 'human_evidence_total', 'trial_total', 'recruiting_trials', 'registered_enrollment'];
+      if (requiredCounts.some((field) => !Number.isFinite(Number(evidence[field])) || Number(evidence[field]) <= 0)) {
+        throw new Error('The live pilot snapshot is incomplete');
+      }
       const research = Array.isArray(data.research) ? data.research : [];
       const trials = Array.isArray(data.trials) ? data.trials : [];
       const universities = Array.isArray(overview.universities) ? overview.universities : [];
