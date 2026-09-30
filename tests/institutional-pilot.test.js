@@ -5,6 +5,7 @@ const path = require('node:path');
 
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'institutional-pilot.html'), 'utf8');
+const stylesheet = fs.readFileSync(path.join(root, 'institutional-pilot.css'), 'utf8');
 const script = fs.readFileSync(path.join(root, 'institutional-pilot.js'), 'utf8');
 const playbook = fs.readFileSync(path.join(root, 'docs', 'institutional-pilot-playbook.md'), 'utf8');
 const build = fs.readFileSync(path.join(root, 'build.js'), 'utf8');
@@ -81,6 +82,14 @@ test('institutional pilot explains the product and asks a concrete demo question
   assert.match(html, /Question to monitor: “What changed in exercise research for healthy ageing in the last six weeks/i);
   assert.match(html, /Every number is linked to its sources/i);
   assert.match(html, /This is not a data dump/i);
+});
+
+test('pilot hero fits the first screen and uses one display scale for its key questions', () => {
+  assert.match(stylesheet, /--pilot-display-size:clamp\(28px,3\.2vw,44px\)/);
+  assert.match(stylesheet, /\.pilot-hero\{[^}]*min-height:calc\(100svh - 72px\)[^}]*align-items:center/);
+  assert.match(stylesheet, /\.pilot-hero h1\{[^}]*font-size:var\(--pilot-display-size\)/);
+  assert.match(stylesheet, /#demoTitle\{font-size:var\(--pilot-display-size\)\}/);
+  assert.match(stylesheet, /\.decision-story-heading h3\{[^}]*font-size:var\(--pilot-display-size\)/);
 });
 
 test('institutional pilot never presents an incomplete zero-filled snapshot as a successful example', () => {
