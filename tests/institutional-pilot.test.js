@@ -19,7 +19,14 @@ test('institutional pilot uses the live exercise dossier', () => {
   assert.match(script, /view', 'topic-dossier'/);
   assert.match(script, /topic', 'exercise'/);
   assert.match(script, /source_url/);
-  assert.match(html, /Live demonstration · Exercise/);
+  assert.match(html, /Live example · Exercise and healthy ageing/);
+});
+
+test('institutional pilot explains the product and asks a concrete demo question', () => {
+  assert.match(html, /Immortal\.life watches longevity research/i);
+  assert.match(html, /What changed in exercise research for healthy ageing/i);
+  assert.match(html, /Every number opens its sources/i);
+  assert.match(html, /This is not a data dump/i);
 });
 
 test('institutional pilot states commercial and medical boundaries', () => {
@@ -33,7 +40,7 @@ test('institutional pilot states commercial and medical boundaries', () => {
 test('institutional offer is specific and measurable', () => {
   assert.match(html, /€2,500–€5,000/);
   assert.match(html, /Six-week structure/);
-  assert.match(html, /Closing decision report/);
+  assert.match(html, /Closing summary/);
   assert.match(playbook, /Build a shortlist of 15 organisations/);
   assert.match(playbook, /Close one paid founding pilot/);
 });

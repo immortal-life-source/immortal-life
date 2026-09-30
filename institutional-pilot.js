@@ -65,12 +65,12 @@
       const grid = document.getElementById('metricGrid');
       clear(grid);
       grid.append(
-        metric('Research records', number.format(Number(evidence.research_total || 0)), '/research?topic=exercise', 'Inspect the records →'),
-        metric('Human evidence', number.format(Number(evidence.human_evidence_total || 0)), '/topics/exercise#dossier-human-evidence', 'Read the context →'),
-        metric('Clinical trials', number.format(Number(evidence.trial_total || 0)), '/trials?topic=exercise', 'Open registrations →'),
-        metric('Recruiting or active', number.format(Number(evidence.recruiting_trials || 0)), '/trials?topic=exercise&status=Recruiting', 'Filter the radar →'),
-        metric('Participants listed', number.format(Number(evidence.registered_enrollment || 0)), '/topics/exercise#dossier-trials', 'Planned or actual →'),
-        metric('Current trend', text(overview.trend_direction, 'Limited').replace(/^./, (value) => value.toUpperCase()), '/topics/exercise#topicTrend', 'Publication activity →'),
+        metric('Indexed research', number.format(Number(evidence.research_total || 0)), '/research?topic=exercise', 'See the research →'),
+        metric('Human studies', number.format(Number(evidence.human_evidence_total || 0)), '/topics/exercise#dossier-human-evidence', 'See the human studies →'),
+        metric('Registered trials', number.format(Number(evidence.trial_total || 0)), '/trials?topic=exercise', 'See trial registrations →'),
+        metric('Active trials', number.format(Number(evidence.recruiting_trials || 0)), '/trials?topic=exercise&status=Recruiting', 'See active trials →'),
+        metric('People listed in trials', number.format(Number(evidence.registered_enrollment || 0)), '/topics/exercise#dossier-trials', 'See participant totals →'),
+        metric('Research activity', text(overview.trend_direction, 'Limited').replace(/^./, (value) => value.toUpperCase()), '/topics/exercise#topicTrend', 'View the trend →'),
       );
       renderList('pilotResearch', research, (record) => item(date(record.published_on), text(record.title), record.source_url || `/research/${encodeURIComponent(record.id)}`), 'No current research example is available.');
       renderList('pilotTrials', trials, (record) => item(text(record.overall_status), text(record.title), record.source_url || `/trials/${encodeURIComponent(record.id)}`), 'No current trial registration is available.');
