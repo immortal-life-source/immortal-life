@@ -133,6 +133,11 @@ test('sponsor visibility explains what a registration represents', () => {
   assert.match(script, /not a paper, participant, or completed-study claim/);
 });
 
+test('pilot cache keys publish the sponsor and university count layout together', () => {
+  assert.match(html, /institutional-pilot\.css\?v=20261001-driver-clarity/);
+  assert.match(html, /institutional-pilot\.js\?v=20261001-driver-clarity/);
+});
+
 test('pilot changes are explicitly a six-week topic window with a visible preview count', () => {
   assert.match(html, /What changed in the last six weeks/);
   assert.match(script, /newest of/);
