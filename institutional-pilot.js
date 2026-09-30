@@ -81,9 +81,9 @@
       grid.append(
         metric('Indexed research', number.format(Number(evidence.research_total || 0)), '/research?topic=exercise', 'See the research →'),
         metric('Human studies', number.format(Number(evidence.human_evidence_total || 0)), '/topics/exercise#dossier-human-evidence', 'See the human studies →'),
-        metric('Exercise-related trials', number.format(exerciseTrials.length), '/trials?q=exercise', 'See trial registrations →'),
-        metric('Active trials', number.format(activeTrials.length), '/trials?q=exercise', 'See current statuses →'),
-        metric('People listed in trials', number.format(listedParticipants), '/trials?q=exercise', 'See listed enrollment →'),
+        metric('Exercise-related trials', number.format(exerciseTrials.length), '/trials?search=exercise', 'See trial registrations →'),
+        metric('Active trials', number.format(activeTrials.length), '/trials?search=exercise&status=active', 'See active trials →'),
+        metric('People listed in trials', number.format(listedParticipants), '/trials?search=exercise', 'See listed enrollment →'),
         metric('Research activity', text(overview.trend_direction, 'Limited').replace(/^./, (value) => value.toUpperCase()), '/topics/exercise#topicTrend', 'View the trend →'),
       );
       renderList('pilotResearch', research, (record) => item(date(record.published_on), text(record.title), record.source_url || `/research/${encodeURIComponent(record.id)}`), 'No current research example is available.');

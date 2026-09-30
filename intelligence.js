@@ -907,11 +907,12 @@
   }
 
   function trialQueryParams(offset = 0) {
+    const selectedStatus = elements.trialStatus?.value || '';
     return {
       offset,
       q: String(elements.trialSearch?.value || '').trim(),
       topic: elements.trialTopic?.value || '',
-      status: elements.trialStatus?.value || '',
+      status: selectedStatus === 'active' ? '' : selectedStatus,
       phase: elements.trialPhase?.value || '',
       country: elements.trialCountry?.value || '',
     };
@@ -1025,6 +1026,10 @@
     return `${record.title || ''} ${record.sponsor || ''} ${record.external_id || ''}`.toLowerCase();
   }
 
+  function isActiveTrial(record) {
+    return /recruiting|active|enrolling/i.test(String(record?.overall_status || ''));
+  }
+
   function filterTrialRecords() {
     const query = String(elements.trialSearch?.value || '').trim().toLowerCase();
     const topic = elements.trialTopic?.value || '';
@@ -1034,7 +1039,7 @@
     const filtered = searchableTrials.filter((record) =>
       (!query || trialSearchText(record).includes(query)) &&
       includesTopic(record, 'clinical_trial_topics', topic) &&
-      (!status || record.overall_status === status) &&
+      (!status || (status === 'active' ? isActiveTrial(record) : record.overall_status === status)) &&
       (!phase || (record.phases || []).includes(phase)) &&
       (!country || (record.countries || []).includes(country))
     );
@@ -1045,7 +1050,10 @@
   function setupTrialSearch(topicEntries = []) {
     if (!elements.trialControls || elements.trialControls.dataset.ready) return;
     replaceFilterOptions(elements.trialTopic, 'All topics', topicEntries.length ? topicEntries : topicOptions(searchableTrials, 'clinical_trial_topics'));
-    replaceFilterOptions(elements.trialStatus, 'All statuses', [...new Set(searchableTrials.map((record) => record.overall_status).filter(Boolean))].sort().map((value) => [value, readableStatus(value)]));
+    replaceFilterOptions(elements.trialStatus, 'All statuses', [
+      ['active', 'Active or recruiting'],
+      ...[...new Set(searchableTrials.map((record) => record.overall_status).filter(Boolean))].sort().map((value) => [value, readableStatus(value)]),
+    ]);
     replaceFilterOptions(elements.trialPhase, 'All phases', [...new Set(searchableTrials.flatMap((record) => record.phases || []).filter(Boolean))].sort().map((value) => [value, readableStatus(value)]));
     replaceFilterOptions(elements.trialCountry, 'All countries', [...new Set(searchableTrials.flatMap((record) => record.countries || []).filter(Boolean))].sort((left, right) => left.localeCompare(right)).map((value) => [value, value]));
     elements.trialSearch.value = new URLSearchParams(location.search).get('search')?.trim() || '';
@@ -2420,7 +2428,8 @@
         renderSources(data.sources || [], false);
       } else if (view === 'trials') {
         const params = new URLSearchParams(location.search);
-        const [data, topicEntries] = await Promise.all([request('trials', 100, { q: params.get('search')?.trim() || '', topic: params.get('topic')?.trim() || '', status: params.get('status')?.trim() || '', phase: params.get('phase')?.trim() || '', country: params.get('country')?.trim() || '' }), catalogueTopicEntries()]);
+        const requestedStatus = params.get('status')?.trim() || '';
+        const [data, topicEntries] = await Promise.all([request('trials', 100, { q: params.get('search')?.trim() || '', topic: params.get('topic')?.trim() || '', status: requestedStatus === 'active' ? '' : requestedStatus, phase: params.get('phase')?.trim() || '', country: params.get('country')?.trim() || '' }), catalogueTopicEntries()]);
         trialNextOffset = data.next_offset;
         trialTotal = Number(data.total_matching || data.trials?.length || 0);
         renderTrials(data.trials || [], topicEntries);

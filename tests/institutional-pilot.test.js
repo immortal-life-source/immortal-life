@@ -35,7 +35,15 @@ test('institutional pilot never presents an incomplete zero-filled snapshot as a
   assert.match(script, /searchParams\.set\('q', 'exercise'\)/);
   assert.match(script, /exerciseTrials\.length/);
   assert.match(script, /listedParticipants/);
+  assert.match(script, /\/trials\?search=exercise/);
+  assert.match(script, /status=active/);
   assert.match(script, /The live pilot snapshot is incomplete/);
+});
+
+test('trial metric destinations open visibly filtered results', () => {
+  assert.match(script, /Exercise-related trials'[\s\S]*\/trials\?search=exercise/);
+  assert.match(script, /Active trials'[\s\S]*\/trials\?search=exercise&status=active/);
+  assert.match(script, /People listed in trials'[\s\S]*\/trials\?search=exercise/);
 });
 
 test('institutional pilot states commercial and medical boundaries', () => {
