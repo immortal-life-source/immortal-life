@@ -10,6 +10,7 @@ const playbook = fs.readFileSync(path.join(root, 'docs', 'institutional-pilot-pl
 const build = fs.readFileSync(path.join(root, 'build.js'), 'utf8');
 const proxy = fs.readFileSync(path.join(root, 'api', 'intelligence.js'), 'utf8');
 const portal = fs.readFileSync(path.join(root, 'intelligence.js'), 'utf8');
+const intelligenceTemplate = fs.readFileSync(path.join(root, 'intelligence-template.html'), 'utf8');
 const pages = fs.readFileSync(path.join(root, 'supabase', 'functions', 'public-pages', 'index.ts'), 'utf8');
 const intelligence = fs.readFileSync(path.join(root, 'supabase', 'functions', 'public-intelligence', 'index.ts'), 'utf8');
 
@@ -60,6 +61,7 @@ test('new field-context views link every aggregate to its matching source cohort
   assert.match(portal, /trialStructuredText/);
   assert.match(portal, /Study theme:/);
   assert.match(portal, /Sponsor:/);
+  assert.match(intelligenceTemplate, /intelligence\.js\?v=20261001-pilot-field-filters/);
 });
 
 test('decision views state their limits rather than turning activity into efficacy claims', () => {
