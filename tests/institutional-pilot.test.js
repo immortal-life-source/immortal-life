@@ -8,6 +8,7 @@ const html = fs.readFileSync(path.join(root, 'institutional-pilot.html'), 'utf8'
 const script = fs.readFileSync(path.join(root, 'institutional-pilot.js'), 'utf8');
 const playbook = fs.readFileSync(path.join(root, 'docs', 'institutional-pilot-playbook.md'), 'utf8');
 const build = fs.readFileSync(path.join(root, 'build.js'), 'utf8');
+const proxy = fs.readFileSync(path.join(root, 'api', 'intelligence.js'), 'utf8');
 
 test('institutional pilot is unlisted and excluded from indexing', () => {
   assert.match(html, /noindex, nofollow, noarchive/);
@@ -49,6 +50,7 @@ test('trial metric destinations open visibly filtered results', () => {
 test('research metric destinations open the matching evidence set', () => {
   assert.match(script, /Indexed research'[\s\S]*\/research\?topic=exercise/);
   assert.match(script, /Human studies'[\s\S]*\/research\?topic=exercise&evidence=human/);
+  assert.match(proxy, /'evidence', 'access'/);
 });
 
 test('institutional pilot states commercial and medical boundaries', () => {

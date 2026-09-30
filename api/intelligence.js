@@ -3,7 +3,7 @@
 const upstreamBase = 'https://nifbuyoghesveotugday.supabase.co/functions/v1/public-intelligence';
 const allowedParameters = new Set([
   'view', 'limit', 'offset', 'topic', 'q', 'country', 'continent', 'sort',
-  'status', 'phase', 'region', 'funder', 'institution', 'quality_rules', 'directory_contract',
+  'status', 'phase', 'evidence', 'access', 'region', 'funder', 'institution', 'quality_rules', 'directory_contract',
 ]);
 
 async function fetchJson(url, timeoutMs = 2500) {
