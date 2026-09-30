@@ -205,11 +205,12 @@
     const sponsorCounts = new Map();
     trials.forEach((trial) => { if (trial.sponsor) sponsorCounts.set(trial.sponsor, (sponsorCounts.get(trial.sponsor) || 0) + 1); });
     const sponsors = [...sponsorCounts.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0])).slice(0, 4);
-    const sponsorGroup = node('section'); sponsorGroup.append(node('h5', '', 'Sponsors with the most matched registrations'));
+    const sponsorGroup = node('section'); sponsorGroup.append(node('h5', '', 'Sponsors with the most Exercise-related clinical-trial registrations'));
     sponsors.forEach(([sponsor, count]) => {
       const link = visualLink('driver-row', `/trials?search=exercise&sponsor=${encodeURIComponent(sponsor)}`);
       link.append(node('span', '', sponsor), node('strong', '', `${formatCount(count)} ${count === 1 ? 'registration' : 'registrations'}`)); sponsorGroup.append(link);
     });
+    if (sponsors.length) sponsorGroup.append(node('p', 'driver-note', 'One registration is one clinical-study record matched to Exercise in the live trial index—not a paper, participant, or completed-study claim.'));
     const universityGroup = node('section'); universityGroup.append(node('h5', '', 'Leading university profiles linked to this field'));
     universities.slice(0, 4).forEach((university) => {
       const location = [university.city, university.country_name || university.country_code].filter(Boolean).join(', ');
@@ -344,7 +345,11 @@
       }
       renderList('pilotUniversities', universities, (record) => {
         const location = [record.city, record.country_name || record.country_code].filter(Boolean).join(', ');
-        return item(location || 'Exercise topic profile', text(record.name), `/universities/${encodeURIComponent(record.slug)}?topic=exercise`);
+        const link = item(location || 'Exercise topic profile', text(record.name), `/universities/${encodeURIComponent(record.slug)}?topic=exercise`);
+        link.classList.add('has-count');
+        const count = Math.max(0, Number(record.works_all_time) || 0);
+        link.append(node('span', 'live-item-count', `${formatCount(count)} ${count === 1 ? 'Exercise work link' : 'Exercise work links'}`));
+        return link;
       }, 'No topic-specific university activity is currently available.');
       const changesSummary = document.getElementById('pilotChangesSummary');
       if (changesSummary) {

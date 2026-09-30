@@ -117,12 +117,20 @@ test('research metric destinations open the matching evidence set', () => {
   assert.match(proxy, /filteredResearch/);
 });
 
-test('university examples open topic profiles without advertising unverified work-link totals', () => {
+test('university examples show verified topic work-link totals and open matching profiles', () => {
   assert.match(script, /universities\/\$\{encodeURIComponent\(record\.slug\)\}\?topic=exercise/);
   assert.match(script, /record\.city/);
-  assert.doesNotMatch(script, /works_all_time \|\| 0\).*work links/);
+  assert.match(script, /record\.works_all_time/);
+  assert.match(script, /Exercise work link/);
+  assert.match(script, /live-item-count/);
   assert.match(script, /universityTotal/);
   assert.match(script, /Showing 3 leading profiles/);
+});
+
+test('sponsor visibility explains what a registration represents', () => {
+  assert.match(script, /Sponsors with the most Exercise-related clinical-trial registrations/);
+  assert.match(script, /One registration is one clinical-study record matched to Exercise/);
+  assert.match(script, /not a paper, participant, or completed-study claim/);
 });
 
 test('pilot changes are explicitly a six-week topic window with a visible preview count', () => {
