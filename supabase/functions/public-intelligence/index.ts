@@ -326,7 +326,7 @@ Deno.serve(async (req) => {
       const cachedOverview = overviewResult.data ?? {}
       const overview = {
         ...cachedOverview,
-        summary: { ...(cachedOverview.summary ?? {}), direct_grants: directGrantTotal },
+        summary: { ...(cachedOverview.summary ?? {}), awards: count, direct_grants: directGrantTotal },
       }
       return response(req, {
         generated_at: new Date().toISOString(),
