@@ -2149,10 +2149,12 @@
 
   async function fetchUniversityIndex(append = false) {
     elements.universityResult.textContent = 'Updating the university view…';
+    const requestedTopic = !universityControlsReady ? new URLSearchParams(location.search).get('topic')?.trim() || '' : '';
+    const activeTopic = elements.universityTopic?.value || requestedTopic;
     const data = await request('universities', 100, {
       offset: append ? universityNextOffset || 0 : 0,
       q: elements.universitySearch?.value,
-      topic: elements.universityTopic?.value,
+      topic: activeTopic,
       country: elements.universityCountry?.value,
       continent: elements.universityContinent?.value,
       sort: elements.universitySort?.value,
@@ -2195,10 +2197,8 @@
         finally { elements.universityLoadMore.disabled = false; }
       };
       universityControlsReady = true;
-      const requestedTopic = new URLSearchParams(location.search).get('topic');
       if (requestedTopic && [...elements.universityTopic.options].some((option) => option.value === requestedTopic)) {
         elements.universityTopic.value = requestedTopic;
-        return fetchUniversityIndex();
       }
     }
     renderUniversityRows();

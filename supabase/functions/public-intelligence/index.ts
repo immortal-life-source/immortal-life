@@ -233,7 +233,7 @@ Deno.serve(async (req) => {
           .order('openalex_id')
       } else {
         directoryQuery = supabase.from('university_research_institutions')
-          .select(institutionFields, { count: 'exact' })
+          .select(institutionFields, { count: 'planned' })
           .eq('is_eligible', true)
           .range(offset, offset + universityLimit - 1)
         if (/^[A-Z]{2}$/.test(country)) directoryQuery = directoryQuery.eq('country_code', country)
@@ -264,17 +264,16 @@ Deno.serve(async (req) => {
         }).filter((institution: any) => institution.openalex_id)
         : (directoryData ?? [])
       const countryDirectory = Array.isArray(coverage.data?.country_directory) ? coverage.data.country_directory : []
+      const hasDirectoryFilters = Boolean(topic || search || continent || /^[A-Z]{2}$/.test(country))
       return response(req, {
         generated_at: new Date().toISOString(),
         // PostgreSQL's planned count keeps the first topic page fast, but it
         // is not an audited total and may underestimate a growing corpus. Do
         // not display it or use it to stop pagination; a full final page is
         // the only completion signal for topic browsing.
-        total_matching: topic ? null : count ?? 0,
+        total_matching: hasDirectoryFilters ? null : Number(coverage.data?.universities ?? count ?? 0),
         offset,
-        next_offset: topic
-          ? universities.length === universityLimit ? offset + universities.length : null
-          : offset + universities.length < Number(count ?? 0) ? offset + universities.length : null,
+        next_offset: universities.length === universityLimit ? offset + universities.length : null,
         coverage: coverage.data ?? {},
         filters: { topic: topic || null, country: country || null, continent: continent || null, search: search || null, sort },
         topics: topicsResult.data ?? [],
