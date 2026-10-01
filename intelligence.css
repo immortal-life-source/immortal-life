@@ -772,7 +772,7 @@ body[data-view="quality"] #qualitySection { padding-top:24px; }
 }
 
 /* Living atlas navigation, orientation, and learning tools */
-.intel-nav { position:relative; }
+@media (min-width:861px) { .intel-nav { position:relative; } }
 .intel-nav-search { display:none; grid-template-columns:minmax(0,1fr) auto; gap:6px; padding:4px 4px 12px; margin-bottom:6px; border-bottom:1px solid var(--border); }
 .intel-nav-search input { min-width:0; height:38px; padding:0 10px; border:1px solid var(--border); border-radius:0; background:#0b0b09; color:var(--text); font:400 11px var(--sans); outline:none; }
 .intel-nav-search input:focus { border-color:var(--gold); }
