@@ -2129,22 +2129,22 @@ body::after { display: none; }
   color: #c73572;
   filter: drop-shadow(0 .08em .11em rgba(126, 29, 74, .18));
   transform-origin: 50% 82%;
-  animation: heroButterflyJourney 6.8s cubic-bezier(.38,.03,.18,1) 1s forwards;
+  animation: heroButterflyJourney 10.2s cubic-bezier(.45,0,.3,1) .8s forwards;
 }
 .hero-butterfly svg {
   display: block;
   width: 100%;
   height: 100%;
   overflow: visible;
-  animation: heroButterflyRestGlow 4.6s ease-in-out 7.8s infinite alternate;
+  animation: heroButterflyRestGlow 4.6s ease-in-out 11s infinite alternate;
 }
 .hero-butterfly-wing {
   fill: rgba(199, 53, 114, .56);
   stroke: rgba(199, 53, 114, .72);
   stroke-width: .7;
   transform-box: fill-box;
-  animation: heroButterflyWingFlight .17s ease-in-out 1s 40 alternate,
-             heroButterflyWingRest 4.2s ease-in-out 7.8s infinite alternate;
+  animation: heroButterflyWingFlight .24s ease-in-out .8s 42 alternate,
+             heroButterflyWingRest 4.2s ease-in-out 11s infinite alternate;
 }
 .hero-butterfly-wing path + path { fill: rgba(232, 109, 67, .42); }
 .hero-butterfly-wing--left { transform-origin: right center; }
@@ -2168,17 +2168,16 @@ body::after { display: none; }
   opacity: .72;
 }
 @keyframes heroButterflyJourney {
-  0% { opacity: 0; transform: translate(-42vw,-24vh) rotate(-28deg) scale(.48); }
-  8% { opacity: .76; }
-  22% { transform: translate(-30vw,-9vh) rotate(13deg) scale(.68); }
-  38% { transform: translate(-20vw,-17vh) rotate(-9deg) scale(.8); }
-  55% { transform: translate(-12vw,-6vh) rotate(15deg) scale(.9); }
-  70% { transform: translate(-6vw,-11vh) rotate(-12deg) scale(.96); }
-  76% { transform: translate(-1.05em,-.75em) rotate(4deg) scale(1); }
-  81% { transform: translate(-50%,-1.22em) rotate(88deg) scale(1); }
-  86% { transform: translate(.58em,-.52em) rotate(178deg) scale(1); }
-  91% { transform: translate(-50%,.3em) rotate(268deg) scale(.98); }
-  96% { transform: translate(-1.05em,-.42em) rotate(350deg) scale(.98); }
+  0% { opacity: 0; transform: translate(-45vw,-8vh) rotate(-4deg) scale(.55); }
+  7% { opacity: .88; }
+  17% { transform: translate(-36vw,-2vh) rotate(4deg) scale(.68); }
+  31% { transform: translate(-27vw,-10vh) rotate(-3deg) scale(.78); }
+  45% { transform: translate(-18vw,-3vh) rotate(3deg) scale(.86); }
+  59% { transform: translate(-11vw,-9vh) rotate(-3deg) scale(.93); }
+  73% { transform: translate(-5vw,-2.5vh) rotate(2deg) scale(.98); }
+  84% { transform: translate(-.75em,-.9em) rotate(-2deg) scale(1); }
+  92% { transform: translate(-.55em,-.62em) rotate(-3deg) scale(1); }
+  97% { transform: translate(-.35em,-.48em) rotate(-5deg) scale(1); }
   100% { opacity: .9; transform: translate(-50%,-54%) rotate(-8deg) scale(1); }
 }
 @keyframes heroButterflyWingFlight {
@@ -2446,11 +2445,14 @@ footer { background: var(--bg); color: var(--white); }
   .hero-butterfly {
     width: .58em;
     filter: drop-shadow(0 .08em .13em rgba(126, 29, 74, .26));
-    animation: heroButterflyJourneyMobile 7.2s cubic-bezier(.38,.03,.18,1) .6s forwards;
+    animation: heroButterflyJourneyMobile 10.4s cubic-bezier(.45,0,.3,1) .8s forwards;
+  }
+  .hero-butterfly svg {
+    animation: heroButterflyRestGlow 4.6s ease-in-out 11.2s infinite alternate;
   }
   .hero-butterfly-wing {
-    animation: heroButterflyWingFlight .17s ease-in-out .6s 42 alternate,
-               heroButterflyWingRest 4.2s ease-in-out 7.8s infinite alternate;
+    animation: heroButterflyWingFlight .24s ease-in-out .8s 43 alternate,
+               heroButterflyWingRest 4.2s ease-in-out 11.2s infinite alternate;
   }
   .hero-actions { width: min(100%, 600px); margin-bottom: 56px; }
   .home-search,
@@ -2475,18 +2477,16 @@ footer { background: var(--bg); color: var(--white); }
 }
 
 @keyframes heroButterflyJourneyMobile {
-  0% { opacity: 0; transform: translate(76vw,-17vh) rotate(24deg) scale(.5); }
-  8% { opacity: .9; }
-  20% { transform: translate(60vw,-5vh) rotate(-12deg) scale(.68); }
-  35% { transform: translate(44vw,-13vh) rotate(11deg) scale(.8); }
-  50% { transform: translate(29vw,-3vh) rotate(-14deg) scale(.9); }
-  65% { transform: translate(15vw,-10vh) rotate(10deg) scale(.97); }
-  74% { transform: translate(2.2em,-1.25em) rotate(-4deg) scale(1); }
-  79% { transform: translate(.58em,-.52em) rotate(88deg) scale(1); }
-  84% { transform: translate(-50%,.3em) rotate(178deg) scale(.98); }
-  89% { transform: translate(-1.05em,-.42em) rotate(268deg) scale(.98); }
-  94% { transform: translate(-50%,-1.22em) rotate(350deg) scale(1); }
-  97% { transform: translate(.58em,-.52em) rotate(368deg) scale(1); }
+  0% { opacity: 0; transform: translate(78vw,-8vh) rotate(4deg) scale(.55); }
+  7% { opacity: .92; }
+  17% { transform: translate(63vw,-2vh) rotate(-4deg) scale(.68); }
+  31% { transform: translate(49vw,-11vh) rotate(3deg) scale(.78); }
+  45% { transform: translate(35vw,-3vh) rotate(-3deg) scale(.86); }
+  59% { transform: translate(22vw,-9vh) rotate(3deg) scale(.93); }
+  73% { transform: translate(10vw,-2.5vh) rotate(-2deg) scale(.98); }
+  84% { transform: translate(.5em,-.75em) rotate(2deg) scale(1); }
+  92% { transform: translate(.25em,-.57em) rotate(-2deg) scale(1); }
+  97% { transform: translate(.05em,-.46em) rotate(-5deg) scale(1); }
   100% { opacity: .94; transform: translate(-50%,-54%) rotate(-8deg) scale(1); }
 }
 
