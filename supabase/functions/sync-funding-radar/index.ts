@@ -87,6 +87,8 @@ Deno.serve(async (req) => {
           updated_at: now,
         }).eq('id', true)
         if (reset.error) throw reset.error
+        const refreshed = await supabase.rpc('refresh_funding_radar_overview_cache')
+        if (refreshed.error) throw refreshed.error
         break
       }
 

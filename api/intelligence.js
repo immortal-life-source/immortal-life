@@ -142,7 +142,7 @@ async function sourceFallback(query) {
   if (view === 'trials') return trialsFallback(query, limit);
   if (view === 'universities') return universitiesFallback(query, limit);
   if (view === 'topic-dossier') return topicDossierFallback(query, limit);
-  if (view === 'funding') return { generated_at: new Date().toISOString(), total_matching: 0, next_offset: null, awards: [], overview: { summary: {}, cohorts: [], leading_funders: [], leading_topics: [], leading_institutions: [] }, coverage_status: { historical_cycle_complete: false, completed_cycles: 0 }, sources: [], fallback: true, notice: 'The verified funding index is temporarily unavailable; no unverified substitute is shown.' };
+  if (view === 'funding') return { generated_at: new Date().toISOString(), total_matching: 0, direct_grant_total_matching: 0, next_offset: null, awards: [], direct_grants: [], overview: { summary: {}, cohorts: [], leading_funders: [], leading_topics: [], leading_institutions: [] }, coverage_status: { historical_cycle_complete: false, completed_cycles: 0, direct_grant_sources: [] }, sources: [], fallback: true, notice: 'The verified funding index is temporarily unavailable; no unverified substitute is shown.' };
   if (view === 'regulatory') return { regulatory: [], regulatory_guides: [], regulatory_coverage: {}, sources: [], fallback: true };
   if (view === 'integrity') return { integrity: [], sources: [], fallback: true };
   if (view === 'graph') return { topics: [], sources: [], fallback: true };

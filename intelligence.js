@@ -253,6 +253,9 @@
     fundingSort: document.getElementById('fundingSort'),
     fundingClear: document.getElementById('fundingClear'),
     fundingResult: document.getElementById('fundingResult'),
+    directGrantSection: document.getElementById('directGrantSection'),
+    directGrantResult: document.getElementById('directGrantResult'),
+    directGrantList: document.getElementById('directGrantList'),
     fundingList: document.getElementById('fundingList'),
     fundingLoadMore: document.getElementById('fundingLoadMore'),
     trialsSection: document.getElementById('trialsSection'),
@@ -878,6 +881,8 @@
   let researchSearchTimer = 0;
   let trialSearchTimer = 0;
   let fundingRows = [];
+  let directGrantRows = [];
+  let directGrantTotal = 0;
   let fundingNextOffset = null;
   let fundingTotal = 0;
   let fundingRequestVersion = 0;
@@ -1251,8 +1256,42 @@
       card.append(meta, main, action);
       elements.fundingList.append(card);
     });
-    elements.fundingResult.textContent = `Showing ${numberFormatter.format(fundingRows.length)} of ${numberFormatter.format(fundingTotal)} matching funding records.`;
+    elements.fundingResult.textContent = `${numberFormatter.format(directGrantTotal)} direct grant record${directGrantTotal === 1 ? '' : 's'} and ${numberFormatter.format(fundingTotal)} publication-linked acknowledgement${fundingTotal === 1 ? '' : 's'} match these filters.`;
     elements.fundingLoadMore.hidden = fundingNextOffset == null;
+  }
+
+  function drawDirectGrants() {
+    elements.directGrantList.replaceChildren();
+    elements.directGrantSection.hidden = !directGrantRows.length;
+    elements.directGrantResult.textContent = directGrantRows.length < directGrantTotal
+      ? `Showing the latest ${numberFormatter.format(directGrantRows.length)} of ${numberFormatter.format(directGrantTotal)} matches.`
+      : `${numberFormatter.format(directGrantTotal)} matching direct grant record${directGrantTotal === 1 ? '' : 's'}.`;
+    directGrantRows.forEach((grant) => {
+      const card = el('article', 'funding-card funding-card--direct');
+      const meta = el('div', 'funding-card-meta');
+      meta.append(el('span', 'funding-funder', grant.source_name || grant.funder_name || 'Official grant source'));
+      meta.append(el('strong', '', grant.grant_number || grant.source_grant_id || 'Grant identifier unavailable'));
+      if (grant.start_date || grant.end_date) meta.append(el('small', '', `${grant.start_date ? formatDate(grant.start_date) : 'Start unavailable'} — ${grant.end_date ? formatDate(grant.end_date) : 'Ongoing or end unavailable'}`));
+
+      const main = el('div', 'funding-card-main');
+      main.append(el('h3', '', grant.title || 'Direct grant record'));
+      main.append(el('p', 'funding-card-context', [grant.recipient_name, grant.recipient_country_name, grant.programme].filter(Boolean).join(' · ') || 'Recipient metadata is not available in this source record.'));
+      const tags = el('div', 'record-tags');
+      (grant.topics || []).slice(0, 6).forEach((item) => tags.append(link('record-tag', item.name, `/topics/${encodeURIComponent(item.slug)}`)));
+      main.append(tags);
+
+      const action = el('div', 'funding-card-action');
+      if (grant.awarded_amount != null && grant.currency) {
+        try { action.append(el('strong', 'direct-grant-amount', new Intl.NumberFormat(undefined, { style: 'currency', currency: grant.currency, maximumFractionDigits: 0 }).format(Number(grant.awarded_amount)))); }
+        catch (_) { action.append(el('strong', 'direct-grant-amount', `${numberFormatter.format(Number(grant.awarded_amount))} ${grant.currency}`)); }
+        action.append(el('span', '', 'Source-reported award or contribution'));
+      } else action.append(el('span', '', 'No reusable amount is reported in this source record.'));
+      const source = link('source-link', `Verify in ${grant.source_name || 'official source'}`, grant.source_url);
+      source.target = '_blank'; source.rel = 'noopener noreferrer'; source.dataset.ilEvent = 'open_source';
+      action.append(source);
+      card.append(meta, main, action);
+      elements.directGrantList.append(card);
+    });
   }
 
   function renderFundingOverview(data) {
@@ -1261,6 +1300,7 @@
     elements.fundingStats.replaceChildren();
     [
       [summary.awards, 'Award entities', 'Open source-linked award records'],
+      [summary.direct_grants, 'Direct grants', 'Official grant-database records'],
       [summary.identified_awards, 'Award identifiers', 'Records carrying a disclosed funder award reference'],
       [summary.funders, 'Funders', 'Distinct OpenAlex funder identities'],
       [summary.institutions, 'Universities', 'Eligible institutions connected through publications'],
@@ -1268,7 +1308,7 @@
     ].forEach(([value, label, note], index) => {
       const button = el('button', `funding-stat${index === 0 ? ' is-primary' : ''}`); button.type = 'button';
       button.append(el('strong', '', numberFormatter.format(Number(value || 0))), el('span', '', label), el('small', '', note));
-      button.onclick = () => (index === 3 ? location.assign('/universities') : elements.fundingList.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+      button.onclick = () => (label === 'Universities' ? location.assign('/universities') : label === 'Direct grants' && directGrantRows.length ? elements.directGrantList.scrollIntoView({ behavior: 'smooth', block: 'start' }) : elements.fundingList.scrollIntoView({ behavior: 'smooth', block: 'start' }));
       elements.fundingStats.append(button);
     });
 
@@ -1306,6 +1346,7 @@
     const countries = new Map();
     (data.overview?.leading_institutions || []).forEach((item) => { if (item.country_code) countries.set(item.country_code, item.country_name || item.country_code); });
     (data.awards || []).flatMap(awardInstitutions).forEach((item) => { if (item.country_code) countries.set(item.country_code, item.country_name || item.country_code); });
+    (data.direct_grants || []).forEach((item) => { if (item.recipient_country_code) countries.set(item.recipient_country_code, item.recipient_country_name || item.recipient_country_code); });
     replaceFilterOptions(elements.fundingCountry, 'All countries', [...countries.entries()].sort((a, b) => a[1].localeCompare(b[1])));
     const params = new URLSearchParams(location.search);
     const requestedCountry = params.get('country')?.trim() || '';
@@ -1331,10 +1372,11 @@
     const data = await request('funding', FUNDING_PAGE_SIZE, fundingQueryParams(0));
     if (version !== fundingRequestVersion) return;
     fundingRows = data.awards || []; fundingNextOffset = data.next_offset; fundingTotal = Number(data.total_matching || fundingRows.length);
+    directGrantRows = data.direct_grants || []; directGrantTotal = Number(data.direct_grant_total_matching || directGrantRows.length);
     const url = new URL(location.href);
     [['search', elements.fundingSearch.value.trim()], ['topic', elements.fundingTopic.value], ['country', elements.fundingCountry.value], ['sort', elements.fundingSort.value]].forEach(([key, value]) => value && !(key === 'sort' && value === 'recent') ? url.searchParams.set(key, value) : url.searchParams.delete(key));
     history.replaceState({}, '', `${url.pathname}${url.search}`);
-    drawFundingAwards(); renderFundingOverview(data);
+    drawDirectGrants(); drawFundingAwards(); renderFundingOverview(data);
   }
 
   async function loadMoreFunding() {
@@ -2533,7 +2575,8 @@
           q: params.get('search')?.trim() || '', topic: params.get('topic')?.trim() || '', country: params.get('country')?.trim() || '', institution: params.get('institution')?.trim() || '', sort: params.get('sort')?.trim() || 'recent',
         }), catalogueTopicEntries()]);
         fundingRows = data.awards || []; fundingNextOffset = data.next_offset; fundingTotal = Number(data.total_matching || fundingRows.length);
-        setupFundingControls(topicEntries, data); drawFundingAwards(); renderFundingOverview(data);
+        directGrantRows = data.direct_grants || []; directGrantTotal = Number(data.direct_grant_total_matching || directGrantRows.length);
+        setupFundingControls(topicEntries, data); drawDirectGrants(); drawFundingAwards(); renderFundingOverview(data);
         elements.fundingSection.hidden = false; elements.fundingLoadMore.onclick = () => loadMoreFunding().catch((error) => console.error('Funding page request failed:', error));
         const fundingHistoryComplete = Boolean(data.coverage_status?.historical_cycle_complete);
         elements.freshness.dataset.health = data.fallback ? 'delayed' : fundingHistoryComplete ? 'healthy' : 'pending';

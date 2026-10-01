@@ -130,14 +130,16 @@
     </section>
 
     <section class="intel-section funding-radar" id="fundingSection" hidden aria-labelledby="fundingTitle">
-      <div class="funding-intro"><div><span class="section-index">Funding Radar</span><h2 id="fundingTitle">Follow disclosed funding relationships behind longevity research.</h2><a class="section-link funding-directory-link" href="/funders">Browse all funder profiles →</a></div><p>This view connects OpenAlex award entities and funder acknowledgements to indexed publications, topics, and universities. It shows where funding is visible in the source metadata—not a complete measure of research spending.</p></div>
+      <div class="funding-intro"><div><span class="section-index">Funding Radar</span><h2 id="fundingTitle">Follow grants and disclosed funding behind longevity research.</h2><a class="section-link funding-directory-link" href="/funders">Browse all funder profiles →</a></div><p>Direct grant records from official funder databases are shown separately from award acknowledgements found on publications. This makes the provenance—and the meaning—of every record clear.</p></div>
       <div class="funding-stats" id="fundingStats" aria-label="Funding Radar coverage"></div>
       <section class="funding-landscape" id="fundingLandscape" hidden><div class="funding-trend"><span class="section-index">Publication-year view</span><h3>Award-linked research over time</h3><div id="fundingYears" class="funding-years"></div></div><div class="funding-leaders"><div><span class="section-index">Leading funders</span><ol id="fundingFunders"></ol></div><div><span class="section-index">Leading topics</span><ol id="fundingTopics"></ol></div></div></section>
       <form class="funding-controls" id="fundingControls" role="search" aria-label="Filter funding records"><label><span>Search awards</span><input id="fundingSearch" type="search" placeholder="Funder, award identifier, or title" autocomplete="off" /></label><label><span>Longevity topic</span><select id="fundingTopic"><option value="">All topics</option></select></label><label><span>Recipient country</span><select id="fundingCountry"><option value="">All countries</option></select></label><label><span>Order by</span><select id="fundingSort"><option value="recent">Most recently linked research</option><option value="oldest">Earliest linked research</option><option value="funder">Funder name</option></select></label><button class="record-filter-clear" id="fundingClear" type="button">Clear filters</button></form>
       <p class="filter-result" id="fundingResult" aria-live="polite"></p>
+      <section class="direct-grants" id="directGrantSection" hidden aria-labelledby="directGrantTitle"><div class="section-heading"><div><span class="section-index">Direct award data</span><h3 id="directGrantTitle">Grants reported by official funder databases</h3></div><p id="directGrantResult"></p></div><div class="funding-list funding-list--direct" id="directGrantList"></div></section>
+      <div class="funding-subheading"><span class="section-index">Publication acknowledgements</span><h3>Awards connected to indexed longevity publications</h3><p>These records indicate that a publication named a funder or award. They do not establish the full grant value, duration, or scope.</p></div>
       <div class="funding-list" id="fundingList"></div>
       <button class="section-link record-load-more" id="fundingLoadMore" type="button" hidden>Load more funding records</button>
-      <aside class="funding-caution"><strong>What this can—and cannot—show</strong><p>An award appears because OpenAlex connects it to at least one retained longevity publication. Source coverage and identifiers can be incomplete or duplicated. The radar does not infer award amounts, project dates, recipient ownership, research quality, or whether the funded work produced a useful result.</p><a href="/methodology">Read the methodology and limitations →</a></aside>
+      <aside class="funding-caution"><strong>What this can—and cannot—show</strong><p>Direct grant amounts and dates are reproduced from the named official source. Publication acknowledgements come from OpenAlex. Source records can be incomplete or duplicated, and neither record type measures research quality, funder impact, total spending, or whether the funded work produced a useful result.</p><a href="/methodology">Read the methodology and limitations →</a></aside>
     </section>
 
     <section class="intel-section" id="trialsSection" hidden>
@@ -312,7 +314,7 @@
 
   <script src="/il-config.js"></script>
   <script src="/desktop-nav.js?v=20261001-all-pages"></script>
-  <script src="/intelligence.js?v=20261001-topic-all"></script>
+  <script src="/intelligence.js?v=20261001-direct-grants"></script>
   <script src="/telemetry.js"></script>
 </body>
 </html>

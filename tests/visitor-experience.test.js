@@ -42,7 +42,7 @@ test('changes-page totals are direct links to their relevant indexes', async () 
 test('shared portal script does not fail on informational pages without portal regions', async () => {
   const [portal, template] = await Promise.all([read('intelligence.js'), read('content-template.html')])
   assert.match(portal, /if \(!elements\.loading \|\| !elements\.error\) return/)
-  assert.match(template, /intelligence\.js\?v=20261001-topic-all/)
+  assert.match(template, /intelligence\.js\?v=20261001-direct-grants/)
 })
 
 test('topic catalogue is compact, searchable, visual, and does not bury research or trials', async () => {
@@ -112,14 +112,15 @@ test('Trial Results Gap Monitor is source-linked, complete, and avoids misconduc
   assert.match(css, /\.results-gap-card--possible-gap/)
 })
 
-test('Funding Radar is source-linked, paginated, and does not invent financial totals', async () => {
-  const [template, portal, css, build, api, worker, migration, proxy, pages, config] = await Promise.all([
+test('Funding Radar is source-linked, paginated, and distinguishes direct grants from acknowledgements', async () => {
+  const [template, portal, css, build, api, worker, migration, strongMigration, grantWorker, proxy, pages, config] = await Promise.all([
     read('intelligence-template.html'), read('intelligence.js'), read('intelligence.css'), read('build.js'),
     read('supabase/functions/public-intelligence/index.ts'), read('supabase/functions/sync-funding-radar/index.ts'),
-    read('supabase/migrations/20260928000700_funding_radar.sql'), read('api/intelligence.js'),
+    read('supabase/migrations/20260928000700_funding_radar.sql'), read('supabase/migrations/20261001000600_strong_funding_database.sql'),
+    read('supabase/functions/sync-direct-grants/index.ts'), read('api/intelligence.js'),
     read('supabase/functions/public-pages/index.ts'), read('supabase/config.toml'),
   ])
-  for (const id of ['fundingSection', 'fundingStats', 'fundingYears', 'fundingFunders', 'fundingTopics', 'fundingControls', 'fundingList']) assert.match(template, new RegExp(`id="${id}"`))
+  for (const id of ['fundingSection', 'fundingStats', 'fundingYears', 'fundingFunders', 'fundingTopics', 'fundingControls', 'directGrantList', 'fundingList']) assert.match(template, new RegExp(`id="${id}"`))
   assert.match(build, /filename: 'funding\.html'/)
   assert.match(build, /href="\/funding">Open Funding Radar/)
   assert.match(build, /href="\/funding\?topic=/)
@@ -132,11 +133,26 @@ test('Funding Radar is source-linked, paginated, and does not invent financial t
   assert.match(migration, /get_funding_radar_overview/)
   assert.match(migration, /revoke all on table public\.funding_awards/)
   assert.match(migration, /immortal-life-funding-radar/)
+  assert.match(strongMigration, /create table if not exists public\.funding_grants/)
+  assert.match(strongMigration, /get_funding_award_page/)
+  assert.match(strongMigration, /funding_radar_overview_cache/)
+  assert.match(strongMigration, /interval '7 days'/)
+  assert.match(grantWorker, /api\.reporter\.nih\.gov\/v2\/projects\/search/)
+  assert.match(grantWorker, /cordis\.europa\.eu\/datalab\/sparql/)
+  assert.match(grantWorker, /upsert_direct_grant_page/)
+  assert.match(grantWorker, /const NIH_PAGE_SIZE = 100/)
+  assert.match(grantWorker, /const CORDIS_PAGE_SIZE = 50/)
+  assert.doesNotMatch(grantWorker, /principal_investigators|abstract_text|phr_text/)
+  assert.match(api, /get_funding_award_page/)
+  assert.match(api, /get_direct_grant_page/)
+  assert.match(portal, /drawDirectGrants/)
+  assert.match(template, /Direct award data/)
   assert.match(proxy, /'institution'/)
   assert.match(pages, /Funding acknowledgements/)
   assert.match(config, /\[functions\.sync-funding-radar\]/)
+  assert.match(config, /\[functions\.sync-direct-grants\]/)
   assert.match(build, /does not measure total spending/i)
-  assert.match(template, /does not infer award amounts/i)
+  assert.match(template, /Direct grant amounts and dates are reproduced from the named official source/i)
   assert.match(css, /FUNDING RADAR/)
 })
 
@@ -149,7 +165,7 @@ test('funder profiles are source-backed, conservative, searchable, and indexable
   assert.match(migration, /create table if not exists public\.funding_funders/)
   assert.match(migration, /get_funder_directory/)
   assert.match(migration, /get_funder_page/)
-  assert.match(migration, /30 days/)
+  assert.match(await read('supabase/migrations/20261001000600_strong_funding_database.sql'), /interval '7 days'/)
   assert.match(worker, /alternate_titles,country_code,description,homepage_url,ids,updated_date/)
   assert.doesNotMatch(worker, /image_url|image_thumbnail_url/)
   assert.match(pages, /mode === 'funders'/)
@@ -393,8 +409,8 @@ test('university profile provenance and record links have non-overlapping spacin
   assert.match(css, /\.university-profile-metrics \+ \.record-links \+ \.quality-intro \{ max-width: 980px; margin: 20px 0 36px; \}/)
   assert.match(template, /intelligence\.css\?v=20261001-mobile-menu-b/)
   assert.match(pages, /intelligence\.css\?v=20261001-mobile-menu-b/)
-  assert.match(template, /intelligence\.js\?v=20261001-topic-all/)
-  assert.match(pages, /intelligence\.js\?v=20261001-topic-all/)
+  assert.match(template, /intelligence\.js\?v=20261001-direct-grants/)
+  assert.match(pages, /intelligence\.js\?v=20261001-direct-grants/)
   assert.match(pages, /desktop-nav\.css\?v=20261001-nav-shell-all/)
   assert.match(pages, /desktop-nav\.js\?v=20261001-all-pages/)
   assert.match(await read('intelligence.js'), /\['universities', 'topic-dossier', 'trial-results-gap', 'funding'\]\.includes\(viewName\) \? 10000 : 6500/)

@@ -296,52 +296,59 @@ Deno.serve(async (req) => {
       const institution = cleanText(url.searchParams.get('institution') ?? '', 120)
       const sort = cleanText(url.searchParams.get('sort') ?? 'recent', 24)
       const search = publicSearchTerm(url.searchParams.get('q'))
-      const topicRelation = topic
-        ? 'funding_award_topics!inner(topic_slug,intelligence_topics(name,slug))'
-        : 'funding_award_topics(topic_slug,intelligence_topics(name,slug))'
-      const institutionRelation = country || institution
-        ? 'funding_award_institutions!inner(openalex_id,university_research_institutions!inner(slug,name,country_code,country_name,city))'
-        : 'funding_award_institutions(openalex_id,university_research_institutions(slug,name,country_code,country_name,city))'
-      let fundingQuery = supabase.from('funding_awards').select(
-        `openalex_award_id,award_identifier,title,funder_id,funder_name,funder_ror,source_url,first_publication_date,latest_publication_date,${topicRelation},${institutionRelation},funding_award_works(openalex_work_id,university_research_works(title,publication_date,source_url,source_name))`,
-        { count: 'exact' },
-      ).range(offset, offset + limit - 1)
-      if (topic) fundingQuery = fundingQuery.eq('funding_award_topics.topic_slug', topic)
-      if (/^[A-Z]{2}$/.test(country)) fundingQuery = fundingQuery.eq('funding_award_institutions.university_research_institutions.country_code', country)
-      if (institution && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(institution)) fundingQuery = fundingQuery.eq('funding_award_institutions.university_research_institutions.slug', institution)
-      if (funder) fundingQuery = fundingQuery.eq('funder_id', funder)
-      if (search) fundingQuery = fundingQuery.or(`award_identifier.ilike.%${search}%,title.ilike.%${search}%,funder_name.ilike.%${search}%`)
-      if (sort === 'oldest') fundingQuery = fundingQuery.order('first_publication_date', { ascending: true, nullsFirst: false }).order('openalex_award_id')
-      else if (sort === 'funder') fundingQuery = fundingQuery.order('funder_name').order('latest_publication_date', { ascending: false, nullsFirst: false })
-      else fundingQuery = fundingQuery.order('latest_publication_date', { ascending: false, nullsFirst: false }).order('openalex_award_id')
-
-      const [{ data: awards, error, count }, overviewResult, syncResult, { data: sources, error: sourcesError }] = await Promise.all([
-        fundingQuery,
+      const safeCountry = /^[A-Z]{2}$/.test(country) ? country : ''
+      const safeInstitution = institution && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(institution) ? institution : ''
+      const [awardResult, directGrantResult, overviewResult, syncResult, directSyncResult, { data: sources, error: sourcesError }] = await Promise.all([
+        supabase.rpc('get_funding_award_page', {
+          p_topic: topic, p_country: safeCountry, p_funder: funder,
+          p_institution: safeInstitution, p_search: search,
+          p_sort: ['recent', 'oldest', 'funder'].includes(sort) ? sort : 'recent',
+          p_offset: offset, p_limit: limit,
+        }),
+        supabase.rpc('get_direct_grant_page', {
+          p_topic: topic, p_country: safeCountry, p_search: search,
+          p_offset: 0, p_limit: Math.min(limit, 24),
+        }),
         supabase.rpc('get_funding_radar_overview'),
         supabase.from('funding_radar_sync_state').select('processed_work_count,linked_award_count,completed_cycles,last_completed_at,last_error,updated_at').eq('id', true).maybeSingle(),
+        supabase.from('funding_grant_sync_state').select('source_id,records_scanned,grants_retained,completed_cycles,last_completed_at,last_success_at,last_error,updated_at').order('source_id'),
         sourcesPromise,
       ])
-      if (error) throw error
+      if (awardResult.error) throw awardResult.error
+      if (directGrantResult.error) throw directGrantResult.error
       if (overviewResult.error) throw overviewResult.error
       if (syncResult.error) throw syncResult.error
+      if (directSyncResult.error) throw directSyncResult.error
       if (sourcesError) throw sourcesError
+      const awards = awardResult.data?.records ?? []
+      const count = Number(awardResult.data?.total_matching ?? 0)
+      const directGrantTotal = Number(directGrantResult.data?.total_matching ?? 0)
+      const cachedOverview = overviewResult.data ?? {}
+      const overview = {
+        ...cachedOverview,
+        summary: { ...(cachedOverview.summary ?? {}), direct_grants: directGrantTotal },
+      }
       return response(req, {
         generated_at: new Date().toISOString(),
-        total_matching: count ?? 0,
+        total_matching: count,
         offset,
-        next_offset: offset + (awards?.length ?? 0) < Number(count ?? 0) ? offset + (awards?.length ?? 0) : null,
+        next_offset: offset + awards.length < count ? offset + awards.length : null,
         filters: { topic: topic || null, country: country || null, funder: funder || null, institution: institution || null, search: search || null, sort },
-        overview: overviewResult.data ?? {},
+        overview,
         coverage_status: {
           historical_cycle_complete: Number(syncResult.data?.completed_cycles ?? 0) > 0,
           completed_cycles: Number(syncResult.data?.completed_cycles ?? 0),
           processed_work_count: Number(syncResult.data?.processed_work_count ?? 0),
           last_completed_at: syncResult.data?.last_completed_at ?? null,
           updated_at: syncResult.data?.updated_at ?? null,
+          direct_grant_sources: directSyncResult.data ?? [],
         },
-        awards: awards ?? [],
-        sources: (sources ?? []).filter((source: any) => source.id === 'openalex').map(publicSourceState),
-        scope_notice: 'These are funding acknowledgements and award identifiers connected to indexed longevity publications in OpenAlex. They are not a complete account of research spending, award value, project duration, or funder impact.',
+        direct_grants: directGrantResult.data?.records ?? [],
+        direct_grant_total_matching: directGrantTotal,
+        direct_grants_by_source: directGrantResult.data?.by_source ?? [],
+        awards,
+        sources: (sources ?? []).filter((source: any) => ['openalex', 'nih-reporter', 'cordis'].includes(source.id)).map(publicSourceState),
+        scope_notice: 'Direct grant records from NIH RePORTER and CORDIS are shown separately from publication-linked OpenAlex funding acknowledgements. Amounts are source-reported award or contribution values, not total research spending or measures of scientific impact.',
       })
     }
 
