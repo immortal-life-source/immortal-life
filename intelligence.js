@@ -496,8 +496,8 @@
     };
     const draw = () => {
       elements.topicGrid.replaceChildren();
-      const search = String(compact ? initialSearch : elements.topicSearch?.value || initialSearch).trim().toLowerCase();
-      const domain = compact ? '' : String(elements.topicDomain?.value || initialDomain);
+      const search = String(compact ? initialSearch : elements.topicSearch?.value ?? '').trim().toLowerCase();
+      const domain = compact ? '' : String(elements.topicDomain?.value ?? '');
       const filtered = topics.filter((topic) => {
         const searchable = `${topic.name} ${topic.description} ${topic.domain_name || ''}`.toLowerCase();
         return (!search || searchable.includes(search)) && (!domain || topic.domain_slug === domain);
@@ -525,12 +525,23 @@
       if (!visible.length) elements.topicGrid.append(el('p', 'empty-list', `No tracked topic matches “${search}”. Try a broader term or browse all topics.`));
       if (!compact && elements.topicResult) elements.topicResult.textContent = `Showing ${numberFormatter.format(visible.length)} of ${numberFormatter.format(topics.length)} topics`;
     };
+    const syncTopicLocation = () => {
+      if (compact) return;
+      const url = new URL(location.href);
+      const search = String(elements.topicSearch?.value ?? '').trim();
+      const domain = String(elements.topicDomain?.value ?? '');
+      if (search) url.searchParams.set('search', search);
+      else url.searchParams.delete('search');
+      if (domain) url.searchParams.set('domain', domain);
+      else url.searchParams.delete('domain');
+      history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    };
     if (!compact && elements.topicSearch && !elements.topicSearch.dataset.ready) {
-      elements.topicSearch.addEventListener('input', draw);
+      elements.topicSearch.addEventListener('input', () => { syncTopicLocation(); draw(); });
       elements.topicSearch.dataset.ready = 'true';
     }
     if (!compact && elements.topicDomain && !elements.topicDomain.dataset.ready) {
-      elements.topicDomain.addEventListener('change', draw);
+      elements.topicDomain.addEventListener('change', () => { syncTopicLocation(); draw(); });
       elements.topicDomain.dataset.ready = 'true';
     }
     if (elements.topicTools) elements.topicTools.hidden = compact;
