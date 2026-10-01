@@ -71,6 +71,20 @@ test('Pro ingestion headroom is used without changing billing controls', async (
   assert.doesNotMatch(executableSql, /spend[_ ]cap|subscription|billing/i)
 })
 
+test('taxonomy completion temporarily receives priority without disabling ingestion', async () => {
+  const migration = await read('supabase/migrations/20261001000900_prioritize_taxonomy_completion.sql')
+  assert.match(migration, /process_priority_topic_taxonomy_reindex/)
+  assert.match(migration, /utc_hour between 0 and 7 then 300 else 150/)
+  assert.match(migration, /where not public\.taxonomy_reindex_active\(\)/g)
+  assert.match(migration, /immortal-life-pubmed-sync/)
+  assert.match(migration, /immortal-life-europe-pmc-sync/)
+  assert.match(migration, /immortal-life-clinicaltrials-sync/)
+  assert.match(migration, /immortal-life-doaj-sync/)
+  assert.match(migration, /immortal-life-direct-grants/)
+  assert.match(migration, /immortal-life-university-history/)
+  assert.doesNotMatch(migration, /delete from public\.|truncate table public\./i)
+})
+
 test('storage migration starts as an additive private archive foundation', async () => {
   const migration = await read('supabase/migrations/20261001000200_reliable_ingestion_and_archive_foundation.sql')
   assert.match(migration, /research_candidate_archive_manifest/)
