@@ -215,18 +215,22 @@ test('desktop homepage exposes the complete navigation and keeps motion clear of
   assert.doesNotMatch(css.match(/\.s1-nav-you,[\s\S]*?\n\}/)?.[0] || '', /255, 238, 155|219, 169, 47/)
 })
 
-test('desktop navigation previews expose useful routes without changing mobile navigation', async () => {
-  const [home, intelligenceTemplate, contentTemplate, menuScript, menuStyles, intelligence] = await Promise.all([
+test('desktop navigation previews expose useful routes on every deployed page shell without changing mobile navigation', async () => {
+  const [home, intelligenceTemplate, contentTemplate, menuScript, menuStyles, intelligence, ...memberPages] = await Promise.all([
     read('index.html'),
     read('intelligence-template.html'),
     read('content-template.html'),
     read('desktop-nav.js'),
     read('desktop-nav.css'),
     read('intelligence.js'),
+    ...['auth-x.html', 'auth-linkedin.html', 'confirmed.html', 'unsubscribed.html', 'leaderboard.html'].map(read),
   ])
-  for (const shell of [home, intelligenceTemplate, contentTemplate]) {
-    assert.match(shell, /desktop-nav\.css/)
-    assert.match(shell, /desktop-nav\.js/)
+  for (const shell of [home, intelligenceTemplate, contentTemplate, ...memberPages]) {
+    assert.match(shell, /desktop-nav\.css\?v=20261001-nav-shell-all/)
+    assert.match(shell, /desktop-nav\.js\?v=20261001-all-pages/)
+  }
+  for (const shell of memberPages) {
+    assert.match(shell, /href="\/you" class="m-member-nav-you">You<\/a>/)
   }
   for (const domain of ['ageing-mechanisms', 'geroscience-interventions', 'nutrition-metabolism', 'lifestyle-environment', 'biomarkers-measurement', 'organs-systems', 'healthspan-clinical-ageing', 'genetics-regeneration-futures', 'population-longevity-prevention']) {
     assert.match(menuScript, new RegExp(`/topics\\?domain=${domain}`))
@@ -236,6 +240,7 @@ test('desktop navigation previews expose useful routes without changing mobile n
   assert.match(menuScript, /\/research\?evidence=human/)
   assert.match(menuScript, /aria-haspopup/)
   assert.match(menuScript, /event\.key === 'Escape'/)
+  assert.match(menuScript, /\.m-member-nav/)
   assert.match(menuStyles, /hover: hover/)
   assert.match(menuStyles, /pointer: fine/)
   assert.match(menuStyles, /max-width: 860px/)
@@ -243,6 +248,7 @@ test('desktop navigation previews expose useful routes without changing mobile n
   assert.match(menuStyles, /\.s1-nav-top,[\s\S]*?min-height: 44px;[\s\S]*?border: 1px solid rgba\(105, 57, 81, \.13\)/)
   assert.match(menuStyles, /\.s1-nav-top > a,[\s\S]*?min-height: 34px;[\s\S]*?border: 1px solid transparent/)
   assert.match(menuStyles, /\.s1-nav-top > \.s1-nav-you,[\s\S]*?min-height: 34px;[\s\S]*?0 0 17px rgba\(199, 53, 114, \.13\)/)
+  assert.match(menuStyles, /\.m-member-nav > \.m-member-nav-you/)
   assert.match(intelligence, /requestedCountry/)
   assert.match(intelligence, /requestedSort/)
 })
@@ -303,8 +309,8 @@ test('public page shells provide search, related journeys and mobile navigation'
 })
 
 test('mobile hamburger navigation is identical on every public shell', async () => {
-  const [home, intelligence, content, privacy, confirmed, unsubscribed] = await Promise.all([
-    read('index.html'), read('intelligence-template.html'), read('content-template.html'), read('privacy.html'), read('confirmed.html'), read('unsubscribed.html'),
+  const [home, intelligence, content, privacy, confirmed, unsubscribed, authX, authLinkedIn, leaderboard] = await Promise.all([
+    read('index.html'), read('intelligence-template.html'), read('content-template.html'), read('privacy.html'), read('confirmed.html'), read('unsubscribed.html'), read('auth-x.html'), read('auth-linkedin.html'), read('leaderboard.html'),
   ])
   const menuLinks = (source, id) => {
     const menu = source.match(new RegExp(`<nav[^>]+id="${id}"[\\s\\S]*?<\\/nav>`))?.[0] || ''
@@ -316,6 +322,9 @@ test('mobile hamburger navigation is identical on every public shell', async () 
   assert.deepEqual(menuLinks(privacy, 'intelNav'), expected)
   assert.deepEqual(menuLinks(confirmed, 'confirmedMemberNav'), expected)
   assert.deepEqual(menuLinks(unsubscribed, 'unsubscribedMemberNav'), expected)
+  assert.deepEqual(menuLinks(authX, 'authXMemberNav'), expected)
+  assert.deepEqual(menuLinks(authLinkedIn, 'linkedinMemberNav'), expected)
+  assert.deepEqual(menuLinks(leaderboard, 'leaderboardMemberNav'), expected)
   const dockLinks = (source) => [...(source.match(/<nav class="mobile-dock"[\s\S]*?<\/nav>/)?.[0] || '').matchAll(/<a[^>]+href="([^"]+)"[^>]*>[\s\S]*?([^<>]+)<\/a>/g)].map((match) => `${match[1]}:${match[2].trim()}`)
   const expectedDock = dockLinks(intelligence)
   assert.deepEqual(dockLinks(home), expectedDock)
@@ -386,8 +395,8 @@ test('university profile provenance and record links have non-overlapping spacin
   assert.match(pages, /intelligence\.css\?v=20261001-mobile-menu-b/)
   assert.match(template, /intelligence\.js\?v=20261001-topic-all/)
   assert.match(pages, /intelligence\.js\?v=20261001-topic-all/)
-  assert.match(pages, /desktop-nav\.css\?v=20261001-nav-shell/)
-  assert.match(pages, /desktop-nav\.js\?v=20261001-b/)
+  assert.match(pages, /desktop-nav\.css\?v=20261001-nav-shell-all/)
+  assert.match(pages, /desktop-nav\.js\?v=20261001-all-pages/)
   assert.match(await read('intelligence.js'), /\['universities', 'topic-dossier', 'trial-results-gap', 'funding'\]\.includes\(viewName\) \? 10000 : 6500/)
   assert.match(pages, /Full-history total not yet available/)
   assert.match(pages, /fullHistoryAvailable \? works : '—'/)

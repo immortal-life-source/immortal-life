@@ -1000,13 +1000,13 @@ details.dash-acc summary {
     background:#fff;
     color:#3e343b;
   }
-  .m-member-nav a:nth-child(6) { border-color:rgba(205,158,49,.5);background:#fff5c8;color:#765210;box-shadow:0 0 24px rgba(219,169,47,.28); }
+  .m-member-nav .m-member-nav-you { border-color:rgba(199,53,114,.34);background:rgba(199,53,114,.07);color:#a92960;box-shadow:0 0 24px rgba(199,53,114,.18); }
   body { padding-bottom:calc(66px + env(safe-area-inset-bottom,0px)); }
   .mobile-dock { position:fixed;display:grid;grid-template-columns:repeat(5,1fr);left:0;right:0;bottom:0;z-index:9000;min-height:66px;padding-bottom:env(safe-area-inset-bottom,0px);border-top:1px solid rgba(77,40,60,.16);background:rgba(255,250,253,.97);backdrop-filter:blur(18px); }
   .mobile-dock a { min-width:0;min-height:66px;padding:7px 2px 5px;color:#766a72;text-decoration:none;font:400 8px var(--font-sans);letter-spacing:.07em;text-transform:uppercase;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px; }
   .mobile-dock span { color:#dd477d;font-size:17px;line-height:1; }
-  .mobile-dock .mobile-dock-you { color:#765210;background:linear-gradient(180deg,rgba(255,247,199,.96),rgba(255,237,148,.9));box-shadow:inset 0 0 0 1px rgba(205,158,49,.25),0 0 24px rgba(219,169,47,.34); }
-  .mobile-dock .mobile-dock-you span { color:#c58a1e; }
+  .mobile-dock .mobile-dock-you { color:#a92960;background:linear-gradient(180deg,rgba(255,247,251,.98),rgba(250,222,234,.94));box-shadow:inset 0 0 0 1px rgba(199,53,114,.22),0 0 24px rgba(199,53,114,.22); }
+  .mobile-dock .mobile-dock-you span { color:#c73572; }
 
   .dash-page {
     max-width: 100%;

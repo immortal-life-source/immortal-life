@@ -159,7 +159,7 @@
     },
   };
 
-  const navs = document.querySelectorAll('.s1-nav, .intel-nav, .pilot-nav');
+  const navs = document.querySelectorAll('.s1-nav, .intel-nav, .pilot-nav, .m-member-nav');
   navs.forEach((nav, navIndex) => {
     const top = nav.querySelector('.s1-nav-top, .intel-nav-top') || nav;
     const triggers = [...top.querySelectorAll(':scope > a')].filter((anchor) => menus[new URL(anchor.href, location.href).pathname]);

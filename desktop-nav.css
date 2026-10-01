@@ -2,16 +2,19 @@
 @media (min-width: 861px) and (hover: hover) and (pointer: fine) {
   .s1-header,
   .intel-header,
-  .pilot-header { overflow: visible; }
+  .pilot-header,
+  .m-page-head { overflow: visible; }
 
   .s1-nav,
   .intel-nav,
-  .pilot-nav { position: relative; }
+  .pilot-nav,
+  .m-member-nav { position: relative; }
 
   /* One quiet shell makes the destinations read as a single navigation system. */
   .s1-nav-top,
   .intel-nav-top,
-  .pilot-nav {
+  .pilot-nav,
+  .m-member-nav {
     min-height: 44px;
     padding: 4px;
     border: 1px solid rgba(105, 57, 81, .13);
@@ -22,9 +25,15 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 7px 24px rgba(99, 42, 70, .055);
   }
 
+  .m-member-nav {
+    flex-wrap: nowrap;
+    gap: 0;
+  }
+
   .s1-nav-top > a,
   .intel-nav-top > a,
-  .pilot-nav > a {
+  .pilot-nav > a,
+  .m-member-nav > a {
     min-height: 34px;
     display: inline-flex;
     align-items: center;
@@ -34,6 +43,11 @@
     border-radius: 9px !important;
     background: transparent;
     box-shadow: none;
+    color: #4b3743;
+    font: 500 clamp(10px, .72vw, 12px)/1.2 'Instrument Sans', system-ui, sans-serif;
+    letter-spacing: -.01em;
+    text-transform: none;
+    white-space: nowrap;
     transition: color 110ms ease, border-color 110ms ease, background 110ms ease, box-shadow 110ms ease, transform 110ms ease;
   }
 
@@ -43,9 +57,12 @@
   .intel-nav-top > a:focus-visible,
   .pilot-nav > a:hover,
   .pilot-nav > a:focus-visible,
+  .m-member-nav > a:hover,
+  .m-member-nav > a:focus-visible,
   .s1-nav-top > a[aria-expanded='true'],
   .intel-nav-top > a[aria-expanded='true'],
-  .pilot-nav > a[aria-expanded='true'] {
+  .pilot-nav > a[aria-expanded='true'],
+  .m-member-nav > a[aria-expanded='true'] {
     border-color: rgba(199, 53, 114, .12) !important;
     background: rgba(255, 255, 255, .72);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 3px 11px rgba(111, 48, 79, .045);
@@ -54,7 +71,8 @@
 
   .s1-nav-top > .s1-nav-you,
   .intel-nav-top > .intel-nav-you,
-  .pilot-nav > .pilot-nav-you {
+  .pilot-nav > .pilot-nav-you,
+  .m-member-nav > .m-member-nav-you {
     min-height: 34px;
     padding: 6px clamp(4px, .42vw, 8px) !important;
     border-radius: 9px !important;
@@ -69,7 +87,9 @@
   .intel-nav-top > .intel-nav-you:hover,
   .intel-nav-top > .intel-nav-you:focus-visible,
   .pilot-nav > .pilot-nav-you:hover,
-  .pilot-nav > .pilot-nav-you:focus-visible {
+  .pilot-nav > .pilot-nav-you:focus-visible,
+  .m-member-nav > .m-member-nav-you:hover,
+  .m-member-nav > .m-member-nav-you:focus-visible {
     background: rgba(199, 53, 114, .085) !important;
     border-color: rgba(199, 53, 114, .34) !important;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .82), 0 0 22px rgba(199, 53, 114, .18) !important;
