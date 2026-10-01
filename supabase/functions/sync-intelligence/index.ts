@@ -58,14 +58,14 @@ type Job = {
 
 const SIX_HOURS_MS = 6 * 60 * 60 * 1000
 const RUN_TIME_BUDGET_MS = 20_000
-const PUBMED_PAGE_SIZE = 200
+const PUBMED_PAGE_SIZE = 100
 // A 1,000-record upsert exceeds the live database statement budget once all
 // publication and discovery indexes are maintained. Smaller resumable pages
 // complete reliably and therefore deliver higher effective throughput.
-const EUROPE_PMC_PAGE_SIZE = 250
+const EUROPE_PMC_PAGE_SIZE = 125
 // Keep database writes comfortably below the hosted statement timeout while
 // retaining an uncapped, cursor-driven corpus traversal.
-const CLINICAL_TRIALS_PAGE_SIZE = 100
+const CLINICAL_TRIALS_PAGE_SIZE = 50
 const ISRCTN_PAGE_SIZE = 1000
 const DOAJ_PAGE_SIZE = 100
 const HISTORY_START = '1800-01-01'
@@ -93,6 +93,14 @@ type SyncOutcome = {
   done: boolean
   cursorState?: Record<string, unknown>
   totalAvailable?: number | null
+}
+
+function adaptiveDatabasePageSize(baseSize: number, attempts: number, minimum: number): number {
+  // A retry after a statement timeout must do less work than the failed
+  // attempt. Cursor/offset state is durable, so shrinking only the current
+  // page cannot skip any source records.
+  const reductions = Math.min(2, Math.max(0, Math.trunc(Number(attempts || 0))))
+  return Math.max(minimum, Math.floor(baseSize / 2 ** reductions))
 }
 
 type TopicAssessment = ReturnType<typeof assessTopicMatch>
@@ -554,6 +562,7 @@ function pubmedPublicationDate(block: string): string | null {
 
 async function syncPubMed(supabase: any, topic: Topic, job: Job): Promise<SyncOutcome> {
   const state = initialPubMedState(job)
+  const pageSize = adaptiveDatabasePageSize(PUBMED_PAGE_SIZE, job.attempts, 25)
   const range = state.current ?? state.ranges.pop()
   if (!range) return { seen: 0, written: 0, done: true, cursorState: {} }
   const searchUrl = new URL('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi')
@@ -563,7 +572,7 @@ async function syncPubMed(supabase: any, topic: Topic, job: Job): Promise<SyncOu
   searchUrl.searchParams.set('mindate', range.from.replaceAll('-', '/'))
   searchUrl.searchParams.set('maxdate', range.to.replaceAll('-', '/'))
   searchUrl.searchParams.set('retstart', String(state.offset))
-  searchUrl.searchParams.set('retmax', String(PUBMED_PAGE_SIZE))
+  searchUrl.searchParams.set('retmax', String(pageSize))
   searchUrl.searchParams.set('sort', 'pub_date')
   searchUrl.searchParams.set('retmode', 'json')
   searchUrl.searchParams.set('tool', 'immortal_life')
@@ -581,7 +590,7 @@ async function syncPubMed(supabase: any, topic: Topic, job: Job): Promise<SyncOu
     state.ranges.push(split[0], split[1])
     return { seen: 0, written: 0, done: false, cursorState: { ranges: state.ranges, current: null, offset: 0 }, totalAvailable: total }
   }
-  const ids = uniqueStrings(searchPayload?.esearchresult?.idlist, PUBMED_PAGE_SIZE)
+  const ids = uniqueStrings(searchPayload?.esearchresult?.idlist, pageSize)
   if (!ids.length) {
     const done = state.ranges.length === 0
     return { seen: 0, written: 0, done, cursorState: done ? {} : { ranges: state.ranges, current: null, offset: 0 }, totalAvailable: total }
@@ -679,6 +688,7 @@ async function syncPubMed(supabase: any, topic: Topic, job: Job): Promise<SyncOu
 
 async function syncEuropePmc(supabase: any, topic: Topic, job: Job): Promise<SyncOutcome> {
   const cursor = typeof job.cursor_state?.cursor === 'string' ? String(job.cursor_state.cursor) : '*'
+  const pageSize = adaptiveDatabasePageSize(EUROPE_PMC_PAGE_SIZE, job.attempts, 25)
   const url = new URL('https://www.ebi.ac.uk/europepmc/webservices/rest/search')
   const incrementalWindow = sourceDateWindow(31)
   const query = job.sync_mode === 'history'
@@ -687,7 +697,7 @@ async function syncEuropePmc(supabase: any, topic: Topic, job: Job): Promise<Syn
   url.searchParams.set('query', query)
   url.searchParams.set('format', 'json')
   url.searchParams.set('resultType', 'core')
-  url.searchParams.set('pageSize', String(EUROPE_PMC_PAGE_SIZE))
+  url.searchParams.set('pageSize', String(pageSize))
   url.searchParams.set('cursorMark', cursor)
 
   const payload = await fetchJson(url)
@@ -1276,9 +1286,10 @@ Deno.serve(async (req) => {
         const isAbort = error instanceof DOMException && error.name === 'AbortError'
         const isEuropePmcTransient = job.source_id === 'europe-pmc'
           && ((error instanceof UpstreamHttpError && (error.status === 429 || error.status >= 500)) || isAbort)
-        const maxAttempts = isEuropePmcTransient ? 20 : 8
+        const isDatabaseTimeout = /canceling statement due to statement timeout/i.test(message)
+        const maxAttempts = isEuropePmcTransient || isDatabaseTimeout ? 20 : 8
         const isDead = attempt >= maxAttempts
-        const baseDelayMs = isEuropePmcTransient ? 60 * 60 * 1000 : 15 * 60 * 1000
+        const baseDelayMs = isEuropePmcTransient ? 60 * 60 * 1000 : isDatabaseTimeout ? 5 * 60 * 1000 : 15 * 60 * 1000
         const maximumDelayMs = isEuropePmcTransient ? 24 * 60 * 60 * 1000 : 6 * 60 * 60 * 1000
         const exponentialDelayMs = Math.min(maximumDelayMs, baseDelayMs * 2 ** Math.max(0, attempt - 1))
         const upstreamDelayMs = error instanceof UpstreamHttpError ? error.retryAfterMs ?? 0 : 0

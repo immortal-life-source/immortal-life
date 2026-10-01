@@ -46,9 +46,13 @@ test('high-volume historical sources receive independent bounded recovery capaci
   assert.match(migration, /'\*\/5 22-23,0-4 \* \* \*'/)
 })
 
-test('Europe PMC pages stay below the indexed upsert statement budget', async () => {
+test('high-volume pages stay below the indexed upsert statement budget and shrink on retry', async () => {
   const source = await read('supabase/functions/sync-intelligence/index.ts')
-  assert.match(source, /EUROPE_PMC_PAGE_SIZE = 250/)
+  assert.match(source, /PUBMED_PAGE_SIZE = 100/)
+  assert.match(source, /EUROPE_PMC_PAGE_SIZE = 125/)
+  assert.match(source, /CLINICAL_TRIALS_PAGE_SIZE = 50/)
+  assert.match(source, /adaptiveDatabasePageSize/)
+  assert.match(source, /canceling statement due to statement timeout/)
 })
 
 test('Pro ingestion headroom is used without changing billing controls', async () => {
@@ -57,7 +61,7 @@ test('Pro ingestion headroom is used without changing billing controls', async (
     read('supabase/functions/sync-university-index/index.ts'),
     read('supabase/migrations/20260928000900_use_pro_ingestion_headroom.sql'),
   ])
-  assert.match(sync, /CLINICAL_TRIALS_PAGE_SIZE = 100/)
+  assert.match(sync, /CLINICAL_TRIALS_PAGE_SIZE = 50/)
   assert.match(sync, /error instanceof UpstreamHttpError[\s\S]{0,120}error\.status !== 400[\s\S]{0,100}!savedPageToken/)
   assert.match(sync, /isEuropePmcTransient[\s\S]{0,500}24 \* 60 \* 60 \* 1000/)
   assert.match(universities, /HISTORY_RUN_TIME_BUDGET_MS = 80_000/)
@@ -65,6 +69,17 @@ test('Pro ingestion headroom is used without changing billing controls', async (
   assert.match(migration, /does not alter billing controls, compute size, corpus scope/)
   const executableSql = migration.split('\n').filter((line) => !line.trimStart().startsWith('--')).join('\n')
   assert.doesNotMatch(executableSql, /spend[_ ]cap|subscription|billing/i)
+})
+
+test('storage migration starts as an additive private archive foundation', async () => {
+  const migration = await read('supabase/migrations/20261001000200_reliable_ingestion_and_archive_foundation.sql')
+  assert.match(migration, /research_candidate_archive_manifest/)
+  assert.match(migration, /research-candidate-archive/)
+  assert.match(migration, /public = false/)
+  assert.match(migration, /pg_try_advisory_xact_lock/)
+  assert.match(migration, /create temporary table topic_counts_next/)
+  assert.match(migration, /canonical_name/)
+  assert.doesNotMatch(migration, /delete from public\.research_items|truncate table public\.research_items|drop table public\.research_items/i)
 })
 
 test('source reuse is fail-closed, auditable, expiring, and excluded from paid delivery by default', async () => {
