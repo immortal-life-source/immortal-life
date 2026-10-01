@@ -327,6 +327,8 @@ test('university profile provenance and record links have non-overlapping spacin
   assert.match(css, /\.university-profile-metrics \+ \.record-links \+ \.quality-intro \{ max-width: 980px; margin: 20px 0 36px; \}/)
   assert.match(template, /intelligence\.css\?v=20261001-profile-layout/)
   assert.match(pages, /intelligence\.css\?v=20261001-profile-layout/)
+  assert.match(template, /intelligence\.js\?v=20261001-filter-reliability/)
+  assert.match(pages, /intelligence\.js\?v=20261001-filter-reliability/)
 })
 
 test('private daily management report covers traffic, new knowledge and operational health', async () => {
