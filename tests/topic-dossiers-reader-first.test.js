@@ -31,7 +31,7 @@ test('all 180 dossiers receive a unique semantic vector illustration', async () 
 })
 
 test('topic pages explain evidence in reader language and keep conclusions readiness-gated', async () => {
-  const [build, browser] = await Promise.all([read('build.js'), read('intelligence.js')])
+  const [build, browser, template] = await Promise.all([read('build.js'), read('intelligence.js'), read('intelligence-template.html')])
   assert.match(build, /The current picture/)
   assert.match(build, /How far has this topic reached\?/)
   assert.match(build, /Human Evidence, Clinical Trials & Research/)
@@ -40,4 +40,6 @@ test('topic pages explain evidence in reader language and keep conclusions readi
   assert.match(browser, /No notice is not the same as evidence of safety/)
   assert.match(browser, /coverage statement, not a claim/)
   assert.match(browser, /topicCurrentInterpretation\.hidden = true/)
+  assert.match(template, /intelligence\.js\?v=20261001-reader-dossiers/)
+  assert.match(template, /intelligence\.css\?v=20261001-reader-dossiers/)
 })

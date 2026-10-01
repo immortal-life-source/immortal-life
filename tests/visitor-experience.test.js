@@ -42,7 +42,7 @@ test('changes-page totals are direct links to their relevant indexes', async () 
 test('shared portal script does not fail on informational pages without portal regions', async () => {
   const [portal, template] = await Promise.all([read('intelligence.js'), read('content-template.html')])
   assert.match(portal, /if \(!elements\.loading \|\| !elements\.error\) return/)
-  assert.match(template, /intelligence\.js\?v=20261001-direct-grants/)
+  assert.match(template, /intelligence\.js\?v=20261001-reader-dossiers/)
 })
 
 test('topic catalogue is compact, searchable, visual, and does not bury research or trials', async () => {
@@ -410,10 +410,10 @@ test('university profile provenance and record links have non-overlapping spacin
   ])
   assert.match(css, /\.university-profile-metrics \+ \.record-links \{ margin: 34px 0 0; \}/)
   assert.match(css, /\.university-profile-metrics \+ \.record-links \+ \.quality-intro \{ max-width: 980px; margin: 20px 0 36px; \}/)
-  assert.match(template, /intelligence\.css\?v=20261001-mobile-menu-b/)
-  assert.match(pages, /intelligence\.css\?v=20261001-mobile-menu-b/)
-  assert.match(template, /intelligence\.js\?v=20261001-direct-grants/)
-  assert.match(pages, /intelligence\.js\?v=20261001-direct-grants/)
+  assert.match(template, /intelligence\.css\?v=20261001-reader-dossiers/)
+  assert.match(pages, /intelligence\.css\?v=20261001-reader-dossiers/)
+  assert.match(template, /intelligence\.js\?v=20261001-reader-dossiers/)
+  assert.match(pages, /intelligence\.js\?v=20261001-reader-dossiers/)
   assert.match(pages, /desktop-nav\.css\?v=20261001-nav-shell-all/)
   assert.match(pages, /desktop-nav\.js\?v=20261001-all-pages/)
   assert.match(await read('intelligence.js'), /\['universities', 'topic-dossier', 'trial-results-gap', 'funding'\]\.includes\(viewName\) \? 10000 : 6500/)
