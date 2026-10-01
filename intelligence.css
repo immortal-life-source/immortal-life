@@ -661,7 +661,7 @@ body[data-view="quality"] #qualitySection { padding-top:24px; }
   .intel-logo { margin: 0; }
   .intel-logo img { width: 49px; height: 49px; }
   .intel-nav-toggle { display: inline-flex; }
-  .intel-nav { position:fixed; top:68px; left:12px; right:12px; width:auto; display:none; z-index:10020; padding:16px; border:1px solid var(--border-strong); border-radius:20px; background:rgba(255,255,255,.985); box-shadow:0 22px 60px rgba(77,40,60,.18); }
+  .intel-nav { position:absolute; top:calc(100% + 12px); left:22px; right:22px; width:auto; max-height:calc(100dvh - 92px - env(safe-area-inset-bottom, 0px)); overflow-y:auto; overscroll-behavior:contain; display:none; z-index:31; padding:16px; border:1px solid var(--border-strong); border-radius:20px; background:rgba(255,255,255,.985); box-shadow:0 22px 60px rgba(77,40,60,.18); }
   .intel-nav[data-open="true"] { display:block; }
   .intel-nav-top { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
   .intel-nav a { min-height:44px; padding:12px 13px; display:flex; align-items:center; border:1px solid var(--border); border-radius:999px; background:#fff; line-height:1.35; }
