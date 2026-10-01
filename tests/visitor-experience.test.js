@@ -5,7 +5,7 @@ import test from 'node:test'
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
 test('homepage is a single-screen search entry with no below-the-fold portal duplicate', async () => {
-  const [html, js] = await Promise.all([read('index.html'), read('main.js')])
+  const [html, js, css] = await Promise.all([read('index.html'), read('main.js'), read('style.css')])
   assert.match(html, /What are you curious about/)
   assert.match(html, /id="homeSearch"/)
   assert.doesNotMatch(html, /home-live|home-paths|home-explorer|home-global|home-personal|site-footer/)
@@ -16,6 +16,10 @@ test('homepage is a single-screen search entry with no below-the-fold portal dup
   assert.match(js, /il_saved_searches/)
   assert.doesNotMatch(html, /My Radar|href="\/dashboard"/)
   assert.match(js, /if \(!document\.getElementById\('todayGrid'\) && !document\.getElementById\('heroDiscoveriesList'\)\) return/)
+  assert.match(html, /class="hero-butterfly" aria-hidden="true"/)
+  assert.match(html, /style\.css\?v=20261001-butterfly/)
+  assert.match(css, /@keyframes heroButterflyJourney/)
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\s+\.hero-butterfly \{[\s\S]*?animation: none;/)
 })
 
 test('changes-page totals are direct links to their relevant indexes', async () => {
