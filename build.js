@@ -197,8 +197,8 @@ for (const asset of staticAssets) {
 const publicDocumentsDir = path.join(outputDir, 'documents');
 fs.mkdirSync(publicDocumentsDir, { recursive: true });
 fs.copyFileSync(
-  path.join(__dirname, 'output', 'pdf', 'immortal-life-strategic-opportunity.pdf'),
-  path.join(publicDocumentsDir, 'immortal-life-company-overview.pdf')
+  path.join(__dirname, 'output', 'pdf', 'immortal-life-strategic-acquisition-overview.pdf'),
+  path.join(publicDocumentsDir, 'immortal-life-strategic-acquisition-overview.pdf')
 );
 
 // The taxonomy is a maintained site asset, not a live analytical query. Serving
