@@ -212,6 +212,34 @@ test('desktop homepage exposes the complete navigation and keeps motion clear of
   assert.doesNotMatch(css.match(/\.s1-nav-you,[\s\S]*?\n\}/)?.[0] || '', /255, 238, 155|219, 169, 47/)
 })
 
+test('desktop navigation previews expose useful routes without changing mobile navigation', async () => {
+  const [home, intelligenceTemplate, contentTemplate, menuScript, menuStyles, intelligence] = await Promise.all([
+    read('index.html'),
+    read('intelligence-template.html'),
+    read('content-template.html'),
+    read('desktop-nav.js'),
+    read('desktop-nav.css'),
+    read('intelligence.js'),
+  ])
+  for (const shell of [home, intelligenceTemplate, contentTemplate]) {
+    assert.match(shell, /desktop-nav\.css/)
+    assert.match(shell, /desktop-nav\.js/)
+  }
+  for (const domain of ['ageing-mechanisms', 'geroscience-interventions', 'nutrition-metabolism', 'lifestyle-environment', 'biomarkers-measurement', 'organs-systems', 'healthspan-clinical-ageing', 'genetics-regeneration-futures', 'population-longevity-prevention']) {
+    assert.match(menuScript, new RegExp(`/topics\\?domain=${domain}`))
+  }
+  assert.match(menuScript, /\/universities\?country=US/)
+  assert.match(menuScript, /\/trials\?status=active/)
+  assert.match(menuScript, /\/research\?evidence=human/)
+  assert.match(menuScript, /aria-haspopup/)
+  assert.match(menuScript, /event\.key === 'Escape'/)
+  assert.match(menuStyles, /hover: hover/)
+  assert.match(menuStyles, /pointer: fine/)
+  assert.match(menuStyles, /max-width: 860px/)
+  assert.match(intelligence, /requestedCountry/)
+  assert.match(intelligence, /requestedSort/)
+})
+
 test('research and trials use complete searchable filter systems', async () => {
   const [template, portal, css, build] = await Promise.all([read('intelligence-template.html'), read('intelligence.js'), read('intelligence.css'), read('build.js')])
   for (const id of ['researchControls', 'researchSearch', 'researchTopic', 'researchEvidence', 'researchAccess', 'researchResult', 'trialControls', 'trialSearch', 'trialTopic', 'trialStatus', 'trialPhase', 'trialCountry', 'trialResult']) assert.match(template, new RegExp(`id="${id}"`))

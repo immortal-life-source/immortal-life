@@ -1,0 +1,150 @@
+/* Fast, source-free desktop navigation previews. Kept out of mobile menus. */
+@media (min-width: 861px) and (hover: hover) and (pointer: fine) {
+  .s1-header,
+  .intel-header,
+  .pilot-header { overflow: visible; }
+
+  .s1-nav,
+  .intel-nav,
+  .pilot-nav { position: relative; }
+
+  .desktop-nav-preview {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    width: min(1080px, calc(100vw - 64px));
+    min-height: 244px;
+    display: grid;
+    grid-template-columns: minmax(220px, .72fr) minmax(600px, 1.8fr);
+    gap: clamp(24px, 3.4vw, 54px);
+    padding: 26px;
+    border: 1px solid rgba(199, 53, 114, .19);
+    border-radius: 24px;
+    background:
+      radial-gradient(circle at 14% 30%, rgba(199, 53, 114, .09), transparent 34%),
+      radial-gradient(circle at 88% 78%, rgba(232, 109, 67, .06), transparent 31%),
+      rgba(255, 255, 255, .985);
+    box-shadow: 0 28px 80px rgba(66, 29, 49, .16), 0 8px 24px rgba(199, 53, 114, .06);
+    color: #281f25;
+    opacity: 0;
+    transform: translateY(-7px) scale(.992);
+    transform-origin: 80% 0;
+    transition: opacity 120ms ease, transform 120ms ease;
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  .desktop-nav-preview[data-open='true'] {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+
+  .desktop-nav-preview__intro {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 5px 0 3px 4px;
+  }
+
+  .desktop-nav-preview__intro > span {
+    color: #c73572;
+    font: 600 9px/1.2 'Instrument Sans', system-ui, sans-serif;
+    letter-spacing: .17em;
+    text-transform: uppercase;
+  }
+
+  .desktop-nav-preview__intro h2 {
+    margin: 13px 0 10px;
+    max-width: 360px;
+    color: #271e24;
+    font: 500 clamp(24px, 2vw, 34px)/1.03 'Instrument Sans', system-ui, sans-serif;
+    letter-spacing: -.045em;
+    text-wrap: balance;
+  }
+
+  .desktop-nav-preview__intro p {
+    margin: 0;
+    max-width: 360px;
+    color: #756771;
+    font: 400 12px/1.55 'Instrument Sans', system-ui, sans-serif;
+  }
+
+  .desktop-nav-preview__intro > a,
+  .s1-header .desktop-nav-preview__intro > a,
+  .s1-header .desktop-nav-preview__intro > a:link,
+  .s1-header .desktop-nav-preview__intro > a:visited {
+    margin-top: auto;
+    padding: 18px 0 0;
+    color: #b32863 !important;
+    font: 600 10px/1.2 'Instrument Sans', system-ui, sans-serif;
+    letter-spacing: .04em;
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+
+  .desktop-nav-preview__links {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-content: start;
+    gap: 8px;
+  }
+
+  .desktop-nav-preview__links > a,
+  .s1-header .desktop-nav-preview__links > a,
+  .s1-header .desktop-nav-preview__links > a:link,
+  .s1-header .desktop-nav-preview__links > a:visited {
+    min-width: 0;
+    min-height: 64px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    padding: 12px 14px;
+    border: 1px solid rgba(199, 53, 114, .10);
+    border-radius: 15px;
+    background: rgba(255, 255, 255, .72);
+    color: #352a31 !important;
+    text-decoration: none;
+    transition: transform 110ms ease, border-color 110ms ease, background 110ms ease, box-shadow 110ms ease;
+  }
+
+  .desktop-nav-preview__links > a:hover,
+  .desktop-nav-preview__links > a:focus-visible {
+    transform: translateY(-2px);
+    border-color: rgba(199, 53, 114, .34);
+    background: #fff7fa;
+    box-shadow: 0 9px 24px rgba(133, 48, 87, .09);
+    outline: none;
+  }
+
+  .desktop-nav-preview__links strong {
+    color: #2b2228;
+    font: 600 12px/1.18 'Instrument Sans', system-ui, sans-serif;
+    letter-spacing: -.01em;
+  }
+
+  .desktop-nav-preview__links span {
+    color: #82747d;
+    font: 400 10px/1.32 'Instrument Sans', system-ui, sans-serif;
+  }
+}
+
+@media (min-width: 861px) and (max-width: 1120px) and (hover: hover) and (pointer: fine) {
+  .desktop-nav-preview {
+    width: calc(100vw - 40px);
+    grid-template-columns: minmax(190px, .58fr) minmax(540px, 1.8fr);
+    gap: 22px;
+    padding: 22px;
+  }
+  .desktop-nav-preview__links > a { padding: 10px 11px; }
+}
+
+@media (max-width: 860px), (hover: none), (pointer: coarse) {
+  .desktop-nav-preview { display: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desktop-nav-preview,
+  .desktop-nav-preview__links > a { transition: none !important; }
+}

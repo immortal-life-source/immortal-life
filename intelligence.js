@@ -2149,15 +2149,20 @@
 
   async function fetchUniversityIndex(append = false) {
     elements.universityResult.textContent = 'Updating the university view…';
-    const requestedTopic = !universityControlsReady ? new URLSearchParams(location.search).get('topic')?.trim() || '' : '';
+    const initialUniversityParams = !universityControlsReady ? new URLSearchParams(location.search) : null;
+    const requestedTopic = initialUniversityParams?.get('topic')?.trim() || '';
+    const requestedCountry = initialUniversityParams?.get('country')?.trim() || '';
+    const requestedContinent = initialUniversityParams?.get('continent')?.trim() || '';
+    const requestedSearch = initialUniversityParams?.get('search')?.trim() || '';
+    const requestedSort = initialUniversityParams?.get('sort')?.trim() || '';
     const activeTopic = elements.universityTopic?.value || requestedTopic;
     const data = await request('universities', 100, {
       offset: append ? universityNextOffset || 0 : 0,
-      q: elements.universitySearch?.value,
+      q: elements.universitySearch?.value || requestedSearch,
       topic: activeTopic,
-      country: elements.universityCountry?.value,
-      continent: elements.universityContinent?.value,
-      sort: elements.universitySort?.value,
+      country: elements.universityCountry?.value || requestedCountry,
+      continent: elements.universityContinent?.value || requestedContinent,
+      sort: elements.universitySort?.value || requestedSort,
     });
     const incoming = Array.isArray(data.universities) ? data.universities : [];
     if (append) {
@@ -2200,6 +2205,10 @@
       if (requestedTopic && [...elements.universityTopic.options].some((option) => option.value === requestedTopic)) {
         elements.universityTopic.value = requestedTopic;
       }
+      if (requestedCountry && [...elements.universityCountry.options].some((option) => option.value === requestedCountry)) elements.universityCountry.value = requestedCountry;
+      if (requestedContinent && [...elements.universityContinent.options].some((option) => option.value === requestedContinent)) elements.universityContinent.value = requestedContinent;
+      if (requestedSearch) elements.universitySearch.value = requestedSearch;
+      if (requestedSort && [...elements.universitySort.options].some((option) => option.value === requestedSort)) elements.universitySort.value = requestedSort;
     }
     renderUniversityRows();
     elements.freshness.dataset.health = data.fallback ? 'stale' : data.sources?.[0]?.health || 'pending';
