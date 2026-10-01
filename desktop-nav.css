@@ -8,6 +8,61 @@
   .intel-nav,
   .pilot-nav { position: relative; }
 
+  /* Give every desktop destination the same quiet boundary and footprint. */
+  .s1-nav-top > a,
+  .intel-nav-top > a,
+  .pilot-nav > a {
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px clamp(4px, .42vw, 8px) !important;
+    border: 1px solid rgba(82, 52, 69, .095) !important;
+    border-radius: 9px !important;
+    background: rgba(255, 255, 255, .42);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .72);
+    transition: color 110ms ease, border-color 110ms ease, background 110ms ease, box-shadow 110ms ease, transform 110ms ease;
+  }
+
+  .s1-nav-top > a:hover,
+  .s1-nav-top > a:focus-visible,
+  .intel-nav-top > a:hover,
+  .intel-nav-top > a:focus-visible,
+  .pilot-nav > a:hover,
+  .pilot-nav > a:focus-visible,
+  .s1-nav-top > a[aria-expanded='true'],
+  .intel-nav-top > a[aria-expanded='true'],
+  .pilot-nav > a[aria-expanded='true'] {
+    transform: translateY(-1px);
+    border-color: rgba(199, 53, 114, .24) !important;
+    background: rgba(255, 248, 251, .82);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .82), 0 5px 16px rgba(111, 48, 79, .055);
+    outline: none;
+  }
+
+  .s1-nav-top > .s1-nav-you,
+  .intel-nav-top > .intel-nav-you,
+  .pilot-nav > .pilot-nav-you {
+    min-height: 34px;
+    padding: 6px clamp(4px, .42vw, 8px) !important;
+    border-radius: 9px !important;
+    border-color: rgba(199, 53, 114, .23) !important;
+    background: rgba(199, 53, 114, .055) !important;
+    color: #a92960 !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .76), 0 0 18px rgba(199, 53, 114, .14) !important;
+  }
+
+  .s1-nav-top > .s1-nav-you:hover,
+  .s1-nav-top > .s1-nav-you:focus-visible,
+  .intel-nav-top > .intel-nav-you:hover,
+  .intel-nav-top > .intel-nav-you:focus-visible,
+  .pilot-nav > .pilot-nav-you:hover,
+  .pilot-nav > .pilot-nav-you:focus-visible {
+    background: rgba(199, 53, 114, .085) !important;
+    border-color: rgba(199, 53, 114, .34) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .82), 0 0 22px rgba(199, 53, 114, .18) !important;
+  }
+
   .desktop-nav-preview {
     position: absolute;
     top: calc(100% + 12px);
