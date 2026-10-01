@@ -36,6 +36,19 @@ function amount(value: unknown): number | null {
   return Number.isFinite(result) && result >= 0 ? result : null
 }
 
+function diagnosticError(error: unknown): string {
+  if (error instanceof Error) return clean(`${error.name}: ${error.message}`, 500) || 'direct_grant_sync_failed'
+  if (error && typeof error === 'object') {
+    const value = error as Record<string, unknown>
+    const parts = ['code', 'message', 'details', 'hint', 'status']
+      .map((key) => clean(value[key], 240))
+      .filter(Boolean)
+    if (parts.length) return clean(parts.join(' · '), 500)
+    try { return clean(JSON.stringify(value), 500) || 'direct_grant_sync_failed' } catch { /* fall through */ }
+  }
+  return clean(String(error), 500) || 'direct_grant_sync_failed'
+}
+
 function constantTimeMatch(left: string, right: string): boolean {
   if (!right || left.length !== right.length) return false
   let mismatch = 0
@@ -167,7 +180,7 @@ WHERE {
   OPTIONAL { ?project eurio:isFundedBy ?grant . ?grant eurio:hasFundingAmount ?money . ?money eurio:value ?amount }
   OPTIONAL { ?project eurio:hasInvolvedParty ?role . ?role eurio:roleLabel "coordinator" ; eurio:isRoleOf ?org . ?org eurio:legalName ?recipient . OPTIONAL { ?org eurio:hasSite ?site . ?site eurio:hasAddress ?address . ?address eurio:addressCountry ?country } }
 } GROUP BY ?project ?id ?title ?start ?end ?status ?amount ?recipient ?country
-ORDER BY ?id LIMIT ${CORDIS_PAGE_SIZE} OFFSET ${Math.max(0, offset)}`
+ORDER BY ?id ?recipient ?amount LIMIT ${CORDIS_PAGE_SIZE} OFFSET ${Math.max(0, offset)}`
   const url = new URL('https://cordis.europa.eu/datalab/sparql')
   url.searchParams.set('query', query)
   url.searchParams.set('format', 'application/sparql-results+json')
@@ -175,32 +188,67 @@ ORDER BY ?id LIMIT ${CORDIS_PAGE_SIZE} OFFSET ${Math.max(0, offset)}`
     headers: { Accept: 'application/sparql-results+json', 'User-Agent': 'immortal.life-direct-grants/1.0 (research@immortal.life)' },
     signal: AbortSignal.timeout(28_000),
   })
-  if (!response.ok) throw new Error(`cordis_sparql_${response.status}`)
+  if (!response.ok) {
+    const detail = clean(await response.text().catch(() => ''), 240)
+    throw new Error(`cordis_sparql_${response.status}${detail ? `: ${detail}` : ''}`)
+  }
   return (await response.json())?.results?.bindings ?? []
+}
+
+function consolidateCordisBindings(bindings: any[]) {
+  const projects = new Map<string, {
+    id: string
+    title: string
+    start: string
+    end: string
+    status: string
+    amount: string
+    recipient: string
+    country: string
+    keywords: Set<string>
+  }>()
+  for (const row of bindings) {
+    const id = sparqlValue(row, 'id')
+    const title = sparqlValue(row, 'title')
+    if (!id || !title) continue
+    const current = projects.get(id) ?? {
+      id, title, start: '', end: '', status: '', amount: '', recipient: '', country: '', keywords: new Set<string>(),
+    }
+    for (const field of ['start', 'end', 'status', 'amount', 'recipient', 'country'] as const) {
+      if (!current[field]) current[field] = sparqlValue(row, field)
+    }
+    for (const keyword of sparqlValue(row, 'keywords').split(';').map((value) => clean(value, 300)).filter(Boolean)) {
+      current.keywords.add(keyword)
+    }
+    projects.set(id, current)
+  }
+  return [...projects.values()]
 }
 
 async function syncCordis(supabase: any, state: any, topics: any[]) {
   const offset = Math.max(0, Number(state?.cursor?.offset) || 0)
   const bindings = await fetchCordis(offset)
+  // EURIO can return several coordinator/funding rows for one project. Merge
+  // them before the database upsert so one API page can never attempt to
+  // update the same primary key twice.
+  const projects = consolidateCordisBindings(bindings)
   const grants: any[] = []
   const links: any[] = []
-  for (const row of bindings) {
-    const id = sparqlValue(row, 'id')
-    const title = sparqlValue(row, 'title')
-    if (!id || !title) continue
-    const matched = topicLinks(id, title, sparqlValue(row, 'keywords').split(';').filter(Boolean), topics, 'cordis')
+  for (const project of projects) {
+    const { id, title } = project
+    const matched = topicLinks(id, title, [...project.keywords], topics, 'cordis')
     if (!matched.length) continue
-    const countryCode = sparqlValue(row, 'country').toUpperCase()
+    const countryCode = project.country.toUpperCase()
     grants.push({
       source_grant_id: id, grant_number: id, title,
-      funder_name: 'European Union', recipient_name: sparqlValue(row, 'recipient') || null,
+      funder_name: 'European Union', recipient_name: project.recipient || null,
       recipient_country_code: /^[A-Z]{2}$/.test(countryCode) ? countryCode : null,
       recipient_country_name: COUNTRY_NAMES[countryCode] || null,
       programme: 'EU research and innovation framework programmes',
-      status: sparqlValue(row, 'status').toLowerCase() || null,
-      fiscal_year: Number(sparqlValue(row, 'start').slice(0, 4)) || null,
-      start_date: isoDate(sparqlValue(row, 'start')), end_date: isoDate(sparqlValue(row, 'end')),
-      awarded_amount: amount(sparqlValue(row, 'amount')), currency: 'EUR',
+      status: project.status.toLowerCase() || null,
+      fiscal_year: Number(project.start.slice(0, 4)) || null,
+      start_date: isoDate(project.start), end_date: isoDate(project.end),
+      awarded_amount: amount(project.amount), currency: 'EUR',
       source_url: `https://cordis.europa.eu/project/id/${encodeURIComponent(id)}`,
       source_updated_at: null,
     })
@@ -266,7 +314,7 @@ Deno.serve(async (req) => {
     await supabase.from('content_sources').update({ last_attempt_at: now, last_success_at: now, last_error: null, consecutive_failures: 0, updated_at: now }).eq('id', sourceId)
     return jsonResponse(req, { ok: true, source: sourceId, scanned, retained, cursor, completed_cycles: completedCycles, runtime_ms: Date.now() - started }, 200, 'POST')
   } catch (error) {
-    const message = clean(error instanceof Error ? error.message : String(error), 500) || 'direct_grant_sync_failed'
+    const message = diagnosticError(error)
     const now = new Date().toISOString()
     if (sourceId) {
       const current = await supabase.from('content_sources').select('consecutive_failures').eq('id', sourceId).maybeSingle()
