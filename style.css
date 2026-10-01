@@ -2425,15 +2425,17 @@ footer { background: var(--bg); color: var(--white); }
   .home-nav-search button { border: 0; border-radius: 999px; background: var(--gold); color: #fff; }
   .s1-center {
     min-height: calc(100svh - 88px);
-    grid-template-rows: auto 1fr auto;
-    padding: clamp(34px, 6vh, 54px) 0 clamp(28px, 5vh, 46px);
+    grid-template-rows: clamp(176px, 31svh, 270px) 1fr auto;
+    padding: clamp(18px, 3.5vh, 32px) 0 clamp(24px, 4vh, 38px);
   }
   .hero-question {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    font-size: clamp(34px, 10vw, 42px);
-    line-height: 1.02;
+    justify-content: center;
+    min-height: clamp(176px, 31svh, 270px);
+    font-size: clamp(58px, 18vw, 78px);
+    line-height: .96;
     letter-spacing: -.05em;
   }
   .s1-center > .hero-question { width: min(100%, 620px); padding-inline: 2px; }
@@ -2441,6 +2443,15 @@ footer { background: var(--bg); color: var(--white); }
   .hero-question-future,
   .hero-question-accent { grid-column: auto; justify-self: auto; }
   .hero-you::after { height: 2px; }
+  .hero-butterfly {
+    width: .58em;
+    filter: drop-shadow(0 .08em .13em rgba(126, 29, 74, .26));
+    animation: heroButterflyJourneyMobile 7.2s cubic-bezier(.38,.03,.18,1) .6s forwards;
+  }
+  .hero-butterfly-wing {
+    animation: heroButterflyWingFlight .17s ease-in-out .6s 42 alternate,
+               heroButterflyWingRest 4.2s ease-in-out 7.8s infinite alternate;
+  }
   .hero-actions { width: min(100%, 600px); margin-bottom: 56px; }
   .home-search,
   .home-search > div { width: 100%; max-width: 100%; box-sizing: border-box; }
@@ -2463,7 +2474,30 @@ footer { background: var(--bg); color: var(--white); }
   .home-search button { min-width: 88px; min-height: 48px; padding: 0 16px; }
 }
 
+@keyframes heroButterflyJourneyMobile {
+  0% { opacity: 0; transform: translate(76vw,-17vh) rotate(24deg) scale(.5); }
+  8% { opacity: .9; }
+  20% { transform: translate(60vw,-5vh) rotate(-12deg) scale(.68); }
+  35% { transform: translate(44vw,-13vh) rotate(11deg) scale(.8); }
+  50% { transform: translate(29vw,-3vh) rotate(-14deg) scale(.9); }
+  65% { transform: translate(15vw,-10vh) rotate(10deg) scale(.97); }
+  74% { transform: translate(2.2em,-1.25em) rotate(-4deg) scale(1); }
+  79% { transform: translate(.58em,-.52em) rotate(88deg) scale(1); }
+  84% { transform: translate(-50%,.3em) rotate(178deg) scale(.98); }
+  89% { transform: translate(-1.05em,-.42em) rotate(268deg) scale(.98); }
+  94% { transform: translate(-50%,-1.22em) rotate(350deg) scale(1); }
+  97% { transform: translate(.58em,-.52em) rotate(368deg) scale(1); }
+  100% { opacity: .94; transform: translate(-50%,-54%) rotate(-8deg) scale(1); }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .hero-butterfly {
+    opacity: .94;
+    animation: none;
+    transform: translate(-50%,-54%) rotate(-8deg) scale(1);
+  }
+  .hero-butterfly svg,
+  .hero-butterfly-wing { animation: none; }
   .bio-ambient--home .bio-human {
     animation: none;
     transform: translateX(-50%);
