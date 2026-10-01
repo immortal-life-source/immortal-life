@@ -5,10 +5,15 @@
   const pilotTopicName = document.body.dataset.pilotTopicName || 'Exercise';
   const pilotTopicNameLower = document.body.dataset.pilotTopicNameLower || pilotTopicName.toLowerCase();
   const pilotTopicEncoded = encodeURIComponent(pilotTopic);
+  // Exercise is temporarily served from a strict title-matched cohort while
+  // its full taxonomy relation pass is rebuilt. Cognitive Training and future
+  // pilots continue to use their completed topic relations.
+  const trialCohortKey = pilotTopic === 'exercise' ? 'search' : 'topic';
+  const trialApiCohortKey = pilotTopic === 'exercise' ? 'q' : 'topic';
   const topicRoute = `/topics/${pilotTopicEncoded}`;
   const researchRoute = (suffix = '') => `/research?topic=${pilotTopicEncoded}${suffix}`;
-  const trialRoute = (suffix = '') => `/trials?topic=${pilotTopicEncoded}${suffix}`;
-  const gapRoute = (suffix = '') => `/trials/results-gap?topic=${pilotTopicEncoded}${suffix}#resultsGapControls`;
+  const trialRoute = (suffix = '') => `/trials?${trialCohortKey}=${pilotTopicEncoded}${suffix}`;
+  const gapRoute = (suffix = '') => `/trials/results-gap?${trialCohortKey}=${pilotTopicEncoded}${suffix}#resultsGapControls`;
   const universityRoute = `/universities?topic=${pilotTopicEncoded}`;
   const changesRoute = `/changes?topic=${pilotTopicEncoded}`;
 
@@ -303,12 +308,12 @@
       dossierUrl.searchParams.set('quality_rules', '20260930-field-context');
       const trialsUrl = new URL(endpoint);
       trialsUrl.searchParams.set('view', 'trials');
-      trialsUrl.searchParams.set('topic', pilotTopic);
+      trialsUrl.searchParams.set(trialApiCohortKey, pilotTopic);
       trialsUrl.searchParams.set('limit', '100');
       trialsUrl.searchParams.set('quality_rules', '20260930-field-context');
       const gapUrl = new URL(endpoint);
       gapUrl.searchParams.set('view', 'trial-results-gap');
-      gapUrl.searchParams.set('topic', pilotTopic);
+      gapUrl.searchParams.set(trialApiCohortKey, pilotTopic);
       gapUrl.searchParams.set('quality_rules', '20260930-decision-views');
       const [response, trialsResponse, gapResponse] = await Promise.all([
         fetch(dossierUrl, { headers: window.ilFnHeaders() }),

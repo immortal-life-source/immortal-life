@@ -38,7 +38,7 @@ test('decision views remain source-linked and use the same Exercise cohorts as t
     assert.match(html, new RegExp(`id="${id}"`));
   }
   assert.match(script, /view', 'trial-results-gap'/);
-  assert.match(script, /gapUrl\.searchParams\.set\('topic', pilotTopic\)/);
+  assert.match(script, /gapUrl\.searchParams\.set\(trialApiCohortKey, pilotTopic\)/);
   assert.match(script, /quality_rules', '20260930-field-context'/);
   assert.match(script, /renderMaturity/);
   assert.match(script, /renderPulse/);
@@ -100,7 +100,8 @@ test('pilot hero fits the first screen and uses one display scale for its key qu
 test('institutional pilot never presents an incomplete zero-filled snapshot as a successful example', () => {
   assert.match(script, /requiredCounts/);
   assert.match(script, /Number\(evidence\[field\]\) <= 0/);
-  assert.match(script, /trialsUrl\.searchParams\.set\('topic', pilotTopic\)/);
+  assert.match(script, /trialsUrl\.searchParams\.set\(trialApiCohortKey, pilotTopic\)/);
+  assert.match(script, /pilotTopic === 'exercise' \? 'q' : 'topic'/);
   assert.match(script, /topicTrials\.length/);
   assert.match(script, /listedParticipants/);
   assert.match(script, /trialRoute/);
@@ -140,8 +141,8 @@ test('sponsor visibility explains what a registration represents', () => {
 
 test('pilot cache keys publish the sponsor and university count layout together', () => {
   assert.match(html, /institutional-pilot\.css\?v=20261001-driver-clarity/);
-  assert.match(html, /institutional-pilot\.js\?v=20261001-gap-focus/);
-  assert.match(pilotTwoHtml, /institutional-pilot\.js\?v=20261001-gap-focus/);
+  assert.match(html, /institutional-pilot\.js\?v=20261001-exercise-recovery/);
+  assert.match(pilotTwoHtml, /institutional-pilot\.js\?v=20261001-exercise-recovery/);
 });
 
 test('pilot two is a complete cognitive-training example with topic-filtered destinations', () => {
