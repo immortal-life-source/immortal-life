@@ -538,14 +538,19 @@ async function universityPage(supabase: any, slug: string): Promise<string | nul
     .eq('openalex_id', university.openalex_id).order('works_five_year', { ascending: false })
   if (scopedError) throw scopedError
   const rows = scopedMetrics ?? []
-  const maxWorks = Math.max(1, ...rows.map((metric: any) => Number(metric.works_all_time ?? 0)))
+  const maxWorks = Math.max(1, ...rows.map((metric: any) => Math.max(Number(metric.works_all_time ?? 0), Number(metric.works_five_year ?? 0))))
   const topicRows = rows.map((metric: any) => {
     const works = Number(metric.works_all_time ?? 0)
     const fiveYear = Number(metric.works_five_year ?? 0)
     const recent = Number(metric.works_two_year ?? 0)
+    const fullHistoryAvailable = works >= fiveYear
+    const activityWorks = Math.max(works, fiveYear)
+    const historyCopy = fullHistoryAvailable
+      ? `${works} source-matched work links across all available history`
+      : 'Full-history total not yet available'
     const topicName = metric.intelligence_topics?.name || metric.topic_slug.replace(/-/g, ' ')
     const completeWorks = `/api/universities/${encodeURIComponent(slug)}/works?topic=${encodeURIComponent(metric.topic_slug)}`
-    return `<article class="university-topic-row"><div><h3><a href="/topics/${encodeURIComponent(metric.topic_slug)}">${escapeHtml(topicName)}</a></h3><p>${works} source-matched work links across all available history · ${fiveYear} in the rolling five-year window · ${recent} in the rolling two-year window · ${Number(metric.representative_citations ?? 0)} citations across all linked works</p><a class="section-link" href="${completeWorks}">Browse every linked work →</a></div><div class="university-topic-bar" aria-label="Relative all-time activity for ${escapeHtml(topicName)}"><i style="width:${Math.max(3, Math.round(100 * works / maxWorks))}%"></i></div><strong class="utility-value">${works}</strong></article>`
+    return `<article class="university-topic-row"><div><h3><a href="/topics/${encodeURIComponent(metric.topic_slug)}">${escapeHtml(topicName)}</a></h3><p>${historyCopy} · ${fiveYear} in the rolling five-year window · ${recent} in the rolling two-year window · ${Number(metric.representative_citations ?? 0)} citations across all linked works</p><a class="section-link" href="${completeWorks}">Browse every linked work →</a></div><div class="university-topic-bar" aria-label="Relative indexed activity for ${escapeHtml(topicName)}"><i style="width:${Math.max(3, Math.round(100 * activityWorks / maxWorks))}%"></i></div><strong class="utility-value">${fullHistoryAvailable ? works : '—'}</strong></article>`
   }).join('')
   const location = [university.city, university.region, university.country_name || university.country_code].filter(Boolean).join(', ') || 'Location unavailable'
   const links = [

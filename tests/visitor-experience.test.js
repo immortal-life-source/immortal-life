@@ -332,6 +332,8 @@ test('university profile provenance and record links have non-overlapping spacin
   assert.match(template, /intelligence\.js\?v=20261001-university-pagination-b/)
   assert.match(pages, /intelligence\.js\?v=20261001-university-pagination-b/)
   assert.match(await read('intelligence.js'), /\['universities', 'topic-dossier', 'trial-results-gap', 'funding'\]\.includes\(viewName\) \? 10000 : 6500/)
+  assert.match(pages, /Full-history total not yet available/)
+  assert.match(pages, /fullHistoryAvailable \? works : '—'/)
 })
 
 test('private daily management report covers traffic, new knowledge and operational health', async () => {
