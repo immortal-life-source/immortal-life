@@ -82,6 +82,32 @@ test('storage migration starts as an additive private archive foundation', async
   assert.doesNotMatch(migration, /delete from public\.research_items|truncate table public\.research_items|drop table public\.research_items/i)
 })
 
+test('DOAJ history uses one resumable OAI-PMH harvest instead of deep search paging', async () => {
+  const [sync, migration, boundedWorker] = await Promise.all([
+    read('supabase/functions/sync-intelligence/index.ts'),
+    read('supabase/migrations/20261001000300_doaj_oai_global_harvest.sql'),
+    read('supabase/migrations/20261001000400_bound_doaj_oai_worker.sql'),
+  ])
+  assert.match(sync, /parseDoajOaiPage/)
+  assert.match(sync, /oai:global:/)
+  assert.match(sync, /badResumptionToken/)
+  assert.match(sync, /DOAJ OAI-PMH deletion signal|deletion reconciliation/)
+  assert.match(migration, /link_research_ingestion_batch/)
+  assert.match(migration, /get_doaj_oai_harvest_report/)
+  assert.match(migration, /Waiting for the shared DOAJ OAI-PMH history harvest/)
+  assert.match(migration, /'\*\/3 \* \* \* \*'/)
+  assert.match(sync, /DOAJ_PAGE_START_BUDGET_MS = 45_000/)
+  assert.match(sync, /requestedSource === 'doaj' \? 4 \* 60 \* 1000/)
+  assert.match(sync, /Recovered abandoned job with a smaller retry batch/)
+  assert.match(sync, /attempts: Number\(abandonedJob\.attempts \?\? 0\) \+ 1/)
+  assert.match(sync, /adaptiveDatabasePageSize\(50, job\.attempts, 10\)/)
+  assert.match(sync, /isDoajDatabaseTimeout \? 60 \* 1000/)
+  assert.match(boundedWorker, /'\* \* \* \* \*'/)
+  assert.match(boundedWorker, /Recovered safely from the initial OAI worker timeout/)
+  assert.doesNotMatch(migration, /delete from public\.research_items|truncate table public\.research_items/i)
+  assert.doesNotMatch(boundedWorker, /delete from public\.research_items|truncate table public\.research_items/i)
+})
+
 test('source reuse is fail-closed, auditable, expiring, and excluded from paid delivery by default', async () => {
   const [migration, expiry] = await Promise.all([
     read('supabase/migrations/20260927000300_accelerate_history_and_enforce_source_policy.sql'),

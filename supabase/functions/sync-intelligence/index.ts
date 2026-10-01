@@ -15,6 +15,7 @@ import {
   uniqueStrings,
 } from '../_shared/intelligence.ts'
 import { isInternalServiceRequest, jsonResponse, serviceRoleKey } from '../_shared/security.ts'
+import { parseDoajOaiPage } from '../_shared/doaj-oai.ts'
 
 type Topic = {
   slug: string
@@ -68,6 +69,11 @@ const EUROPE_PMC_PAGE_SIZE = 125
 const CLINICAL_TRIALS_PAGE_SIZE = 50
 const ISRCTN_PAGE_SIZE = 1000
 const DOAJ_PAGE_SIZE = 100
+const DOAJ_OAI_JOB_PREFIX = 'oai:global:'
+// Stop starting new OAI pages well before the hosted Edge deadline. A single
+// unusually relevant page can require many batched link writes; this margin
+// lets that page finish and persist its cursor instead of leaving a stale lock.
+const DOAJ_PAGE_START_BUDGET_MS = 45_000
 const HISTORY_START = '1800-01-01'
 const USER_AGENT = 'immortal.life-intelligence/1.0 (contact: research@immortal.life)'
 
@@ -138,6 +144,32 @@ async function persistResearchPage(
     p_external_ids: records.map((record: any) => record.external_id),
   })
   if (reindexed.error) throw new Error(`research reindex enqueue: ${errorMessage(reindexed.error)}`)
+}
+
+async function persistGlobalResearchPage(
+  supabase: any,
+  records: any[],
+  sourceId: string,
+  links: any[],
+  batchSize = 50,
+): Promise<void> {
+  for (let offset = 0; offset < records.length; offset += batchSize) {
+    const page = records.slice(offset, offset + batchSize)
+    const ids = new Set(page.map((record: any) => record.external_id))
+    const imported = await supabase.from('research_items')
+      .upsert(page, { onConflict: 'source_id,external_id', defaultToNull: false })
+    if (imported.error) throw new Error(`global research page upsert: ${errorMessage(imported.error)}`)
+    const linked = await supabase.rpc('link_research_ingestion_batch', {
+      p_source_id: sourceId,
+      p_links: links.filter((link: any) => ids.has(link.external_id)),
+    })
+    if (linked.error) throw new Error(`global research topic links: ${errorMessage(linked.error)}`)
+    const reindexed = await supabase.rpc('enqueue_research_source_records_for_reindex', {
+      p_source_id: sourceId,
+      p_external_ids: [...ids],
+    })
+    if (reindexed.error) throw new Error(`global research reindex enqueue: ${errorMessage(reindexed.error)}`)
+  }
 }
 
 async function persistTrialPage(
@@ -858,6 +890,146 @@ async function syncDoaj(supabase: any, topic: Topic, job: Job): Promise<SyncOutc
   return { seen: results.length, written: records.length, done, cursorState: done ? {} : { page: page + 1 }, totalAvailable: total }
 }
 
+async function syncDoajOai(supabase: any, topics: Topic[], job: Job): Promise<SyncOutcome> {
+  const token = typeof job.cursor_state?.resumptionToken === 'string' ? String(job.cursor_state.resumptionToken) : ''
+  const recoveryUntil = typeof job.cursor_state?.until === 'string' ? String(job.cursor_state.until) : ''
+  const url = new URL('/oai.article', 'https://doaj.org')
+  url.searchParams.set('verb', 'ListRecords')
+  if (token) {
+    // OAI-PMH requires the resumption token to be the only argument besides
+    // the verb. It represents one durable page in the single global harvest.
+    url.searchParams.set('resumptionToken', token)
+  } else {
+    url.searchParams.set('metadataPrefix', 'oai_doaj')
+    if (job.sync_mode === 'incremental') {
+      // The free feed can trail the live index by up to 30 days. A 32-day
+      // overlap collects the newly visible day without missing late changes;
+      // source ids make the overlap idempotent.
+      url.searchParams.set('from', new Date(Date.now() - 32 * 86400000).toISOString().slice(0, 10))
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(recoveryUntil)) {
+      url.searchParams.set('until', recoveryUntil)
+    }
+  }
+
+  const xml = await fetchText(url)
+  const page = parseDoajOaiPage(xml)
+  if (page.errorCode) {
+    if (page.errorCode === 'noRecordsMatch') return { seen: 0, written: 0, done: true, cursorState: {} }
+    if (page.errorCode === 'badResumptionToken' && token && typeof job.cursor_state?.lastDatestamp === 'string') {
+      // Resume from the last fully processed calendar day. This can replay a
+      // small overlap but cannot skip history, and all writes are idempotent.
+      return {
+        seen: 0,
+        written: 0,
+        done: false,
+        cursorState: { until: String(job.cursor_state.lastDatestamp).slice(0, 10) },
+        totalAvailable: page.completeListSize,
+      }
+    }
+    throw new Error(`DOAJ OAI-PMH ${page.errorCode}`)
+  }
+
+  const now = new Date().toISOString()
+  const records: any[] = []
+  const links: any[] = []
+  for (const item of page.records) {
+    const controlledTerms = uniqueStrings(item.keywords, 80)
+    const haystack = `${item.title} ${controlledTerms.join(' ')} ${item.journal}`
+    const candidateTopics = topics.filter((topic) =>
+      topicAppearsInText(topic, haystack) || Boolean(TOPIC_KEYWORDS[topic.slug]?.test(haystack)))
+    const assessed = candidateTopics.map((topic) => ({ topic, assessment: assessTopic(topic, {
+      title: item.title,
+      controlledTerms,
+      studyType: 'Open-access journal article',
+      sourceId: 'doaj',
+      sourceDate: dateOnly(item.publishedOn),
+    }) })).filter(({ assessment }) => assessment.relevanceScore > 0)
+    if (!assessed.length) continue
+    const best = assessed.reduce((current, candidate) =>
+      candidate.assessment.relevanceScore > current.assessment.relevanceScore ? candidate : current)
+    const publishedOn = dateOnly(item.publishedOn)
+    const publicationType = 'Open-access journal article'
+    const level = classifyEvidence(publicationType, item.title, 'doaj')
+    records.push({
+      source_id: 'doaj',
+      external_id: item.externalId,
+      title: cleanText(item.title, 500),
+      authors: uniqueStrings(item.authors, 40).join(', ') || null,
+      journal: cleanText(item.journal, 240) || null,
+      published_on: publishedOn,
+      doi: cleanText(item.doi, 240) || null,
+      publication_type: publicationType,
+      // Abstracts and full text are deliberately not imported. Omitting the
+      // field also preserves any legacy value already attached to a record;
+      // this cutover never deletes previously collected source data.
+      controlled_terms: controlledTerms,
+      evidence_level: level,
+      source_url: `https://doaj.org/article/${encodeURIComponent(item.externalId)}`,
+      is_open_access: true,
+      cited_by_count: null,
+      editorial_summary: researchEditorialSummary(level, item.journal),
+      evidence_snapshot: researchEvidenceSnapshot({ evidence_level: level, publication_type: publicationType }),
+      source_updated_at: item.datestamp || now,
+      last_seen_at: now,
+      status: 'published',
+      relevance_confidence: best.assessment.relevanceScore,
+      source_quality_score: best.assessment.sourceQualityScore,
+      freshness_score: best.assessment.freshnessScore,
+      publication_state: best.assessment.publish ? 'published' : 'quarantined',
+      match_explanation: best.assessment.explanation,
+      quality_checked_at: now,
+      duplicate_cluster_key: duplicateClusterKey(item.title, item.doi || item.externalId),
+      metadata: {
+        doaj_id: item.externalId,
+        keywords: controlledTerms,
+        language: cleanText(item.language, 40) || null,
+        publisher: cleanText(item.publisher, 240) || null,
+        oai_datestamp: item.datestamp || null,
+        source: 'DOAJ OAI-PMH article metadata (CC0)',
+      },
+    })
+    for (const { topic, assessment } of assessed) {
+      links.push({
+        external_id: item.externalId,
+        topic_slug: topic.slug,
+        relevance_score: assessment.relevanceScore,
+        match_reasons: assessment.reasons,
+        matched_fields: assessment.matchedFields,
+        is_published: assessment.publish,
+        evaluated_at: now,
+      })
+    }
+  }
+
+  // Dense OAI pages can match several topics per record. Retried pages reduce
+  // their transaction fan-out automatically instead of repeatedly hitting the
+  // same database statement timeout.
+  const writeBatchSize = adaptiveDatabasePageSize(50, job.attempts, 10)
+  if (records.length) await persistGlobalResearchPage(supabase, records, 'doaj', links, writeBatchSize)
+  for (let offset = 0; offset < page.deletedIds.length; offset += 100) {
+    const deleted = await supabase.from('research_items').update({
+      status: 'withdrawn',
+      publication_state: 'quarantined',
+      last_seen_at: now,
+    }).eq('source_id', 'doaj').in('external_id', page.deletedIds.slice(offset, offset + 100))
+    if (deleted.error) throw new Error(`DOAJ deletion reconciliation: ${errorMessage(deleted.error)}`)
+  }
+
+  const done = !page.resumptionToken
+  const lastDatestamp = page.lastDatestamp || cleanText(job.cursor_state?.lastDatestamp, 80)
+  return {
+    seen: page.records.length + page.deletedIds.length,
+    written: records.length,
+    done,
+    cursorState: done ? {} : {
+      resumptionToken: page.resumptionToken,
+      lastDatestamp,
+      cursor: page.cursor,
+    },
+    totalAvailable: page.completeListSize,
+  }
+}
+
 function initialIsrctnState(job: Job): { ranges: DateRange[]; current: DateRange | null } {
   const existing = job.cursor_state ?? {}
   const ranges = Array.isArray(existing.ranges)
@@ -1117,7 +1289,7 @@ Deno.serve(async (req) => {
   if (runError) return jsonResponse(req, { error: 'Unable to create ingestion run' }, 500, 'POST')
   // Source-scoped workers deliberately yield well before the platform timeout.
   // This leaves Edge capacity available for the reader-facing public API.
-  const runTimeBudgetMs = requestedSource === 'all' ? RUN_TIME_BUDGET_MS : 20_000
+  const runTimeBudgetMs = requestedSource === 'doaj' ? DOAJ_PAGE_START_BUDGET_MS : requestedSource === 'all' ? RUN_TIME_BUDGET_MS : 20_000
 
   try {
     const { data: topics, error: topicsError } = await supabase
@@ -1142,6 +1314,9 @@ Deno.serve(async (req) => {
 
     const slot = new Date(Math.floor(Date.now() / SIX_HOURS_MS) * SIX_HOURS_MS).toISOString()
     const queued = sources.flatMap((source: { id: string }) => {
+      if (source.id === 'doaj') {
+        return [{ source_id: source.id, topic_slug: null, job_key: `${DOAJ_OAI_JOB_PREFIX}incremental`, window_start: slot, sync_mode: 'incremental' }]
+      }
       if (TOPIC_SOURCE_IDS.has(source.id)) {
         return (topics ?? []).map((topic: Topic) => ({ source_id: source.id, topic_slug: topic.slug, job_key: `${topic.slug}:incremental`, window_start: slot, sync_mode: 'incremental' }))
       }
@@ -1152,6 +1327,12 @@ Deno.serve(async (req) => {
         source_id: source.id,
         topic_slug: null,
         job_key: 'retractions:history',
+        window_start: '1800-01-01T00:00:00.000Z',
+        sync_mode: 'history',
+      }] : source.id === 'doaj' ? [{
+        source_id: source.id,
+        topic_slug: null,
+        job_key: `${DOAJ_OAI_JOB_PREFIX}history`,
         window_start: '1800-01-01T00:00:00.000Z',
         sync_mode: 'history',
       }] : (topics ?? []).map((topic: Topic) => ({
@@ -1179,12 +1360,36 @@ Deno.serve(async (req) => {
       .upsert([...freshQueued, ...historical], { onConflict: 'source_id,job_key,window_start', ignoreDuplicates: true })
     if (queueError) throw queueError
 
-    const abandonedBefore = new Date(Date.now() - 45 * 60 * 1000).toISOString()
-    await supabase
+    // Dedicated DOAJ runs stop starting pages after 45 seconds, so a four
+    // minute lock is certainly abandoned. Other workers retain the wider
+    // recovery window because their upstream page durations vary more.
+    const abandonedAfterMs = requestedSource === 'doaj' ? 4 * 60 * 1000 : 45 * 60 * 1000
+    const abandonedBefore = new Date(Date.now() - abandonedAfterMs).toISOString()
+    const { data: abandonedJobs, error: abandonedJobsError } = await supabase
       .from('ingestion_jobs')
-      .update({ status: 'retry', available_at: new Date().toISOString(), locked_at: null, last_error: 'Recovered abandoned job' })
+      .select('id,attempts')
       .eq('status', 'running')
       .lt('locked_at', abandonedBefore)
+    if (abandonedJobsError) throw abandonedJobsError
+    for (const abandonedJob of abandonedJobs ?? []) {
+      // A terminated Edge invocation cannot record its own failure. Count the
+      // recovered lock as an attempt so adaptive writers use a smaller batch
+      // on the exact page that exceeded the runtime instead of repeating the
+      // same expensive transaction forever.
+      const recovered = await supabase
+        .from('ingestion_jobs')
+        .update({
+          status: 'retry',
+          attempts: Number(abandonedJob.attempts ?? 0) + 1,
+          available_at: new Date().toISOString(),
+          locked_at: null,
+          last_error: 'Recovered abandoned job with a smaller retry batch',
+        })
+        .eq('id', abandonedJob.id)
+        .eq('status', 'running')
+        .lt('locked_at', abandonedBefore)
+      if (recovered.error) throw recovered.error
+    }
 
     const topicBySlug = new Map((topics ?? []).map((topic: Topic) => [topic.slug, topic]))
     let seen = 0
@@ -1222,7 +1427,8 @@ Deno.serve(async (req) => {
       if (!jobs?.length) break
       const job = jobs[0] as Job
       const topic = job.topic_slug ? topicBySlug.get(job.topic_slug) : null
-      if (TOPIC_SOURCE_IDS.has(job.source_id) && !topic) {
+      const isDoajOaiJob = job.source_id === 'doaj' && job.job_key.startsWith(DOAJ_OAI_JOB_PREFIX)
+      if (TOPIC_SOURCE_IDS.has(job.source_id) && !topic && !isDoajOaiJob) {
         await supabase.from('ingestion_jobs').update({ status: 'dead', last_error: 'Enabled topic no longer exists', updated_at: new Date().toISOString() }).eq('id', job.id)
         continue
       }
@@ -1242,6 +1448,7 @@ Deno.serve(async (req) => {
         let outcome: SyncOutcome
         if (job.source_id === 'europe-pmc') outcome = await syncEuropePmc(supabase, topic as Topic, job)
         else if (job.source_id === 'pubmed') outcome = await syncPubMed(supabase, topic as Topic, job)
+        else if (job.source_id === 'doaj' && isDoajOaiJob) outcome = await syncDoajOai(supabase, topics as Topic[], job)
         else if (job.source_id === 'doaj') outcome = await syncDoaj(supabase, topic as Topic, job)
         else if (job.source_id === 'clinicaltrials-gov') outcome = await syncClinicalTrials(supabase, topic as Topic, job)
         else if (job.source_id === 'isrctn') outcome = await syncIsrctn(supabase, topic as Topic, job)
@@ -1258,7 +1465,7 @@ Deno.serve(async (req) => {
         await supabase.from('ingestion_jobs').update({
           status: outcome.done ? 'succeeded' : 'pending',
           completed_at: outcome.done ? completedAt : null,
-          available_at: outcome.done ? completedAt : new Date(Date.now() + 1000).toISOString(),
+          available_at: outcome.done ? completedAt : isDoajOaiJob ? completedAt : new Date(Date.now() + 1000).toISOString(),
           cursor_state: outcome.cursorState ?? {},
           pages_processed: Number(job.pages_processed ?? 0) + 1,
           total_available: outcome.totalAvailable ?? null,
@@ -1269,6 +1476,10 @@ Deno.serve(async (req) => {
           last_error: null,
           updated_at: completedAt,
         }).eq('id', job.id)
+        if (isDoajOaiJob && job.sync_mode === 'history' && outcome.done) {
+          const finalized = await supabase.rpc('finalize_doaj_oai_history')
+          if (finalized.error) throw new Error(`DOAJ history reconciliation: ${errorMessage(finalized.error)}`)
+        }
         // A source is live once a real upstream page succeeds. Historical jobs
         // can span many pages, so waiting for the entire stream to finish would
         // incorrectly leave a healthy integration labelled as pending.
@@ -1289,8 +1500,9 @@ Deno.serve(async (req) => {
         const isDatabaseTimeout = /canceling statement due to statement timeout/i.test(message)
         const maxAttempts = isEuropePmcTransient || isDatabaseTimeout ? 20 : 8
         const isDead = attempt >= maxAttempts
-        const baseDelayMs = isEuropePmcTransient ? 60 * 60 * 1000 : isDatabaseTimeout ? 5 * 60 * 1000 : 15 * 60 * 1000
-        const maximumDelayMs = isEuropePmcTransient ? 24 * 60 * 60 * 1000 : 6 * 60 * 60 * 1000
+        const isDoajDatabaseTimeout = job.source_id === 'doaj' && isDatabaseTimeout
+        const baseDelayMs = isEuropePmcTransient ? 60 * 60 * 1000 : isDoajDatabaseTimeout ? 60 * 1000 : isDatabaseTimeout ? 5 * 60 * 1000 : 15 * 60 * 1000
+        const maximumDelayMs = isEuropePmcTransient ? 24 * 60 * 60 * 1000 : isDoajDatabaseTimeout ? 15 * 60 * 1000 : 6 * 60 * 60 * 1000
         const exponentialDelayMs = Math.min(maximumDelayMs, baseDelayMs * 2 ** Math.max(0, attempt - 1))
         const upstreamDelayMs = error instanceof UpstreamHttpError ? error.retryAfterMs ?? 0 : 0
         const jitterMs = ((Number(job.id) * 37 + attempt * 101) % 900) * 1000
