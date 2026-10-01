@@ -207,7 +207,10 @@
         return link;
       }));
       panel.hidden = false;
-      requestAnimationFrame(() => panel.dataset.open = 'true');
+      // Force one layout after removing `hidden` so the very short transition
+      // is reliable for both pointer hover and keyboard focus.
+      void panel.offsetWidth;
+      panel.dataset.open = 'true';
     }
 
     function close(immediate = false) {
@@ -234,8 +237,9 @@
     });
     nav.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && !panel.hidden) {
+        const returnFocus = activeTrigger;
         close(true);
-        activeTrigger?.focus();
+        returnFocus?.focus();
       }
     });
   });
