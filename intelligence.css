@@ -1262,6 +1262,48 @@ body[data-view="topic"] .intel-hero .freshness { display:none; }
 .topic-hero-timeline-event > a { display:block; color:#35272f; text-decoration:none; font:600 clamp(12px,1vw,15px)/1.35 var(--sans); }
 .topic-hero-timeline-event > a:hover { color:var(--gold); }
 .topic-hero-timeline-loading,.topic-hero-timeline-empty { padding:22px 0; color:var(--muted); font:12px/1.5 var(--sans); }
+
+/* On wide screens the illustration is a real third column rather than a
+   background hidden behind the evidence card. */
+@media (min-width:1180px) {
+  body[data-view="topic"] .intel-hero {
+    grid-template-columns:minmax(360px,.9fr) minmax(210px,.48fr) minmax(350px,.82fr);
+    grid-template-areas:"kicker art timeline" "title art timeline" "lede art timeline";
+    column-gap:clamp(20px,2.3vw,42px);
+    padding-inline:clamp(34px,4.7vw,76px);
+  }
+  body[data-view="topic"] .intel-hero > .topic-hero-art {
+    position:relative;
+    inset:auto;
+    grid-area:art;
+    align-self:stretch;
+    min-height:360px;
+    overflow:visible;
+  }
+  body[data-view="topic"] .topic-hero-art svg {
+    width:clamp(310px,29vw,480px);
+    right:auto;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+  }
+  body[data-view="topic"] .topic-hero-art::before {
+    width:clamp(300px,31vw,470px);
+    height:clamp(330px,35vw,520px);
+    right:auto;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+  }
+  body[data-view="topic"] .intel-hero h1 {
+    font-size:clamp(50px,5.7vw,88px);
+  }
+  body[data-view="topic"] .topic-hero-timeline {
+    max-width:540px;
+    position:relative;
+    z-index:2;
+  }
+}
 body[data-view="topic"] .living-dossier { padding-top:clamp(42px,6vw,78px); }
 .living-dossier-heading { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:48px; align-items:start; }
 .living-dossier-heading h2 { margin:12px 0 16px; max-width:930px; font:600 clamp(31px,4vw,54px)/1.06 var(--sans); letter-spacing:-.045em; }

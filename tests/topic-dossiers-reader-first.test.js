@@ -31,7 +31,7 @@ test('all 180 dossiers receive a unique semantic vector illustration', async () 
 })
 
 test('topic pages explain evidence in reader language and keep conclusions readiness-gated', async () => {
-  const [build, browser, template] = await Promise.all([read('build.js'), read('intelligence.js'), read('intelligence-template.html')])
+  const [build, browser, template, styles] = await Promise.all([read('build.js'), read('intelligence.js'), read('intelligence-template.html'), read('intelligence.css')])
   assert.match(build, /The current picture/)
   assert.match(build, /How far has this topic reached\?/)
   assert.match(build, /Human Evidence, Clinical Trials & Research/)
@@ -41,5 +41,7 @@ test('topic pages explain evidence in reader language and keep conclusions readi
   assert.match(browser, /coverage statement, not a claim/)
   assert.match(browser, /topicCurrentInterpretation\.hidden = true/)
   assert.match(template, /intelligence\.js\?v=20261001-reader-dossiers/)
-  assert.match(template, /intelligence\.css\?v=20261001-reader-dossiers/)
+  assert.match(template, /intelligence\.css\?v=20261002-topic-art-layout/)
+  assert.match(styles, /grid-template-areas:"kicker art timeline" "title art timeline" "lede art timeline"/)
+  assert.match(styles, /\.intel-hero > \.topic-hero-art \{\s*position:relative;/)
 })
