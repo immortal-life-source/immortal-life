@@ -208,24 +208,45 @@ Deno.serve(async (req) => {
       const sort = cleanText(url.searchParams.get('sort') ?? 'index', 20)
       const search = publicSearchTerm(url.searchParams.get('q'))
       const universityLimit = Math.min(Math.max(parsedLimit || 100, 1), 500)
-      const relation = topic
-        ? ',university_research_topic_metrics!inner(topic_slug,works_all_time,works_five_year,works_two_year,representative_citations,representative_open_access_count,representative_work_count)'
-        : ''
-      let query = supabase.from('university_research_institutions')
-        .select(`openalex_id,slug,name,ror_id,country_code,country_name,continent,region,city,latitude,longitude,homepage_url,openalex_url,indexed_works_all_time,indexed_works_five_year,indexed_works_two_year,indexed_topic_count,representative_citations,representative_open_access_share,activity_score,breadth_score,momentum_score,citation_context_score,research_index_score,ranking_method_version,updated_at${relation}`, { count: 'exact' })
-        .eq('is_eligible', true)
-        .range(offset, offset + universityLimit - 1)
-      if (topic) query = query.eq('university_research_topic_metrics.topic_slug', topic)
-      if (/^[A-Z]{2}$/.test(country)) query = query.eq('country_code', country)
-      if (continent) query = query.eq('continent', continent)
-      if (search) query = query.or(`name.ilike.%${search}%,city.ilike.%${search}%,country_name.ilike.%${search}%`)
-      if (sort === 'activity') query = query.order('indexed_works_five_year', { ascending: false }).order('research_index_score', { ascending: false })
-      else if (sort === 'momentum') query = query.order('momentum_score', { ascending: false }).order('indexed_works_two_year', { ascending: false })
-      else if (sort === 'breadth') query = query.order('indexed_topic_count', { ascending: false }).order('indexed_works_five_year', { ascending: false })
-      else if (sort === 'open-access') query = query.order('representative_open_access_share', { ascending: false, nullsFirst: false }).order('indexed_works_five_year', { ascending: false })
-      else query = query.order('research_index_score', { ascending: false }).order('indexed_works_five_year', { ascending: false })
-      const [{ data, error, count }, coverage, topicsResult, { data: sources, error: sourcesError }] = await Promise.all([
-        query,
+      const institutionFields = 'openalex_id,slug,name,ror_id,country_code,country_name,continent,region,city,latitude,longitude,homepage_url,openalex_url,indexed_works_all_time,indexed_works_five_year,indexed_works_two_year,indexed_topic_count,representative_citations,representative_open_access_share,activity_score,breadth_score,momentum_score,citation_context_score,research_index_score,ranking_method_version,updated_at'
+
+      // Start topic-filtered requests from the selective metrics table. The
+      // previous reverse embedded join started with every eligible institution,
+      // calculated an exact joined count, and only then applied the topic. At
+      // global scale that regularly approached the proxy deadline. This shape
+      // uses university_topic_rank_idx directly and also returns the genuinely
+      // strongest topic institutions, rather than sorting a general top-100
+      // sample in JavaScript after retrieval.
+      let directoryQuery: any
+      if (topic) {
+        directoryQuery = supabase.from('university_research_topic_metrics')
+          .select(`topic_slug,works_all_time,works_five_year,works_two_year,representative_citations,representative_open_access_count,representative_work_count,university_research_institutions!inner(${institutionFields})`, { count: 'planned' })
+          .eq('topic_slug', topic)
+          .eq('university_research_institutions.is_eligible', true)
+          .range(offset, offset + universityLimit - 1)
+        if (/^[A-Z]{2}$/.test(country)) directoryQuery = directoryQuery.eq('university_research_institutions.country_code', country)
+        if (continent) directoryQuery = directoryQuery.eq('university_research_institutions.continent', continent)
+        if (search) directoryQuery = directoryQuery.or(`name.ilike.%${search}%,city.ilike.%${search}%,country_name.ilike.%${search}%`, { referencedTable: 'university_research_institutions' })
+        directoryQuery = directoryQuery
+          .order('works_five_year', { ascending: false })
+          .order('works_two_year', { ascending: false })
+          .order('openalex_id')
+      } else {
+        directoryQuery = supabase.from('university_research_institutions')
+          .select(institutionFields, { count: 'exact' })
+          .eq('is_eligible', true)
+          .range(offset, offset + universityLimit - 1)
+        if (/^[A-Z]{2}$/.test(country)) directoryQuery = directoryQuery.eq('country_code', country)
+        if (continent) directoryQuery = directoryQuery.eq('continent', continent)
+        if (search) directoryQuery = directoryQuery.or(`name.ilike.%${search}%,city.ilike.%${search}%,country_name.ilike.%${search}%`)
+        if (sort === 'activity') directoryQuery = directoryQuery.order('indexed_works_five_year', { ascending: false }).order('research_index_score', { ascending: false })
+        else if (sort === 'momentum') directoryQuery = directoryQuery.order('momentum_score', { ascending: false }).order('indexed_works_two_year', { ascending: false })
+        else if (sort === 'breadth') directoryQuery = directoryQuery.order('indexed_topic_count', { ascending: false }).order('indexed_works_five_year', { ascending: false })
+        else if (sort === 'open-access') directoryQuery = directoryQuery.order('representative_open_access_share', { ascending: false, nullsFirst: false }).order('indexed_works_five_year', { ascending: false })
+        else directoryQuery = directoryQuery.order('research_index_score', { ascending: false }).order('indexed_works_five_year', { ascending: false })
+      }
+      const [{ data: directoryData, error, count }, coverage, topicsResult, { data: sources, error: sourcesError }] = await Promise.all([
+        directoryQuery,
         supabase.rpc('get_university_index_coverage'),
         supabase.from('intelligence_topics').select('slug,name,sort_order,domain_slug,domain_name,domain_sort').eq('enabled', true).order('sort_order'),
         sourcesPromise,
@@ -233,20 +254,27 @@ Deno.serve(async (req) => {
       for (const result of [coverage, topicsResult]) if (result.error) throw result.error
       if (error) throw error
       if (sourcesError) throw sourcesError
-      const universities = data ?? []
-      if (topic) universities.sort((left: any, right: any) => {
-        const leftMetric = (left.university_research_topic_metrics ?? []).find((metric: any) => metric.topic_slug === topic)
-        const rightMetric = (right.university_research_topic_metrics ?? []).find((metric: any) => metric.topic_slug === topic)
-        return Number(rightMetric?.works_five_year ?? 0) - Number(leftMetric?.works_five_year ?? 0)
-          || Number(rightMetric?.works_two_year ?? 0) - Number(leftMetric?.works_two_year ?? 0)
-          || String(left.name).localeCompare(String(right.name))
-      })
+      const universities = topic
+        ? (directoryData ?? []).map((metric: any) => {
+          const institution = Array.isArray(metric.university_research_institutions)
+            ? metric.university_research_institutions[0]
+            : metric.university_research_institutions
+          const { university_research_institutions: _institution, ...topicMetric } = metric
+          return { ...(institution ?? {}), university_research_topic_metrics: [topicMetric] }
+        }).filter((institution: any) => institution.openalex_id)
+        : (directoryData ?? [])
       const countryDirectory = Array.isArray(coverage.data?.country_directory) ? coverage.data.country_directory : []
       return response(req, {
         generated_at: new Date().toISOString(),
-        total_matching: count ?? 0,
+        // PostgreSQL's planned count keeps the first topic page fast, but it
+        // is not an audited total and may underestimate a growing corpus. Do
+        // not display it or use it to stop pagination; a full final page is
+        // the only completion signal for topic browsing.
+        total_matching: topic ? null : count ?? 0,
         offset,
-        next_offset: offset + universities.length < Number(count ?? 0) ? offset + universities.length : null,
+        next_offset: topic
+          ? universities.length === universityLimit ? offset + universities.length : null
+          : offset + universities.length < Number(count ?? 0) ? offset + universities.length : null,
         coverage: coverage.data ?? {},
         filters: { topic: topic || null, country: country || null, continent: continent || null, search: search || null, sort },
         topics: topicsResult.data ?? [],

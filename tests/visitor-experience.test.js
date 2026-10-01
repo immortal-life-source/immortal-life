@@ -308,8 +308,25 @@ test('university fallbacks never present a 100-row sample as complete global cov
   assert.match(proxy, /slowAggregate \? 9000 : 3500/)
   assert.match(api, /country_name\.ilike/)
   assert.match(api, /count: 'exact'/)
+  assert.match(api, /supabase\.from\('university_research_topic_metrics'\)/)
+  assert.match(api, /university_research_institutions!inner/)
+  assert.match(api, /uses university_topic_rank_idx directly/)
+  assert.match(api, /university_research_institutions!inner\(\$\{institutionFields\}\)`, \{ count: 'planned' \}/)
+  assert.match(api, /total_matching: topic \? null : count \?\? 0/)
+  assert.match(api, /universities\.length === universityLimit/)
   assert.match(portal, /Load 100 more/)
+  assert.match(portal, /data\.total_matching != null/)
   assert.match(portal, /complete university index is reconnecting/i)
+})
+
+test('university profile provenance and record links have non-overlapping spacing', async () => {
+  const [css, template, pages] = await Promise.all([
+    read('intelligence.css'), read('intelligence-template.html'), read('supabase/functions/public-pages/index.ts'),
+  ])
+  assert.match(css, /\.university-profile-metrics \+ \.record-links \{ margin: 34px 0 0; \}/)
+  assert.match(css, /\.university-profile-metrics \+ \.record-links \+ \.quality-intro \{ max-width: 980px; margin: 20px 0 36px; \}/)
+  assert.match(template, /intelligence\.css\?v=20261001-profile-layout/)
+  assert.match(pages, /intelligence\.css\?v=20261001-profile-layout/)
 })
 
 test('private daily management report covers traffic, new knowledge and operational health', async () => {
@@ -350,7 +367,8 @@ test('topic journeys produce a visibly topic-specific university ranking', async
   assert.match(portal, /Find related university activity/)
   assert.match(portal, /This is a topic-specific view/)
   assert.match(portal, /ranked by that topic’s indexed work links/)
-  assert.match(api, /leftMetric\?\.works_five_year/)
+  assert.match(api, /\.order\('works_five_year', \{ ascending: false \}\)/)
+  assert.match(api, /university_research_topic_metrics: \[topicMetric\]/)
   assert.match(template, /id="universityHeading"/)
 })
 

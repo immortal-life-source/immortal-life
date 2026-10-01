@@ -2163,9 +2163,11 @@
       universityRows.push(...incoming.filter((university) => !known.has(university.openalex_id)));
     } else universityRows = incoming;
     universityNextOffset = data.next_offset;
-    universityTotal = Number.isFinite(Number(data.total_matching)) ? Number(data.total_matching) : universityRows.length;
+    universityTotal = data.total_matching != null && Number.isFinite(Number(data.total_matching)) ? Number(data.total_matching) : null;
     elements.universityLoadMore.hidden = universityNextOffset == null;
-    if (!elements.universityLoadMore.hidden) elements.universityLoadMore.textContent = `Load 100 more · ${numberFormatter.format(universityRows.length)} of ${numberFormatter.format(universityTotal)} shown`;
+    if (!elements.universityLoadMore.hidden) elements.universityLoadMore.textContent = universityTotal == null
+      ? `Load 100 more · ${numberFormatter.format(universityRows.length)} shown`
+      : `Load 100 more · ${numberFormatter.format(universityRows.length)} of ${numberFormatter.format(universityTotal)} shown`;
     renderUniversityStats(data.coverage || {});
     if (!universityControlsReady) {
       (data.topics || []).forEach((topic) => elements.universityTopic.append(new Option(topic.name, topic.slug)));

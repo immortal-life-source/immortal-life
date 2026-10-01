@@ -50,6 +50,14 @@ test('public indexes avoid unfiltered exact scans while filtered views use exact
   assert.match(trialView, /pageLength === limit/)
 })
 
+test('reader-facing evidence filters have matching database indexes', async () => {
+  const migration = await read('supabase/migrations/20261001000100_fast_research_evidence_filters.sql')
+  assert.match(migration, /research_items_public_evidence_browse_idx/)
+  assert.match(migration, /publication_state, evidence_level, published_on desc nulls last, id desc/)
+  assert.match(migration, /research_items_public_access_browse_idx/)
+  assert.match(migration, /publication_state, is_open_access, published_on desc nulls last, id desc/)
+})
+
 test('public browsing, graph totals, sitemaps and downloads traverse the complete retained corpus', async () => {
   const [api, pages, portal, graphMigration] = await Promise.all([
     read('supabase/functions/public-intelligence/index.ts'),
