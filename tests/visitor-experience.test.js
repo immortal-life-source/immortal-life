@@ -17,8 +17,10 @@ test('homepage is a single-screen search entry with no below-the-fold portal dup
   assert.doesNotMatch(html, /My Radar|href="\/dashboard"/)
   assert.match(js, /if \(!document\.getElementById\('todayGrid'\) && !document\.getElementById\('heroDiscoveriesList'\)\) return/)
   assert.match(html, /class="hero-butterfly" aria-hidden="true"/)
-  assert.match(html, /style\.css\?v=20261001-butterfly/)
+  assert.match(html, /style\.css\?v=20261001-butterfly-orbit/)
   assert.match(css, /@keyframes heroButterflyJourney/)
+  assert.match(css, /rotate\(268deg\)/)
+  assert.match(css, /translate\(-50%,-54%\)/)
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\s+\.hero-butterfly \{[\s\S]*?animation: none;/)
 })
 
