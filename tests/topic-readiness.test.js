@@ -30,11 +30,15 @@ test('published interpretations fail closed until topic history, reindexing, uni
 })
 
 test('sleep remains a preview and does not receive a production conclusion before readiness', async () => {
-  const [build, migration] = await Promise.all([
+  const [build, browser, migration] = await Promise.all([
     read('build.js'),
+    read('intelligence.js'),
     read('supabase/migrations/20260927000800_topic_taxonomy_reindex_readiness.sql'),
   ])
-  assert.match(build, /topic\.slug === 'senolytics'/)
+  assert.match(build, /topic-current-interpretation[^>]*[\s\S]{0,180}hidden/)
+  assert.match(browser, /if \(!pilot\?\.enabled \|\| !conclusions\.length\)/)
+  assert.match(browser, /elements\.topicCurrentInterpretation\.hidden = true/)
+  assert.match(browser, /elements\.topicCurrentInterpretation\.hidden = false/)
   assert.doesNotMatch(migration, /Direct lifespan extension not established/)
   assert.doesNotMatch(migration, /insert into public\.topic_dossier_versions[\s\S]{0,1200}'sleep'/)
 })

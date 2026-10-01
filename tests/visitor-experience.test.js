@@ -519,9 +519,11 @@ test('senolytics pilots versioned cautious conclusions without silently rewritin
     read('supabase/functions/public-intelligence/index.ts'),
     read('supabase/migrations/20260927000700_senolytics_living_conclusions_pilot.sql'),
   ])
-  assert.match(build, /topic\.slug === 'senolytics'/)
+  assert.match(build, /topic-current-interpretation[^>]*[\s\S]{0,180}hidden/)
   assert.match(build, /What the evidence supports today/)
   assert.match(portal, /renderTopicPilot/)
+  assert.match(portal, /if \(!pilot\?\.enabled \|\| !conclusions\.length\)/)
+  assert.match(portal, /topicCurrentInterpretation\.hidden = true/)
   assert.match(portal, /cannot silently reverse the conclusion/)
   assert.match(portal, /20260930-audited-pilot-metrics-b/)
   assert.match(api, /get_topic_dossier_pilot/)

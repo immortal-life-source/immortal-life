@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { buildResourceDirectory } = require('./scripts/resource-directory.js');
+const { topicIllustrationSvg } = require('./scripts/topic-illustrations.js');
 
 const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
 const site = 'https://www.immortal.life';
@@ -119,6 +120,25 @@ function pageSchema(page) {
           item: `${site}/${parts.slice(0, index + 1).join('/')}`,
         })),
       ];
+  const webPage = {
+    '@type': page.PAGE_VIEW === 'topic' ? 'CollectionPage' : 'WebPage',
+    '@id': `${page.CANONICAL_URL}#webpage`,
+    name: page.PAGE_TITLE,
+    description: page.PAGE_DESCRIPTION,
+    url: page.CANONICAL_URL,
+    isPartOf: { '@id': `${site}/#website` },
+    publisher: { '@id': `${site}/#organization` },
+    breadcrumb: { '@id': `${page.CANONICAL_URL}#breadcrumb` },
+    isAccessibleForFree: true,
+  };
+  if (page.PAGE_VIEW === 'topic') {
+    webPage.about = {
+      '@type': 'DefinedTerm',
+      name: page.PAGE_HEADING,
+      description: page.TOPIC_DEFINITION || page.PAGE_DESCRIPTION,
+      inDefinedTermSet: `${site}/topics`,
+    };
+  }
   return JSON.stringify({
     '@context': 'https://schema.org',
     '@graph': [
@@ -137,17 +157,7 @@ function pageSchema(page) {
         url: site,
         publisher: { '@id': `${site}/#organization` },
       },
-      {
-        '@type': page.PAGE_VIEW === 'topic' ? 'CollectionPage' : 'WebPage',
-        '@id': `${page.CANONICAL_URL}#webpage`,
-        name: page.PAGE_TITLE,
-        description: page.PAGE_DESCRIPTION,
-        url: page.CANONICAL_URL,
-        isPartOf: { '@id': `${site}/#website` },
-        publisher: { '@id': `${site}/#organization` },
-        breadcrumb: { '@id': `${page.CANONICAL_URL}#breadcrumb` },
-        isAccessibleForFree: true,
-      },
+      webPage,
       {
         '@type': 'BreadcrumbList',
         '@id': `${page.CANONICAL_URL}#breadcrumb`,
@@ -164,8 +174,11 @@ function pageSchema(page) {
 
 function intelligencePage(values, topicDossierHtml = '', topicEndHtml = '') {
   const resolved = { SOCIAL_IMAGE_URL: `${site}/og-image.png`, BODY_STYLE: '', FRESHNESS_TEXT: 'Checking source freshness…', ...values };
-  return renderTemplate(intelligenceTemplate, resolved, {
+  const escapedValues = { ...resolved };
+  delete escapedValues.TOPIC_VISUAL_HTML;
+  return renderTemplate(intelligenceTemplate, escapedValues, {
     SCHEMA_JSON: pageSchema(resolved),
+    TOPIC_VISUAL_HTML: resolved.PAGE_VIEW === 'topic' ? (resolved.TOPIC_VISUAL_HTML || '') : '',
     HERO_ACTION_HTML: resolved.PAGE_VIEW === 'topics'
       ? '<div class="intel-hero-actions"><a class="intel-hero-action" href="/compare">Compare evidence <span aria-hidden="true">→</span></a><a class="intel-hero-action" href="/resources">Open global sources <span aria-hidden="true">→</span></a></div>'
       : resolved.PAGE_VIEW === 'research'
@@ -369,17 +382,21 @@ for (const page of intelligencePages) {
 const topicOutputDir = path.join(outputDir, 'topics');
 fs.mkdirSync(topicOutputDir, { recursive: true });
 for (const topic of intelligenceTopics) {
-  const pilotContentsLink = topic.slug === 'senolytics' ? '<a href="#topicCurrentInterpretation">Current interpretation</a>' : '';
-  const pilotInterpretation = topic.slug === 'senolytics' ? `<section class="topic-current-interpretation" id="topicCurrentInterpretation" aria-labelledby="topicCurrentInterpretationTitle">
-    <div class="topic-interpretation-heading"><div><span class="section-index">Senolytics pilot</span><h2 id="topicCurrentInterpretationTitle">What the evidence supports today</h2><p>A conservative, versioned interpretation. Each statement explains its boundary and what kind of new evidence could change it.</p></div><div class="topic-interpretation-version"><strong id="topicInterpretationVersion">Loading current version…</strong><span id="topicInterpretationDate"></span></div></div>
+  const pilotInterpretation = `<section class="topic-current-interpretation" id="topicCurrentInterpretation" aria-labelledby="topicCurrentInterpretationTitle" hidden>
+    <div class="topic-interpretation-heading"><div><span class="section-index">Reviewed evidence boundary</span><h2 id="topicCurrentInterpretationTitle">What the evidence supports today</h2><p>A dated interpretation is shown only after the topic has passed the complete coverage and quality checks. Each statement explains its boundary and what kind of evidence could change it.</p></div><div class="topic-interpretation-version"><strong id="topicInterpretationVersion">Loading current version…</strong><span id="topicInterpretationDate"></span></div></div>
     <div class="topic-material-change" id="topicMaterialChange" hidden role="status" aria-live="polite"></div>
     <div class="topic-claim-ledger" id="topicClaimLedger"><p class="dossier-loading">Loading the source-linked interpretation…</p></div>
     <p class="topic-interpretation-method" id="topicInterpretationMethod">New records update the facts immediately. A potentially material change is identified separately so it cannot silently rewrite the current interpretation.</p>
-  </section>` : '';
+  </section>`;
   const dossier = `<section class="intel-section living-dossier" id="topicLivingDossier" aria-labelledby="topic-question" data-topic-name="${htmlEscape(topic.name)}">
     <div class="living-dossier-heading"><div><a class="topic-domain-badge" href="/topics?domain=${encodeURIComponent(topic.domain.slug)}">${htmlEscape(topic.domain.name)}</a><span class="section-index">Living Evidence Dossier</span><h2 id="topic-question">${htmlEscape(topic.question)}</h2><p>${htmlEscape(topic.state)}</p></div><div class="topic-follow-actions"><a class="section-link topic-compare-link" href="/compare?left=${encodeURIComponent(topic.slug)}">Compare evidence</a><button class="section-link save-topic-button" type="button" data-watch-topic="${topic.slug}" data-watch-name="${htmlEscape(topic.name)}" aria-pressed="false">Follow this topic</button><a class="section-link" href="/feeds/topics/${topic.slug}.xml">RSS feed</a></div></div>
-    <nav class="topic-contents" aria-label="On this page"><span>On this page</span>${pilotContentsLink}<a href="#topicUniversities">Universities</a><a href="#topicFunding">Funding</a><a href="#trialsSection">Trials</a><a href="#researchSection">Research</a><a href="#topicTrend">Trend</a><a href="#topicEvidenceContext">Evidence context</a></nav>
+    <nav class="topic-contents" aria-label="On this page"><span>On this page</span><a href="#topicCurrentPicture">Current picture</a><a href="#topicUniversities">Universities</a><a href="#topicFunding">Funding</a><a href="#trialsSection">Trials</a><a href="#researchSection">Research</a><a href="#topicTrend">Trend</a><a href="#topicEvidenceContext">Evidence context</a></nav>
     <div class="dossier-snapshot" id="topicDossierSnapshot" aria-live="polite"><p class="dossier-loading">Loading the evidence overview…</p></div>
+    <section class="topic-current-picture" id="topicCurrentPicture" aria-labelledby="topicCurrentPictureTitle">
+      <div class="topic-current-picture-heading"><div><span class="section-index">The current picture</span><h2 id="topicCurrentPictureTitle">What the indexed evidence means—in plain language</h2></div><p>Counts are translated into evidence stage, trial maturity, safety context, and the most important gap. Every statement leads back to the records behind it.</p></div>
+      <div class="topic-meaning-grid" id="topicMeaningGrid" aria-live="polite"><p class="dossier-loading">Reading the source-linked evidence landscape…</p></div>
+      <div class="topic-evidence-ladder" aria-labelledby="topicEvidenceLadderTitle"><div class="topic-evidence-ladder-heading"><span class="section-index">Evidence ladder</span><h3 id="topicEvidenceLadderTitle">How far has this topic reached?</h3><p>Each step answers a different question. More records do not automatically mean stronger or more favourable evidence.</p></div><div class="topic-evidence-ladder-steps" id="topicEvidenceLadderSteps"></div></div>
+    </section>
     ${pilotInterpretation}
     <section class="topic-reader-overview" aria-labelledby="topicOverviewTitle"><div class="topic-overview-heading"><span class="section-index">Start here</span><h2 id="topicOverviewTitle">Understand the landscape</h2><p>The most useful routes into this topic, with every figure connected to its underlying records.</p></div><div class="topic-overview-grid"><a href="#topicUniversities"><span>01</span><strong>Where it is studied</strong><small id="topicUniversitySummary">Loading leading research universities…</small></a><a href="#trialsSection"><span>02</span><strong>Clinical trials</strong><small id="topicTrialSummary">Loading registered studies…</small></a><a href="#researchSection"><span>03</span><strong>Research</strong><small id="topicResearchSummary">Loading published evidence…</small></a><a href="#topicFunding"><span>04</span><strong>Funding activity</strong><small id="topicFundingSummary">Loading source-linked awards…</small></a><a href="#topicTrend"><span>05</span><strong>Research trend</strong><small id="topicTrendSummary">Comparing recent publication activity…</small></a></div></section>
     <section class="topic-universities" id="topicUniversities" aria-labelledby="topicUniversitiesTitle"><div class="section-heading"><div><span class="section-index">Leading research activity</span><h2 id="topicUniversitiesTitle">Universities active in ${htmlEscape(topic.name)}</h2></div><a class="section-link" href="/universities?topic=${encodeURIComponent(topic.slug)}">Explore the complete university view</a></div><p class="topic-section-intro">Ordered by indexed work linked to this topic. This is a research-activity guide, not a ranking of teaching quality or programme suitability.</p><div class="topic-university-grid" id="topicUniversityGrid"><p class="dossier-loading">Loading university activity…</p></div></section>
@@ -392,8 +409,8 @@ for (const topic of intelligenceTopics) {
   fs.writeFileSync(
     path.join(topicOutputDir, `${topic.slug}.html`),
     intelligencePage({
-      PAGE_TITLE: `${topic.name} Research & Trials — immortal.life`,
-      PAGE_DESCRIPTION: topic.description,
+      PAGE_TITLE: `${topic.name}: Human Evidence, Clinical Trials & Research — immortal.life`,
+      PAGE_DESCRIPTION: `${topic.description} Explore human evidence, clinical trials, safety context, research trends, universities, funding, and recent source-linked changes.`,
       CANONICAL_URL: `${site}/topics/${topic.slug}`,
       PAGE_VIEW: 'topic',
       TOPIC_SLUG: topic.slug,
@@ -401,6 +418,8 @@ for (const topic of intelligenceTopics) {
       FRESHNESS_TEXT: 'Current evidence overview',
       PAGE_KICKER: 'Living Evidence Dossier',
       PAGE_HEADING: topic.name,
+      TOPIC_DEFINITION: topic.description,
+      TOPIC_VISUAL_HTML: topicIllustrationSvg(topic),
       SOCIAL_IMAGE_URL: `${site}/social-card/entity/topic-${topic.slug}.png`,
     }, dossier, endGuide)
   );

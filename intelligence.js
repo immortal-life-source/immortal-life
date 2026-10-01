@@ -339,6 +339,9 @@
     sourceList: document.getElementById('sourceList'),
     topicDossierSnapshot: document.getElementById('topicDossierSnapshot'),
     topicDossierAnswers: document.getElementById('topicDossierAnswers'),
+    topicMeaningGrid: document.getElementById('topicMeaningGrid'),
+    topicEvidenceLadderSteps: document.getElementById('topicEvidenceLadderSteps'),
+    topicCurrentInterpretation: document.getElementById('topicCurrentInterpretation'),
     topicInterpretationVersion: document.getElementById('topicInterpretationVersion'),
     topicInterpretationDate: document.getElementById('topicInterpretationDate'),
     topicMaterialChange: document.getElementById('topicMaterialChange'),
@@ -1861,18 +1864,24 @@
     const lastUpdate = evidence.last_meaningful_update || events[0]?.occurred_at || evidence.generated_at;
     const metric = (label, value, href, note) => {
       const card = link('dossier-snapshot-card', '', href);
-      card.append(el('strong', '', typeof value === 'number' ? numberFormatter.format(value) : value), el('span', '', label), el('small', '', note));
+      const display = typeof value === 'number' ? (value === 0 ? '0 found' : numberFormatter.format(value)) : value;
+      card.append(el('strong', '', display), el('span', '', label), el('small', '', note));
       return card;
     };
     elements.topicDossierSnapshot.replaceChildren(
-      metric('Research records', Number(evidence.research_total || 0), '#researchSection', 'Open research →'),
-      metric('Human evidence', humanTotal, '#dossier-human-evidence', 'Read context →'),
-      metric('Clinical trials', trialTotal, '#trialsSection', 'Open trials →'),
-      metric('Recruiting or active', recruiting, `/trials?topic=${encodeURIComponent(topicSlug)}&status=Recruiting`, 'Filter trials →'),
-      metric('Funding awards', Number(data?.funding?.award_count || 0), `/funding?topic=${encodeURIComponent(topicSlug)}`, 'Open Funding Radar →'),
-      metric('Participants listed', enrollment, '#dossier-trials', 'Registry enrollment →'),
-      metric('Last meaningful update', lastUpdate ? formatTimestamp(lastUpdate) : 'None recorded', '#timelineSection', 'Open timeline →'),
+      metric('Matched research records', Number(evidence.research_total || 0), '#researchSection', 'See the papers and study records'),
+      metric('Human-study records', humanTotal, '#dossier-human-evidence', 'See which evidence involves people'),
+      metric('Registered clinical trials', trialTotal, '#trialsSection', 'See the official registrations'),
+      metric('Active or recruiting trials', recruiting, `/trials?topic=${encodeURIComponent(topicSlug)}&status=Recruiting`, 'See studies currently moving forward'),
+      metric('People listed in trial registries', enrollment, '#dossier-trials', 'Planned or actual enrollment'),
+      metric('Source-linked funding records', Number(data?.funding?.award_count || 0), `/funding?topic=${encodeURIComponent(topicSlug)}`, 'See acknowledged awards'),
+      metric('Latest important source change', lastUpdate ? formatTimestamp(lastUpdate) : 'None recorded', '#timelineSection', 'See what changed'),
     );
+
+    renderTopicMeaning({
+      data, evidence, events, humanTotal, preclinicalTotal, trialTotal, recruiting,
+      results, enrollment, regulatory, integrity, lastUpdate,
+    });
 
     elements.topicDossierAnswers.querySelectorAll('.living-dossier-answer').forEach((item) => item.remove());
     const dynamic = document.createDocumentFragment();
@@ -1926,15 +1935,88 @@
     elements.topicDossierAnswers.append(dynamic);
   }
 
+  function renderTopicMeaning(context) {
+    if (!elements.topicMeaningGrid || !elements.topicEvidenceLadderSteps) return;
+    const { data, evidence, events, humanTotal, preclinicalTotal, trialTotal, recruiting, results, regulatory, integrity } = context;
+    const randomized = Number(evidence.randomized_human_total ?? evidence.research_by_stage?.['randomized-human'] ?? 0);
+    const syntheses = Number(evidence.human_synthesis_total ?? evidence.research_by_stage?.['human-synthesis'] ?? 0);
+    const humanStudies = Math.max(0, humanTotal - randomized - syntheses);
+    const latest = events[0];
+    const card = (eyebrow, title, text, href, linkLabel, tone = '') => {
+      const article = el('article', `topic-meaning-card${tone ? ` topic-meaning-card--${tone}` : ''}`);
+      article.append(el('span', 'topic-meaning-eyebrow', eyebrow), el('h3', '', title), el('p', '', text), link('section-link', linkLabel, href));
+      return article;
+    };
+
+    const humanTitle = randomized > 0 && syntheses > 0 ? 'Human evidence includes both randomized studies and evidence reviews.'
+      : randomized > 0 ? 'Randomized human research is present, but it is not the whole answer.'
+      : humanTotal > 0 ? 'Human research exists, but stronger comparative evidence remains limited.'
+      : 'No human-study record is currently identified in this dossier.';
+    const humanText = humanTotal
+      ? `${numberFormatter.format(humanTotal)} human-study record${humanTotal === 1 ? '' : 's'} are linked here. Study type tells us how the research was conducted—not whether all findings agree or show benefit.`
+      : 'This can reflect an early research field, incomplete coverage, or terminology the matching system has not yet connected. It must not be read as proof that no human research exists.';
+
+    const trialTitle = results > 0 ? 'Some registered trials have posted results.'
+      : trialTotal > 0 ? 'Trials are registered, but posted results are not yet visible here.'
+      : 'No matching clinical-trial registration is currently indexed.';
+    const trialText = results > 0
+      ? `${numberFormatter.format(results)} of ${numberFormatter.format(trialTotal)} matched registration${trialTotal === 1 ? '' : 's'} expose posted results. The individual result pages still determine what was measured and found.`
+      : trialTotal > 0
+        ? `${numberFormatter.format(trialTotal)} registration${trialTotal === 1 ? '' : 's'} describe planned, active, completed, or stopped studies. A registration is not evidence that an intervention worked.`
+        : 'The absence of a match in this index is a coverage statement, not a claim that no trial exists anywhere.';
+
+    const safetyTitle = regulatory > 0 ? 'Official notices are part of the current safety context.' : 'No general safety conclusion can be drawn.';
+    const safetyText = regulatory > 0
+      ? `${numberFormatter.format(regulatory)} matched official notice${regulatory === 1 ? '' : 's'} must be read for the named product, use, country, and date. ${integrity ? `${numberFormatter.format(integrity)} correction or integrity notice${integrity === 1 ? '' : 's'} also require attention.` : ''}`.trim()
+      : `No matched official regulatory notice is currently connected to this topic${integrity ? `; ${numberFormatter.format(integrity)} correction or integrity notice${integrity === 1 ? ' is' : 's are'} present` : ''}. No notice is not the same as evidence of safety.`;
+
+    const gaps = [];
+    if (!humanTotal) gaps.push('human studies');
+    if (!randomized) gaps.push('randomized human evidence');
+    if (!syntheses) gaps.push('evidence reviews');
+    if (!trialTotal) gaps.push('clinical-trial registrations');
+    else if (!results) gaps.push('posted trial results');
+    const gapTitle = gaps.length ? `The clearest gaps are ${gaps.slice(0, 3).join(', ')}.` : 'Important questions remain even across a broad evidence base.';
+    const gapText = gaps.length
+      ? 'These are gaps in the current indexed collection. The next decisive evidence would need to address meaningful outcomes, suitable comparison groups, follow-up, reproducibility, and safety.'
+      : 'The remaining questions concern effect size, meaningful health outcomes, long-term follow-up, population differences, reproducibility, and safety—not simply the number of publications.';
+
+    elements.topicMeaningGrid.replaceChildren(
+      card('Evidence in people', humanTitle, humanText, '#dossier-human-evidence', 'Open the human-evidence explanation', humanTotal ? 'human' : 'gap'),
+      card('Clinical development', trialTitle, trialText, '#dossier-trials', 'Understand the trial landscape', results ? 'human' : trialTotal ? 'developing' : 'gap'),
+      card('Safety and integrity', safetyTitle, safetyText, '#dossier-safety', 'Read the safety boundary', regulatory || integrity ? 'attention' : 'neutral'),
+      card('Most important unknowns', gapTitle, gapText, '#dossier-gaps', 'See the unanswered questions', 'gap'),
+      card('Latest meaningful movement', latest ? `${readableStatus(latest.event_type)} · ${formatTimestamp(latest.occurred_at)}` : 'No source-level change is recorded yet.', latest
+        ? `“${latest.title}” is the latest recorded event. Open the timeline to see whether it is a new record, trial update, official notice, correction, or retraction.`
+        : 'The absence of a recorded change can mean that the topic is stable or that a relevant source has not yet produced a matched event.', '#timelineSection', 'Open the evidence timeline', 'change'),
+    );
+
+    const ladderSteps = [
+      ['Laboratory or animal research', preclinicalTotal, 'Explores mechanisms before a conclusion about people is possible.', `/research?topic=${encodeURIComponent(topicSlug)}&evidence=preclinical`],
+      ['Other human studies', humanStudies, 'Research involving people that is not classified here as randomized evidence or a synthesis.', `/research?topic=${encodeURIComponent(topicSlug)}&evidence=human`],
+      ['Randomized human studies', randomized, 'Compares assigned groups, while still depending on population, outcomes, duration, and study quality.', `/research?topic=${encodeURIComponent(topicSlug)}&evidence=randomized-human`],
+      ['Evidence reviews', syntheses, 'Studies that bring multiple human records together; their methods and included evidence still matter.', `/research?topic=${encodeURIComponent(topicSlug)}&evidence=human-synthesis`],
+      ['Registered clinical trials', trialTotal, 'Official study registrations. Registration describes a study, not its result.', `/trials?topic=${encodeURIComponent(topicSlug)}`],
+      ['Trials with posted results', results, 'Registrations that currently expose structured results in the connected registry.', `/trials?topic=${encodeURIComponent(topicSlug)}`],
+    ];
+    elements.topicEvidenceLadderSteps.replaceChildren();
+    ladderSteps.forEach(([label, value, explanation, href], index) => {
+      const step = link('topic-evidence-step', '', href);
+      step.append(el('span', 'topic-evidence-step-number', String(index + 1).padStart(2, '0')), el('strong', '', value ? numberFormatter.format(value) : '0 found'), el('h4', '', label), el('p', '', explanation));
+      elements.topicEvidenceLadderSteps.append(step);
+    });
+  }
+
   function renderTopicPilot(pilot) {
     if (!elements.topicClaimLedger) return;
     const version = pilot?.version || {};
     const conclusions = Array.isArray(version.conclusions) ? version.conclusions : [];
     const pending = Array.isArray(pilot?.pending_changes) ? pilot.pending_changes : [];
     if (!pilot?.enabled || !conclusions.length) {
-      elements.topicClaimLedger.replaceChildren(el('p', 'dossier-loading', 'The cautious interpretation is temporarily unavailable. The source-linked records below remain accessible.'));
+      if (elements.topicCurrentInterpretation) elements.topicCurrentInterpretation.hidden = true;
       return;
     }
+    if (elements.topicCurrentInterpretation) elements.topicCurrentInterpretation.hidden = false;
     if (elements.topicInterpretationVersion) elements.topicInterpretationVersion.textContent = `Evidence interpretation · version ${Number(version.version_number || 1)}`;
     if (elements.topicInterpretationDate) elements.topicInterpretationDate.textContent = version.published_at ? `Assessed ${formatTimestamp(version.published_at)}` : '';
     if (elements.topicInterpretationMethod && pilot.method) elements.topicInterpretationMethod.textContent = pilot.method;

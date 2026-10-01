@@ -19,6 +19,7 @@ const browserScripts = [
   'spread-copy.js',
   'widget.js',
   'telemetry.js',
+  'scripts/topic-illustrations.js',
 ];
 
 const edgeScripts = [
