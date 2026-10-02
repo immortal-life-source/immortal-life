@@ -58,7 +58,10 @@ module.exports = async function publicPageProxy(request, response) {
       signal: controller.signal,
     });
     const body = request.method === 'HEAD' ? '' : await result.text();
-    const contentType = result.headers.get('content-type') || 'text/html; charset=utf-8';
+    // public-pages currently emits HTML with a text/plain origin header. Do
+    // not propagate that mistake through a nosniff response or browsers will
+    // show the document source instead of rendering the page.
+    const contentType = 'text/html; charset=utf-8';
     if (!result.ok) {
       response.setHeader('Cache-Control', 'no-store');
       return response.status(result.status).type(contentType).send(body);
