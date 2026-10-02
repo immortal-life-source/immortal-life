@@ -124,7 +124,13 @@ async function topicDossierFallback(query, limit) {
   // would bypass the 60% topic threshold and manufacture zero-valued metrics.
   return {
     generated_at: new Date().toISOString(),
-    research: [], trials: [], sources: [], evidence: {}, overview: {}, funding: { award_count: 0 },
+    research: [], trials: [], sources: [], evidence: {}, overview: {},
+    funding: {
+      summary: {}, reported_amounts: [], direct_funders: [], acknowledgement_funders: [],
+      universities: [], acknowledgement_countries: [], direct_countries: [],
+      acknowledgement_years: [], direct_grant_years: [], recent_direct_grants: [],
+      recent_awards: [], related_topics: [], direct_sources: [],
+    },
     timeline: { events: [], related_topics: [] },
     fallback: true,
     unavailable: true,

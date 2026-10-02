@@ -413,7 +413,7 @@ Deno.serve(async (req) => {
           .neq('event_type', 'quality_state_changed').contains('topic_slugs', [topic]).gte('occurred_at', twelveWeeksAgo).order('occurred_at', { ascending: false }).limit(2000)),
         dossierStage('sources', sourcesPromise),
         dossierStage('interpretation', supabase.rpc('get_topic_dossier_pilot', { requested_topic: topic })),
-        dossierStage('funding-count', supabase.from('funding_award_topics').select('openalex_award_id', { count: 'planned', head: true }).eq('topic_slug', topic)),
+        dossierStage('funding', supabase.rpc('get_topic_funding_dossier', { requested_topic: topic })),
         dossierStage('university-count', supabase.from('university_research_topic_metrics')
           .select('openalex_id,university_research_institutions!inner(is_eligible)', { count: 'planned', head: true })
           .eq('topic_slug', topic).gt('works_all_time', 0).eq('university_research_institutions.is_eligible', true)),
@@ -504,7 +504,12 @@ Deno.serve(async (req) => {
           },
         },
         pilot: pilotResult.data ?? null,
-        funding: { award_count: fundingResult.count ?? 0 },
+        funding: fundingResult.data ?? {
+          summary: {}, reported_amounts: [], direct_funders: [], acknowledgement_funders: [],
+          universities: [], acknowledgement_countries: [], direct_countries: [],
+          acknowledgement_years: [], direct_grant_years: [], recent_direct_grants: [],
+          recent_awards: [], related_topics: [], direct_sources: [],
+        },
         sources: (sourcesResult.data ?? []).map(publicSourceState),
       })
     }

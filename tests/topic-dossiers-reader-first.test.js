@@ -40,8 +40,8 @@ test('topic pages explain evidence in reader language and keep conclusions readi
   assert.match(browser, /No notice is not the same as evidence of safety/)
   assert.match(browser, /coverage statement, not a claim/)
   assert.match(browser, /topicCurrentInterpretation\.hidden = true/)
-  assert.match(template, /intelligence\.js\?v=20261002-funding-menu/)
-  assert.match(template, /intelligence\.css\?v=20261002-topic-art-layout/)
+  assert.match(template, /intelligence\.js\?v=20261002-topic-funding-dossiers/)
+  assert.match(template, /intelligence\.css\?v=20261002-topic-funding-dossiers/)
   assert.match(styles, /grid-template-areas:"kicker art timeline" "title art timeline" "lede art timeline"/)
   assert.match(styles, /\.intel-hero > \.topic-hero-art \{\s*position:relative;/)
 })
@@ -59,4 +59,32 @@ test('dossier hero metrics show meaningful scale and open precisely filtered evi
   assert.match(proxy, /'published_from', 'published_to'/)
   assert.match(endpoint, /query\.gte\('published_on', publishedFrom\)/)
   assert.match(endpoint, /query\.lte\('published_on', publishedTo\)/)
+})
+
+test('every dossier receives fast, source-linked funding intelligence without collapsing unlike evidence', async () => {
+  const [build, browser, styles, endpoint, migration] = await Promise.all([
+    read('build.js'),
+    read('intelligence.js'),
+    read('intelligence.css'),
+    read('supabase/functions/public-intelligence/index.ts'),
+    read('supabase/migrations/20261002000800_topic_funding_dossier_cache.sql'),
+  ])
+  assert.match(build, /Official grants and funding acknowledgements in publications are shown as two distinct forms of evidence/)
+  assert.match(build, /id="topicFundingStats"/)
+  assert.match(build, /id="topicFundingPathways"/)
+  assert.match(build, /id="topicFundingTrend"/)
+  assert.match(browser, /Direct funding evidence/)
+  assert.match(browser, /Publication-linked evidence/)
+  assert.match(browser, /Currencies stay separate; totals are not converted or combined/)
+  assert.match(browser, /A funding relationship does not establish benefit, safety, impact, or endorsement/)
+  assert.match(build, /This describes present coverage; it does not prove that no funding exists/)
+  assert.match(styles, /\.topic-funding-pathways/)
+  assert.match(styles, /\.topic-funding-trend-chart/)
+  assert.match(endpoint, /rpc\('get_topic_funding_dossier'/)
+  assert.doesNotMatch(endpoint, /dossierStage\('funding-count'/)
+  assert.match(migration, /create table if not exists public\.topic_funding_dossier_cache/)
+  assert.match(migration, /join public\.funding_grants/)
+  assert.match(migration, /from award_base/)
+  assert.match(migration, /select public\.refresh_topic_funding_dossier_cache\(\)/)
+  assert.match(migration, /'27 \*\/6 \* \* \*'/)
 })
