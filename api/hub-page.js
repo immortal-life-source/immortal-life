@@ -6,7 +6,7 @@ const path = require('node:path');
 const upstreamBase = 'https://nifbuyoghesveotugday.supabase.co/functions/v1/public-intelligence';
 const hubViews = new Set(['research', 'trials', 'universities', 'funding']);
 const forwarded = new Set(['topic', 'q', 'country', 'continent', 'sort', 'status', 'phase', 'evidence', 'access', 'published_from', 'published_to', 'funder', 'institution']);
-const pageDirectory = path.join(process.cwd(), 'dist');
+const pageDirectory = path.join(process.cwd(), 'dist', '_hub-templates');
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[character]));

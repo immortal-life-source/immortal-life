@@ -41,7 +41,10 @@ test('major hubs and dynamic profiles use cacheable first-party HTML', () => {
   assert.equal(routes.get('/funding'), '/api/hub-page?view=funding');
   assert.equal(routes.get('/funders/:slug'), '/api/public-page?mode=funder&slug=:slug');
   const hubs = read('api/hub-page.js');
+  const build = read('build.js');
   const pages = read('api/public-page.js');
+  assert.match(build, /const serverRenderedHubs = new Set\(\['research', 'trials', 'universities', 'funding'\]\)/);
+  assert.match(hubs, /dist', '_hub-templates'/);
   assert.match(hubs, /data-prerendered="true"/);
   assert.match(hubs, /stale-while-revalidate=86400/);
   assert.match(pages, /Vercel-CDN-Cache-Control/);

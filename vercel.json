@@ -10,7 +10,7 @@
       "maxDuration": 10
     },
     "api/hub-page.js": {
-      "includeFiles": "dist/*.html",
+      "includeFiles": "dist/_hub-templates/**",
       "maxDuration": 15
     },
     "api/public-page.js": {

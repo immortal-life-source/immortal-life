@@ -400,8 +400,15 @@ const intelligencePages = [
   },
 ];
 
+// These hubs are rendered by api/hub-page.js so their first HTML response
+// contains useful records. Keep their templates private: a public static file
+// would take precedence over the Vercel rewrite and bypass the SSR snapshot.
+const serverRenderedHubs = new Set(['research', 'trials', 'universities', 'funding']);
+const hubTemplateDir = path.join(outputDir, '_hub-templates');
+fs.mkdirSync(hubTemplateDir, { recursive: true });
 for (const page of intelligencePages) {
-  fs.writeFileSync(path.join(outputDir, page.filename), intelligencePage(page));
+  const destination = serverRenderedHubs.has(page.PAGE_VIEW) ? hubTemplateDir : outputDir;
+  fs.writeFileSync(path.join(destination, page.filename), intelligencePage(page));
 }
 
 // Topic dossiers are private templates for the edge renderer. Keeping them out
@@ -542,8 +549,9 @@ const staticRoutes = fs.readdirSync(outputDir)
     if (name === 'index.html') return '/';
     if (name === 'trial-results-gap.html') return '/trials/results-gap';
     return `/${name.replace(/\.html$/, '')}`;
-  })
-  .sort();
+  });
+staticRoutes.push('/research', '/trials', '/universities', '/funding');
+staticRoutes.sort();
 fs.writeFileSync(path.join(sitemapDirectory, 'static.xml'), sitemapUrlset(staticRoutes));
 // /sitemaps/topics.xml is generated dynamically so its lastmod values reflect
 // meaningful evidence changes rather than the time of a routine site build.
