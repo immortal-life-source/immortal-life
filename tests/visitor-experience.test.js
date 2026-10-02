@@ -160,12 +160,13 @@ test('Funding Radar is source-linked, paginated, and distinguishes direct grants
 })
 
 test('funder profiles are source-backed, conservative, searchable, fast, and indexable only when useful', async () => {
-  const [migration, fastProfileMigration, boundedProfileMigration, largeProfileMigration, fastestProfileMigration, worker, pages, script, config, sitemapProxy] = await Promise.all([
+  const [migration, fastProfileMigration, boundedProfileMigration, largeProfileMigration, fastestProfileMigration, directoryCacheMigration, worker, pages, script, config, sitemapProxy] = await Promise.all([
     read('supabase/migrations/20260928000800_funder_profiles.sql'),
     read('supabase/migrations/20261002000300_fast_funder_profiles.sql'),
     read('supabase/migrations/20261002000400_bounded_funder_profile_reads.sql'),
     read('supabase/migrations/20261002000500_responsive_large_funder_profiles.sql'),
     read('supabase/migrations/20261002000600_faster_largest_funder_profiles.sql'),
+    read('supabase/migrations/20261002000700_fast_funder_directory_cache.sql'),
     read('supabase/functions/sync-funding-funders/index.ts'), read('supabase/functions/public-pages/index.ts'),
     read('intelligence.js'), read('vercel.json'), read('api/sitemap.js'),
   ])
@@ -182,6 +183,9 @@ test('funder profiles are source-backed, conservative, searchable, fast, and ind
   assert.match(largeProfileMigration, /relationships_complete/)
   assert.match(fastestProfileMigration, /limit 1000/)
   assert.match(fastestProfileMigration, /headline totals still come from the full profile\/cache/i)
+  assert.match(directoryCacheMigration, /create materialized view if not exists public\.funding_funder_stats_cache/)
+  assert.match(directoryCacheMigration, /refresh materialized view concurrently public\.funding_funder_stats_cache/)
+  assert.match(directoryCacheMigration, /left join public\.funding_funder_stats_cache s using \(funder_id\)/)
   assert.match(await read('supabase/migrations/20261001000600_strong_funding_database.sql'), /interval '7 days'/)
   assert.match(worker, /alternate_titles,country_code,description,homepage_url,ids,updated_date/)
   assert.doesNotMatch(worker, /image_url|image_thumbnail_url/)
