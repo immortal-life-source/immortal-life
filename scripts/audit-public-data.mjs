@@ -60,7 +60,19 @@ const pageResults = await mapConcurrent(pageUrls, pageConcurrency, async (url, i
     warnings: failurePhrases.filter((phrase) => result.body?.includes(phrase)),
   };
 });
-const pageFailures = pageResults.filter((result) => !result.ok);
+const rawPageFailures = pageResults.filter((result) => !result.ok);
+// Ingestion and taxonomy reindexing can legitimately quarantine a record
+// while this multi-minute audit is traversing tens of thousands of URLs. A
+// 404 is only a broken sitemap URL if a fresh end-of-run sitemap still lists
+// it. This prevents a healthy publication-state transition from being
+// reported as a loading failure.
+const refreshedSitemapResults = rawPageFailures.some((result) => result.status === 404)
+  ? await mapConcurrent(sitemapUrls, 6, (url) => request(`${url}${url.includes('?') ? '&' : '?'}audit=${Date.now()}`))
+  : sitemapResults;
+const refreshedPageUrls = new Set(refreshedSitemapResults.flatMap((result) => result.ok ? locations(result.body) : []));
+const retiredDuringAudit = rawPageFailures.filter((result) => result.status === 404 && !refreshedPageUrls.has(result.url));
+const retiredUrls = new Set(retiredDuringAudit.map((result) => result.url));
+const pageFailures = rawPageFailures.filter((result) => !retiredUrls.has(result.url));
 // Static application shells contain hidden recovery copy which becomes
 // visible only when a data request fails. Its presence in raw HTML is not a
 // live failure; the data-view and dossier checks below verify the requests
@@ -111,6 +123,7 @@ const report = {
   pages: {
     discovered: pageUrls.length, checked: pageResults.length,
     failed: pageFailures.map(({ url, status, error, elapsedMs }) => ({ url, status, error, elapsedMs })),
+    retiredDuringAudit: retiredDuringAudit.map(({ url, status, elapsedMs }) => ({ url, status, elapsedMs })),
     embeddedRecoveryCopyCount: embeddedRecoveryCopy.length,
     slowest: [...pageResults].sort((left, right) => right.elapsedMs - left.elapsedMs).slice(0, 20).map(({ url, status, elapsedMs }) => ({ url, status, elapsedMs })),
   },
