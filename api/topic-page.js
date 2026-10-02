@@ -2,16 +2,22 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { injectFundingSnapshot } = require('./_topic-funding-ssr');
+const { injectFundingSnapshot, topicIndexable } = require('./_topic-funding-ssr');
 
 const upstreamBase = 'https://nifbuyoghesveotugday.supabase.co/rest/v1/rpc/get_public_topic_funding_seo';
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const topicDirectory = path.join(process.cwd(), 'dist', '_topic-templates');
 
-function sendHtml(response, status, html, source) {
+function sendHtml(response, status, html, source, options = {}) {
   response.setHeader('Content-Type', 'text/html; charset=utf-8');
-  response.setHeader('Cache-Control', 'public, max-age=60, s-maxage=21600, stale-while-revalidate=86400, stale-if-error=604800');
-  response.setHeader('CDN-Cache-Control', 'public, s-maxage=21600, stale-while-revalidate=86400, stale-if-error=604800');
+  if (options.cacheable === false) {
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader('CDN-Cache-Control', 'no-store');
+  } else {
+    response.setHeader('Cache-Control', 'public, max-age=60, s-maxage=21600, stale-while-revalidate=86400, stale-if-error=604800');
+    response.setHeader('CDN-Cache-Control', 'public, s-maxage=21600, stale-while-revalidate=86400, stale-if-error=604800');
+  }
+  if (options.indexable === false) response.setHeader('X-Robots-Tag', 'noindex, follow');
   response.setHeader('X-Immortal-Topic-Page', source);
   return response.status(status).send(html);
 }
@@ -49,10 +55,10 @@ module.exports = async function topicPage(request, response) {
   if (request.method === 'HEAD') return sendHtml(response, 200, '', 'head');
   try {
     const snapshot = await loadFundingSnapshot(slug);
-    return sendHtml(response, 200, injectFundingSnapshot(staticHtml, snapshot), 'funding-prerender');
+    return sendHtml(response, 200, injectFundingSnapshot(staticHtml, snapshot), 'funding-prerender', { indexable: topicIndexable(snapshot) });
   } catch (error) {
     console.warn('Topic funding prerender fallback:', error instanceof Error ? error.message : String(error));
-    return sendHtml(response, 200, staticHtml, 'static-fallback');
+    return sendHtml(response, 200, staticHtml, 'static-fallback', { cacheable: false, indexable: false });
   }
 };
 

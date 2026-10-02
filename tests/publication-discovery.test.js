@@ -70,7 +70,7 @@ test('task-first utility page, retired route redirects, segmented sitemaps, topi
   assert.equal(redirects.get('/learn'), '/methodology');
   const build = read('build.js');
   assert.match(build, /sitemapDirectory/);
-  assert.match(build, /sitemapPartitions = \['static', 'topics', 'research'/);
+  assert.match(build, /sitemapPartitions = \['static', 'topics', 'research-0'/);
   const pages = read('supabase/functions/public-pages/index.ts');
   assert.match(pages, /noindex,follow/);
   assert.match(pages, /selectedTrials\.length >= 3/);

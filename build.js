@@ -173,7 +173,14 @@ function pageSchema(page) {
 }
 
 function intelligencePage(values, topicDossierHtml = '', topicEndHtml = '') {
-  const resolved = { SOCIAL_IMAGE_URL: `${site}/og-image.png`, BODY_STYLE: '', FRESHNESS_TEXT: 'Checking source freshness…', ...values };
+  const resolved = {
+    SOCIAL_IMAGE_URL: `${site}/og-image.png`,
+    BODY_STYLE: '',
+    FRESHNESS_TEXT: 'Checking source freshness…',
+    ROBOTS_CONTENT: values.PAGE_VIEW === 'topic' ? 'noindex, follow' : 'index, follow, max-image-preview:large',
+    TOPICS_SECTION_HIDDEN: values.PAGE_VIEW === 'topics' ? '' : 'hidden',
+    ...values,
+  };
   const escapedValues = { ...resolved };
   delete escapedValues.TOPIC_VISUAL_HTML;
   return renderTemplate(intelligenceTemplate, escapedValues, {
@@ -191,7 +198,25 @@ function intelligencePage(values, topicDossierHtml = '', topicEndHtml = '') {
       : '',
     TOPIC_DOSSIER_HTML: topicDossierHtml,
     TOPIC_END_HTML: topicEndHtml,
+    TOPIC_GRID_HTML: resolved.PAGE_VIEW === 'topics' ? renderTopicDirectoryMarkup() : '',
   });
+}
+
+function topicCardStyle(slug) {
+  const hash = [...slug].reduce((value, character) => ((value * 33) ^ character.charCodeAt(0)) >>> 0, 5381);
+  return `--card-hue:${326 + (hash % 52)};--card-hue-two:${18 + ((hash >>> 5) % 34)};--card-x:${18 + ((hash >>> 10) % 68)}%;--card-y:${12 + ((hash >>> 17) % 70)}%;--card-tilt:${-24 + ((hash >>> 23) % 48)}deg`;
+}
+
+function renderTopicDirectoryMarkup() {
+  let runningIndex = 0;
+  return intelligenceTopicDomains.map((domain) => {
+    const topics = intelligenceTopics.filter((topic) => topic.domain?.slug === domain.slug);
+    const cards = topics.map((topic) => {
+      runningIndex += 1;
+      return `<a class="topic-card" href="/topics/${encodeURIComponent(topic.slug)}" style="${topicCardStyle(topic.slug)}"><span class="topic-card-number">${String(runningIndex).padStart(2, '0')}</span><h3>${htmlEscape(topic.name)}</h3><p>${htmlEscape(topic.description)}</p><span class="topic-counts">Open evidence dossier</span></a>`;
+    }).join('');
+    return `<section class="topic-domain" id="domain-${htmlEscape(domain.slug)}"><div class="topic-domain-heading"><div><span class="section-index">${topics.length} topics</span><h3>${htmlEscape(domain.name)}</h3><p>${htmlEscape(domain.description)}</p></div></div><div class="topic-domain-grid">${cards}</div></section>`;
+  }).join('');
 }
 
 function topicVisualStyle(slug) {
@@ -512,7 +537,7 @@ const sitemapDirectory = path.join(outputDir, 'sitemaps');
 fs.mkdirSync(sitemapDirectory, { recursive: true });
 const sitemapUrlset = (urls) => `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((url) => `  <url><loc>${site}${url}</loc></url>`).join('\n')}\n</urlset>\n`;
 const staticRoutes = fs.readdirSync(outputDir)
-  .filter((name) => name.endsWith('.html') && !['auth-x.html', 'auth-linkedin.html', 'confirmed.html', 'unsubscribed.html', 'institutional-pilot.html', 'institutional-pilot2.html'].includes(name))
+  .filter((name) => name.endsWith('.html') && !['auth-x.html', 'auth-linkedin.html', 'confirmed.html', 'unsubscribed.html', 'institutional-pilot.html', 'institutional-pilot2.html'].includes(name) && name !== 'leaderboard.html')
   .map((name) => {
     if (name === 'index.html') return '/';
     if (name === 'trial-results-gap.html') return '/trials/results-gap';
@@ -522,7 +547,10 @@ const staticRoutes = fs.readdirSync(outputDir)
 fs.writeFileSync(path.join(sitemapDirectory, 'static.xml'), sitemapUrlset(staticRoutes));
 // /sitemaps/topics.xml is generated dynamically so its lastmod values reflect
 // meaningful evidence changes rather than the time of a routine site build.
-const sitemapPartitions = ['static', 'topics', 'research', 'trials', 'regulatory', 'integrity', 'briefings', 'universities', 'entities', 'funders'];
+// The public /sitemap.xml route is generated dynamically by api/sitemap.js so
+// record families can grow beyond one 25,000-URL file without a new site build.
+// This build-time copy is a resilient fallback for static hosting previews.
+const sitemapPartitions = ['static', 'topics', 'research-0', 'trials-0', 'regulatory-0', 'integrity-0', 'briefings', 'universities', 'entities', 'funders'];
 fs.writeFileSync(path.join(outputDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapPartitions.map((name) => `  <sitemap><loc>${site}/sitemaps/${name}.xml</loc></sitemap>`).join('\n')}\n</sitemapindex>\n`);
 
 console.log(`Static site written to ${outputDir}`);

@@ -202,6 +202,17 @@ function injectFundingSnapshot(html, snapshot) {
   if (startIndex < 0 || endIndex < 0) return html;
   let output = `${html.slice(0, startIndex)}${renderTopicFundingSection(topicName, topicSlug, funding)}\n    ${html.slice(endIndex)}`;
   output = output.replace(/(<small id="topicFundingSummary">)[\s\S]*?(<\/small>)/, `$1${escapeHtml(fundingSummaryText(funding))}$2`);
+  const counts = snapshot?.counts || {};
+  const evidenceRecordCount = Math.max(0, Number(counts.research_count || 0)) + Math.max(0, Number(counts.trial_count || 0));
+  const indexable = evidenceRecordCount >= 5;
+  output = output.replace(
+    /<meta name="robots" content="[^"]*"\s*\/?>/,
+    `<meta name="robots" content="${indexable ? 'index, follow, max-image-preview:large' : 'noindex, follow'}" />`,
+  );
+  output = output.replace(
+    '</head>',
+    `  <meta name="immortal-life:evidence-record-count" content="${evidenceRecordCount}" />\n  <meta name="immortal-life:index-readiness" content="${indexable ? 'ready' : 'building'}" />\n</head>`,
+  );
   const modified = snapshot.modified_at || funding.refreshed_at;
   if (modified) {
     output = output.replace('</head>', `  <meta property="article:modified_time" content="${escapeHtml(modified)}" />\n</head>`);
@@ -219,4 +230,9 @@ function injectFundingSnapshot(html, snapshot) {
   return output;
 }
 
-module.exports = { escapeHtml, fundingInterpretation, fundingSummaryText, injectFundingSnapshot, renderTopicFundingSection, trendModel };
+function topicIndexable(snapshot) {
+  const counts = snapshot?.counts || {};
+  return Math.max(0, Number(counts.research_count || 0)) + Math.max(0, Number(counts.trial_count || 0)) >= 5;
+}
+
+module.exports = { escapeHtml, fundingInterpretation, fundingSummaryText, injectFundingSnapshot, renderTopicFundingSection, topicIndexable, trendModel };

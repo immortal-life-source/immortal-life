@@ -8,6 +8,13 @@
     "api/topic-page.js": {
       "includeFiles": "dist/_topic-templates/**",
       "maxDuration": 10
+    },
+    "api/hub-page.js": {
+      "includeFiles": "dist/*.html",
+      "maxDuration": 15
+    },
+    "api/public-page.js": {
+      "maxDuration": 15
     }
   },
   "redirects": [
@@ -20,6 +27,7 @@
     { "source": "/discover/recruiting-trials", "destination": "/trials", "permanent": true },
     { "source": "/discover/recruiting-trials/:country", "destination": "/trials", "permanent": true },
     { "source": "/dashboard", "destination": "/topics", "permanent": true },
+    { "source": "/leaderboard", "destination": "/universities", "permanent": true },
     { "source": "/join", "destination": "/topics", "permanent": true },
     { "source": "/invite/:code", "destination": "/topics", "permanent": true }
   ],
@@ -124,14 +132,14 @@
       "source": "/sitemap.xml",
       "headers": [
         { "key": "Content-Type", "value": "application/xml; charset=utf-8" },
-        { "key": "Cache-Control", "value": "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800" }
+        { "key": "Cache-Control", "value": "public, max-age=60, s-maxage=300, stale-while-revalidate=3600, stale-if-error=86400" }
       ]
     },
     {
       "source": "/sitemaps/:path*",
       "headers": [
         { "key": "Content-Type", "value": "application/xml; charset=utf-8" },
-        { "key": "Cache-Control", "value": "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800" }
+        { "key": "Cache-Control", "value": "public, max-age=60, s-maxage=300, stale-while-revalidate=3600, stale-if-error=86400" }
       ]
     },
     {
@@ -168,33 +176,42 @@
   ],
   "rewrites": [
     { "source": "/topics/:slug", "destination": "/api/topic-page?slug=:slug" },
+    { "source": "/research", "destination": "/api/hub-page?view=research" },
+    { "source": "/trials", "destination": "/api/hub-page?view=trials" },
+    { "source": "/universities", "destination": "/api/hub-page?view=universities" },
+    { "source": "/funding", "destination": "/api/hub-page?view=funding" },
     { "source": "/auth/x", "destination": "/auth-x" },
     { "source": "/auth/linkedin", "destination": "/auth-linkedin" },
     { "source": "/compare/:pair", "destination": "/compare?pair=:pair" },
     { "source": "/trials/results-gap", "destination": "/trial-results-gap" },
-    { "source": "/research/:id", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=record&kind=research&id=:id" },
-    { "source": "/trials/:id", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=record&kind=trials&id=:id" },
-    { "source": "/regulatory/:id", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=record&kind=regulatory&id=:id" },
-    { "source": "/integrity/:id", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=record&kind=integrity&id=:id" },
-    { "source": "/briefings", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=briefings" },
-    { "source": "/briefings/:slug", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=briefings&slug=:slug" },
-    { "source": "/changes", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=changes" },
+    { "source": "/research/:id", "destination": "/api/public-page?mode=record&kind=research&id=:id" },
+    { "source": "/trials/:id", "destination": "/api/public-page?mode=record&kind=trials&id=:id" },
+    { "source": "/regulatory/:id", "destination": "/api/public-page?mode=record&kind=regulatory&id=:id" },
+    { "source": "/integrity/:id", "destination": "/api/public-page?mode=record&kind=integrity&id=:id" },
+    { "source": "/briefings", "destination": "/api/public-page?mode=briefings" },
+    { "source": "/briefings/:slug", "destination": "/api/public-page?mode=briefings&slug=:slug" },
+    { "source": "/changes", "destination": "/api/public-page?mode=changes" },
     { "source": "/changes/feed.xml", "destination": "/api/feed?format=rss" },
     { "source": "/changes/feed.json", "destination": "/api/feed?format=json" },
-    { "source": "/reports", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=reports" },
+    { "source": "/reports", "destination": "/api/public-page?mode=reports" },
     { "source": "/api/subscribe", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/subscribe-briefing" },
-    { "source": "/entities/:kind/:slug", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=entity&kind=:kind&slug=:slug" },
+    { "source": "/entities/:kind/:slug", "destination": "/api/public-page?mode=entity&kind=:kind&slug=:slug" },
     { "source": "/api/universities/:slug/works", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=university-works&slug=:slug" },
-    { "source": "/universities/:slug", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=university&slug=:slug" },
-    { "source": "/funders", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=funders" },
-    { "source": "/funders/:slug", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=funder&slug=:slug" },
+    { "source": "/universities/:slug", "destination": "/api/public-page?mode=university&slug=:slug" },
+    { "source": "/funders", "destination": "/api/public-page?mode=funders" },
+    { "source": "/funders/:slug", "destination": "/api/public-page?mode=funder&slug=:slug" },
     { "source": "/social-card/:kind/:key.png", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/social-card?kind=:kind&key=:key" },
     { "source": "/social-card/:kind/:key.svg", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=social&kind=:kind&key=:key" },
     { "source": "/api/intelligence/:kind/:id", "destination": "https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages?mode=api&kind=:kind&id=:id" },
-    { "source": "/sitemaps/research.xml", "destination": "/api/sitemap?type=research" },
-    { "source": "/sitemaps/trials.xml", "destination": "/api/sitemap?type=trials" },
-    { "source": "/sitemaps/regulatory.xml", "destination": "/api/sitemap?type=regulatory" },
-    { "source": "/sitemaps/integrity.xml", "destination": "/api/sitemap?type=integrity" },
+    { "source": "/sitemap.xml", "destination": "/api/sitemap?type=index" },
+    { "source": "/sitemaps/research-:segment.xml", "destination": "/api/sitemap?type=research-:segment" },
+    { "source": "/sitemaps/trials-:segment.xml", "destination": "/api/sitemap?type=trials-:segment" },
+    { "source": "/sitemaps/regulatory-:segment.xml", "destination": "/api/sitemap?type=regulatory-:segment" },
+    { "source": "/sitemaps/integrity-:segment.xml", "destination": "/api/sitemap?type=integrity-:segment" },
+    { "source": "/sitemaps/research.xml", "destination": "/api/sitemap?type=research-0" },
+    { "source": "/sitemaps/trials.xml", "destination": "/api/sitemap?type=trials-0" },
+    { "source": "/sitemaps/regulatory.xml", "destination": "/api/sitemap?type=regulatory-0" },
+    { "source": "/sitemaps/integrity.xml", "destination": "/api/sitemap?type=integrity-0" },
     { "source": "/sitemaps/briefings.xml", "destination": "/api/sitemap?type=briefings" },
     { "source": "/sitemaps/universities.xml", "destination": "/api/sitemap?type=universities" },
     { "source": "/sitemaps/entities.xml", "destination": "/api/sitemap?type=entities" },

@@ -2,7 +2,8 @@
 
 const upstreamBase = 'https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages';
 const restBase = 'https://nifbuyoghesveotugday.supabase.co/rest/v1/rpc/get_public_topic_sitemap';
-const allowedTypes = new Set(['research', 'trials', 'regulatory', 'integrity', 'topics', 'briefings', 'universities', 'entities', 'funders']);
+const directoryTypes = new Set(['index', 'static', 'topics', 'briefings', 'universities', 'entities', 'funders']);
+const recordTypePattern = /^(research|trials|regulatory|integrity)(?:-(\d+))?$/;
 
 const emptyUrlset = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n</urlset>\n';
 const escapeXml = (value) => String(value ?? '').replace(/[<>&'\"]/g, (character) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[character]));
@@ -13,7 +14,7 @@ module.exports = async function sitemapProxy(request, response) {
     return response.status(405).send('Method not allowed');
   }
   const type = String(request.query?.type || 'research');
-  if (!allowedTypes.has(type)) return response.status(404).send('Not found');
+  if (!directoryTypes.has(type) && !recordTypePattern.test(type)) return response.status(404).send('Not found');
   const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
   if (type === 'topics') {
     try {
@@ -25,7 +26,9 @@ module.exports = async function sitemapProxy(request, response) {
       });
       if (!result.ok) throw new Error(`topic_sitemap_${result.status}`);
       const rows = await result.json();
-      const urls = (Array.isArray(rows) ? rows : []).map((row) => `<url><loc>${escapeXml(`https://www.immortal.life/topics/${row.topic_slug}`)}</loc>${row.content_updated_at ? `<lastmod>${escapeXml(String(row.content_updated_at).slice(0, 10))}</lastmod>` : ''}</url>`).join('');
+      const urls = (Array.isArray(rows) ? rows : [])
+        .filter((row) => !Object.hasOwn(row, 'research_count') || Number(row.research_count || 0) + Number(row.trial_count || 0) >= 5)
+        .map((row) => `<url><loc>${escapeXml(`https://www.immortal.life/topics/${row.topic_slug}`)}</loc>${row.content_updated_at ? `<lastmod>${escapeXml(String(row.content_updated_at).slice(0, 10))}</lastmod>` : ''}</url>`).join('');
       response.setHeader('Content-Type', 'application/xml; charset=utf-8');
       response.setHeader('Cache-Control', 'public, max-age=300, s-maxage=21600, stale-while-revalidate=86400, stale-if-error=604800');
       return response.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>\n`);
