@@ -49,6 +49,7 @@ type Job = {
   topic_slug: string | null
   job_key: string
   attempts: number
+  database_timeout_count: number
   sync_mode: 'incremental' | 'history'
   cursor_state: Record<string, unknown>
   pages_processed: number
@@ -91,6 +92,7 @@ const TOPIC_SOURCE_IDS = new Set(['europe-pmc', 'pubmed', 'doaj', 'clinicaltrial
 const GENERIC_SOURCE_IDS = new Set([...TOPIC_SOURCE_IDS, 'crossref', ...Object.keys(REGULATORY_FEEDS)])
 const HISTORY_SOURCE_IDS = new Set([...TOPIC_SOURCE_IDS, 'crossref'])
 const DEDICATED_SOURCE_IDS = new Set(['doaj', 'isrctn'])
+const HEAVY_RESEARCH_SOURCE_IDS = new Set(['pubmed', 'europe-pmc'])
 let lastNcbiRequestAt = 0
 
 type SyncOutcome = {
@@ -101,11 +103,11 @@ type SyncOutcome = {
   totalAvailable?: number | null
 }
 
-function adaptiveDatabasePageSize(baseSize: number, attempts: number, minimum: number): number {
+function adaptiveDatabasePageSize(baseSize: number, databaseTimeoutCount: number, minimum: number): number {
   // A retry after a statement timeout must do less work than the failed
   // attempt. Cursor/offset state is durable, so shrinking only the current
   // page cannot skip any source records.
-  const reductions = Math.min(2, Math.max(0, Math.trunc(Number(attempts || 0))))
+  const reductions = Math.min(2, Math.max(0, Math.trunc(Number(databaseTimeoutCount || 0))))
   return Math.max(minimum, Math.floor(baseSize / 2 ** reductions))
 }
 
@@ -594,7 +596,7 @@ function pubmedPublicationDate(block: string): string | null {
 
 async function syncPubMed(supabase: any, topic: Topic, job: Job): Promise<SyncOutcome> {
   const state = initialPubMedState(job)
-  const pageSize = adaptiveDatabasePageSize(PUBMED_PAGE_SIZE, job.attempts, 25)
+  const pageSize = adaptiveDatabasePageSize(PUBMED_PAGE_SIZE, job.database_timeout_count, 25)
   const range = state.current ?? state.ranges.pop()
   if (!range) return { seen: 0, written: 0, done: true, cursorState: {} }
   const searchUrl = new URL('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi')
@@ -720,7 +722,7 @@ async function syncPubMed(supabase: any, topic: Topic, job: Job): Promise<SyncOu
 
 async function syncEuropePmc(supabase: any, topic: Topic, job: Job): Promise<SyncOutcome> {
   const cursor = typeof job.cursor_state?.cursor === 'string' ? String(job.cursor_state.cursor) : '*'
-  const pageSize = adaptiveDatabasePageSize(EUROPE_PMC_PAGE_SIZE, job.attempts, 25)
+  const pageSize = adaptiveDatabasePageSize(EUROPE_PMC_PAGE_SIZE, job.database_timeout_count, 25)
   const url = new URL('https://www.ebi.ac.uk/europepmc/webservices/rest/search')
   const incrementalWindow = sourceDateWindow(31)
   const query = job.sync_mode === 'history'
@@ -1004,7 +1006,7 @@ async function syncDoajOai(supabase: any, topics: Topic[], job: Job): Promise<Sy
   // Dense OAI pages can match several topics per record. Retried pages reduce
   // their transaction fan-out automatically instead of repeatedly hitting the
   // same database statement timeout.
-  const writeBatchSize = adaptiveDatabasePageSize(50, job.attempts, 10)
+  const writeBatchSize = adaptiveDatabasePageSize(50, job.database_timeout_count, 10)
   if (records.length) await persistGlobalResearchPage(supabase, records, 'doaj', links, writeBatchSize)
   for (let offset = 0; offset < page.deletedIds.length; offset += 100) {
     const deleted = await supabase.from('research_items').update({
@@ -1290,8 +1292,52 @@ Deno.serve(async (req) => {
   // Source-scoped workers deliberately yield well before the platform timeout.
   // This leaves Edge capacity available for the reader-facing public API.
   const runTimeBudgetMs = requestedSource === 'doaj' ? DOAJ_PAGE_START_BUDGET_MS : requestedSource === 'all' ? RUN_TIME_BUDGET_MS : 20_000
+  let heavyResearchLeaseHolder: string | null = null
 
   try {
+    // PubMed and Europe PMC both maintain the largest research indexes. While
+    // a complete taxonomy rebuild is active, allow only one of these writers
+    // to enter its bounded work slice at a time. Incremental jobs remain in
+    // the same fair queue and normal parallel cadence resumes automatically
+    // when the taxonomy run completes.
+    if (HEAVY_RESEARCH_SOURCE_IDS.has(requestedSource)) {
+      const { data: taxonomyActive, error: taxonomyError } = await supabase.rpc('taxonomy_reindex_active')
+      if (taxonomyError) throw taxonomyError
+      if (taxonomyActive) {
+        heavyResearchLeaseHolder = `${requestedSource}:${run.id}:${crypto.randomUUID()}`
+        const { data: leaseAcquired, error: leaseError } = await supabase.rpc('try_acquire_ingestion_worker_lease', {
+          p_lease_key: 'taxonomy-heavy-research-writes',
+          p_holder: heavyResearchLeaseHolder,
+          p_source_id: requestedSource,
+          p_ttl_seconds: 180,
+        })
+        if (leaseError) throw leaseError
+        if (!leaseAcquired) {
+          await supabase.from('ingestion_runs').update({
+            completed_at: new Date().toISOString(),
+            status: 'succeeded',
+            jobs_processed: 0,
+            items_seen: 0,
+            items_written: 0,
+            errors: 0,
+            details: {
+              requested_source: requestedSource,
+              status: 'yielded',
+              reason: 'heavy_research_writer_already_active',
+              incremental_freshness_preserved: true,
+            },
+          }).eq('id', run.id)
+          heavyResearchLeaseHolder = null
+          return jsonResponse(req, {
+            ok: true,
+            run_id: run.id,
+            status: 'yielded',
+            reason: 'heavy_research_writer_already_active',
+          }, 202, 'POST')
+        }
+      }
+    }
+
     const { data: topics, error: topicsError } = await supabase
       .from('intelligence_topics')
       .select('slug,name,literature_query,trials_query,matching_terms,requires_ageing_context')
@@ -1372,10 +1418,9 @@ Deno.serve(async (req) => {
       .lt('locked_at', abandonedBefore)
     if (abandonedJobsError) throw abandonedJobsError
     for (const abandonedJob of abandonedJobs ?? []) {
-      // A terminated Edge invocation cannot record its own failure. Count the
-      // recovered lock as an attempt so adaptive writers use a smaller batch
-      // on the exact page that exceeded the runtime instead of repeating the
-      // same expensive transaction forever.
+      // A terminated Edge invocation cannot record its own failure. Recover
+      // the durable cursor, but do not shrink its next page unless the worker
+      // recorded an actual database statement timeout.
       const recovered = await supabase
         .from('ingestion_jobs')
         .update({
@@ -1383,7 +1428,7 @@ Deno.serve(async (req) => {
           attempts: Number(abandonedJob.attempts ?? 0) + 1,
           available_at: new Date().toISOString(),
           locked_at: null,
-          last_error: 'Recovered abandoned job with a smaller retry batch',
+          last_error: 'Recovered abandoned job from its durable cursor',
         })
         .eq('id', abandonedJob.id)
         .eq('status', 'running')
@@ -1409,7 +1454,7 @@ Deno.serve(async (req) => {
       const selectJob = async (mode: Job['sync_mode']) => {
         let query = supabase
           .from('ingestion_jobs')
-          .select('id,source_id,topic_slug,job_key,attempts,sync_mode,cursor_state,pages_processed,items_seen,items_written,window_start')
+          .select('id,source_id,topic_slug,job_key,attempts,database_timeout_count,sync_mode,cursor_state,pages_processed,items_seen,items_written,window_start')
           .in('status', ['pending', 'retry'])
           .eq('sync_mode', mode)
           .lte('available_at', new Date().toISOString())
@@ -1472,6 +1517,7 @@ Deno.serve(async (req) => {
           items_seen: Number(job.items_seen ?? 0) + outcome.seen,
           items_written: Number(job.items_written ?? 0) + outcome.written,
           attempts: 0,
+          database_timeout_count: 0,
           locked_at: null,
           last_error: null,
           updated_at: completedAt,
@@ -1510,6 +1556,9 @@ Deno.serve(async (req) => {
         await supabase.from('ingestion_jobs').update({
           status: isDead ? 'dead' : 'retry',
           attempts: attempt,
+          database_timeout_count: isDatabaseTimeout
+            ? Number(job.database_timeout_count ?? 0) + 1
+            : Number(job.database_timeout_count ?? 0),
           available_at: new Date(Date.now() + retryDelayMs).toISOString(),
           locked_at: null,
           last_error: message,
@@ -1578,5 +1627,13 @@ Deno.serve(async (req) => {
     }).eq('id', run.id)
     console.error('sync-intelligence error:', message)
     return jsonResponse(req, { error: 'sync_failed', run_id: run.id }, 500, 'POST')
+  } finally {
+    if (heavyResearchLeaseHolder) {
+      const { error: releaseError } = await supabase.rpc('release_ingestion_worker_lease', {
+        p_lease_key: 'taxonomy-heavy-research-writes',
+        p_holder: heavyResearchLeaseHolder,
+      })
+      if (releaseError) console.error('sync-intelligence lease release error:', errorMessage(releaseError))
+    }
   }
 })

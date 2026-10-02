@@ -46,13 +46,34 @@ test('high-volume historical sources receive independent bounded recovery capaci
   assert.match(migration, /'\*\/5 22-23,0-4 \* \* \*'/)
 })
 
-test('high-volume pages stay below the indexed upsert statement budget and shrink on retry', async () => {
+test('high-volume pages stay below the indexed upsert statement budget and shrink only on database timeout', async () => {
   const source = await read('supabase/functions/sync-intelligence/index.ts')
   assert.match(source, /PUBMED_PAGE_SIZE = 100/)
   assert.match(source, /EUROPE_PMC_PAGE_SIZE = 125/)
   assert.match(source, /CLINICAL_TRIALS_PAGE_SIZE = 50/)
   assert.match(source, /adaptiveDatabasePageSize/)
+  assert.match(source, /job\.database_timeout_count/)
+  assert.doesNotMatch(source, /adaptiveDatabasePageSize\([^\n]+job\.attempts/)
   assert.match(source, /canceling statement due to statement timeout/)
+})
+
+test('heavy research writes serialize only during taxonomy rebuilding with an expiring private lease', async () => {
+  const [source, migration] = await Promise.all([
+    read('supabase/functions/sync-intelligence/index.ts'),
+    read('supabase/migrations/20261002001200_serialize_heavy_research_writes.sql'),
+  ])
+  assert.match(source, /HEAVY_RESEARCH_SOURCE_IDS = new Set\(\['pubmed', 'europe-pmc'\]\)/)
+  assert.match(source, /taxonomy_reindex_active/)
+  assert.match(source, /try_acquire_ingestion_worker_lease/)
+  assert.match(source, /release_ingestion_worker_lease/)
+  assert.match(source, /incremental_freshness_preserved: true/)
+  assert.match(migration, /database_timeout_count integer not null default 0/)
+  assert.match(migration, /create table if not exists public\.ingestion_worker_leases/)
+  assert.match(migration, /expires_at <= now\(\)/)
+  assert.match(migration, /revoke all on table public\.ingestion_worker_leases from public, anon, authenticated/)
+  assert.doesNotMatch(migration, /delete from public\.research_items|truncate table public\.research_items|drop table public\.research_items/i)
+  const executableSql = migration.split('\n').filter((line) => !line.trimStart().startsWith('--')).join('\n')
+  assert.doesNotMatch(executableSql, /spend[_ ]cap|subscription|billing/i)
 })
 
 test('Pro ingestion headroom is used without changing billing controls', async () => {
@@ -112,9 +133,9 @@ test('DOAJ history uses one resumable OAI-PMH harvest instead of deep search pag
   assert.match(migration, /'\*\/3 \* \* \* \*'/)
   assert.match(sync, /DOAJ_PAGE_START_BUDGET_MS = 45_000/)
   assert.match(sync, /requestedSource === 'doaj' \? 4 \* 60 \* 1000/)
-  assert.match(sync, /Recovered abandoned job with a smaller retry batch/)
+  assert.match(sync, /Recovered abandoned job from its durable cursor/)
   assert.match(sync, /attempts: Number\(abandonedJob\.attempts \?\? 0\) \+ 1/)
-  assert.match(sync, /adaptiveDatabasePageSize\(50, job\.attempts, 10\)/)
+  assert.match(sync, /adaptiveDatabasePageSize\(50, job\.database_timeout_count, 10\)/)
   assert.match(sync, /isDoajDatabaseTimeout \? 60 \* 1000/)
   assert.match(boundedWorker, /'\* \* \* \* \*'/)
   assert.match(boundedWorker, /Recovered safely from the initial OAI worker timeout/)
