@@ -377,6 +377,32 @@ Deno.serve(async (req) => {
       return response(req, { topic, evidence: snapshot ?? {}, sources: (sources ?? []).map(publicSourceState) })
     }
 
+    if (view === 'topic-funding-seo') {
+      if (!topic) return response(req, { error: 'Topic is required' }, 400)
+      const [topicResult, fundingResult, countResult] = await Promise.all([
+        supabase.from('intelligence_topics')
+          .select('slug,name,description,updated_at').eq('slug', topic).eq('enabled', true).maybeSingle(),
+        supabase.from('topic_funding_dossier_cache')
+          .select('dossier,refreshed_at,content_updated_at').eq('topic_slug', topic).maybeSingle(),
+        supabase.from('intelligence_topic_counts_cache')
+          .select('research_count,trial_count,refreshed_at,content_updated_at').eq('topic_slug', topic).maybeSingle(),
+      ])
+      for (const result of [topicResult, fundingResult, countResult]) if (result.error) throw result.error
+      if (!topicResult.data) return response(req, { error: 'Topic not found' }, 404)
+      const timestamps = [
+        topicResult.data.updated_at,
+        fundingResult.data?.content_updated_at ?? fundingResult.data?.refreshed_at,
+        countResult.data?.content_updated_at ?? countResult.data?.refreshed_at,
+      ].filter(Boolean).map((value) => new Date(String(value))).filter((value) => !Number.isNaN(value.getTime()))
+      const modifiedAt = timestamps.length ? new Date(Math.max(...timestamps.map((value) => value.getTime()))).toISOString() : null
+      return response(req, {
+        topic: topicResult.data,
+        funding: fundingResult.data ? { ...(fundingResult.data.dossier ?? {}), refreshed_at: fundingResult.data.refreshed_at } : { summary: {} },
+        counts: countResult.data ?? { research_count: 0, trial_count: 0 },
+        modified_at: modifiedAt,
+      })
+    }
+
     if (view === 'topic-dossier') {
       if (!topic) return response(req, { error: 'Topic is required' }, 400)
       const dossierStage = async (stage: string, operation: PromiseLike<any>) => {

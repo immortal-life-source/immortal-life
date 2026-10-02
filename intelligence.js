@@ -1356,7 +1356,7 @@
     }, (item) => funderProfilePath(item.funder_name, item.funder_id));
     drawLeaders(elements.fundingTopics, overview.leading_topics || [], (item) => item.name, (item) => {
       elements.fundingTopic.value = item.slug; reloadFunding().catch((error) => console.error('Funding filter failed:', error));
-    });
+    }, (item) => `/topics/${encodeURIComponent(item.slug)}#topicFunding`);
     elements.fundingLandscape.hidden = !cohorts.length && !(overview.leading_funders || []).length;
   }
 
@@ -1975,12 +1975,23 @@
     const share = summary.top_five_acknowledgement_share_pct == null ? Number.NaN : Number(summary.top_five_acknowledgement_share_pct);
     const concentration = Number.isFinite(share) ? (share >= 70 ? 'highly concentrated' : share >= 40 ? 'moderately concentrated' : 'widely distributed') : 'not yet measurable';
     elements.topicFundingInsight.replaceChildren(el('span', 'section-index', 'What it means'));
+    const topicName = document.querySelector('.intel-hero h1')?.textContent?.trim() || topicSlug.replace(/-/g, ' ');
+    const leadingDirect = Array.isArray(funding?.direct_funders) ? funding.direct_funders[0] : null;
+    const leadingAcknowledgement = Array.isArray(funding?.acknowledgement_funders) ? funding.acknowledgement_funders[0] : null;
+    let landscapeText = '';
+    if (directGrants && awardEntities) {
+      landscapeText = `${topicName} currently connects to ${numberFormatter.format(directGrants)} official grant records and ${numberFormatter.format(awardEntities)} award entities acknowledged on publications. These are complementary views and should not be added together as a spending total.`;
+    } else if (directGrants) {
+      landscapeText = `${topicName} currently connects to ${numberFormatter.format(directGrants)} official grant records from ${numberFormatter.format(Number(summary.direct_funders || 0))} named funders${leadingDirect?.name ? `; ${leadingDirect.name} is the most visible funder in this connected record set` : ''}.`;
+    } else {
+      landscapeText = `${topicName} currently connects to ${numberFormatter.format(awardEntities)} award entities acknowledged on indexed publications${leadingAcknowledgement?.name ? `; ${leadingAcknowledgement.name} is named most often in these records` : ''}.`;
+    }
     const activityName = hasAcknowledgementHistory ? 'funding-linked publication activity' : 'official grant activity';
     const activityUnit = hasAcknowledgementHistory ? 'linked publications' : 'official grants beginning';
     const insightHeading = el('h3', '', momentum == null ? `Visible ${activityName} is emerging.` : momentum > 10 ? `${activityName[0].toUpperCase()}${activityName.slice(1)} is growing.` : momentum < -10 ? `${activityName[0].toUpperCase()}${activityName.slice(1)} has slowed recently.` : `${activityName[0].toUpperCase()}${activityName.slice(1)} is broadly steady.`);
     const insightCopy = el('p', '', momentum == null ? `${numberFormatter.format(recent)} ${activityUnit} appear in the latest three complete years; the preceding period is too small for a stable percentage comparison.` : `The latest three complete years contain ${numberFormatter.format(recent)} ${activityUnit}, ${Math.abs(momentum)}% ${momentum >= 0 ? 'more than' : 'fewer than'} the preceding three years.`);
     const concentrationCopy = el('p', '', Number.isFinite(share) ? `The five most frequently named funders account for ${share}% of acknowledged awards, so visible activity is ${concentration}.` : 'Funder concentration cannot yet be calculated from the connected records.');
-    elements.topicFundingInsight.append(insightHeading, insightCopy, concentrationCopy, el('small', '', 'Activity measures records visible in the index—not spending, scientific quality, or whether findings were positive.'));
+    elements.topicFundingInsight.append(insightHeading, el('p', 'topic-funding-interpretation', landscapeText), insightCopy, concentrationCopy, el('small', '', 'Activity measures records visible in the index—not spending, scientific quality, or whether findings were positive.'));
 
     const reportedAmounts = Array.isArray(funding?.reported_amounts) ? funding.reported_amounts : [];
     if (reportedAmounts.length) {

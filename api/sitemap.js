@@ -1,9 +1,11 @@
 'use strict';
 
 const upstreamBase = 'https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages';
-const allowedTypes = new Set(['research', 'trials', 'regulatory', 'integrity', 'briefings', 'universities', 'entities', 'funders']);
+const restBase = 'https://nifbuyoghesveotugday.supabase.co/rest/v1/rpc/get_public_topic_sitemap';
+const allowedTypes = new Set(['research', 'trials', 'regulatory', 'integrity', 'topics', 'briefings', 'universities', 'entities', 'funders']);
 
 const emptyUrlset = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n</urlset>\n';
+const escapeXml = (value) => String(value ?? '').replace(/[<>&'\"]/g, (character) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[character]));
 
 module.exports = async function sitemapProxy(request, response) {
   if (request.method !== 'GET') {
@@ -12,6 +14,28 @@ module.exports = async function sitemapProxy(request, response) {
   }
   const type = String(request.query?.type || 'research');
   if (!allowedTypes.has(type)) return response.status(404).send('Not found');
+  const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+  if (type === 'topics') {
+    try {
+      if (!key) throw new Error('missing_publishable_key');
+      const result = await fetch(restBase, {
+        method: 'POST',
+        headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      if (!result.ok) throw new Error(`topic_sitemap_${result.status}`);
+      const rows = await result.json();
+      const urls = (Array.isArray(rows) ? rows : []).map((row) => `<url><loc>${escapeXml(`https://www.immortal.life/topics/${row.topic_slug}`)}</loc>${row.content_updated_at ? `<lastmod>${escapeXml(String(row.content_updated_at).slice(0, 10))}</lastmod>` : ''}</url>`).join('');
+      response.setHeader('Content-Type', 'application/xml; charset=utf-8');
+      response.setHeader('Cache-Control', 'public, max-age=300, s-maxage=21600, stale-while-revalidate=86400, stale-if-error=604800');
+      return response.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>\n`);
+    } catch (_) {
+      response.setHeader('Content-Type', 'application/xml; charset=utf-8');
+      response.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400, stale-if-error=604800');
+      response.setHeader('X-Immortal-Source', 'topic-sitemap-fallback');
+      return response.status(200).send(emptyUrlset);
+    }
+  }
   const upstream = new URL(upstreamBase);
   upstream.searchParams.set('mode', 'sitemap');
   upstream.searchParams.set('type', type);
@@ -25,7 +49,6 @@ module.exports = async function sitemapProxy(request, response) {
   // into a misleading empty sitemap.
   const timeout = setTimeout(() => controller.abort(), 60_000);
   try {
-    const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
     const result = await fetch(upstream, {
       headers: key ? { apikey: key, Authorization: `Bearer ${key}` } : {},
       signal: controller.signal,

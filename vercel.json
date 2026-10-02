@@ -4,6 +4,12 @@
   "buildCommand": "node build.js",
   "outputDirectory": "dist",
   "installCommand": "",
+  "functions": {
+    "api/topic-page.js": {
+      "includeFiles": "dist/topics/**",
+      "maxDuration": 10
+    }
+  },
   "redirects": [
     { "source": "/how-it-works", "destination": "/methodology", "permanent": true },
     { "source": "/learn", "destination": "/methodology", "permanent": true },
@@ -161,6 +167,7 @@
     }
   ],
   "rewrites": [
+    { "source": "/topics/:slug", "destination": "/api/topic-page?slug=:slug" },
     { "source": "/auth/x", "destination": "/auth-x" },
     { "source": "/auth/linkedin", "destination": "/auth-linkedin" },
     { "source": "/compare/:pair", "destination": "/compare?pair=:pair" },
@@ -192,6 +199,7 @@
     { "source": "/sitemaps/universities.xml", "destination": "/api/sitemap?type=universities" },
     { "source": "/sitemaps/entities.xml", "destination": "/api/sitemap?type=entities" },
     { "source": "/sitemaps/funders.xml", "destination": "/api/sitemap?type=funders" },
+    { "source": "/sitemaps/topics.xml", "destination": "/api/sitemap?type=topics" },
     { "source": "/feed.xml", "destination": "/api/feed?format=rss" },
     { "source": "/feed.atom", "destination": "/api/feed?format=atom" },
     { "source": "/feed.json", "destination": "/api/feed?format=json" },

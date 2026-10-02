@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises'
 
 const require = createRequire(import.meta.url)
 const { motifForTopic, topicIllustrationSvg } = require('../scripts/topic-illustrations.js')
+const { injectFundingSnapshot, renderTopicFundingSection } = require('../api/_topic-funding-ssr.js')
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
 async function topics() {
@@ -40,8 +41,8 @@ test('topic pages explain evidence in reader language and keep conclusions readi
   assert.match(browser, /No notice is not the same as evidence of safety/)
   assert.match(browser, /coverage statement, not a claim/)
   assert.match(browser, /topicCurrentInterpretation\.hidden = true/)
-  assert.match(template, /intelligence\.js\?v=20261002-topic-funding-dossiers-v3/)
-  assert.match(template, /intelligence\.css\?v=20261002-topic-funding-dossiers-v3/)
+  assert.match(template, /intelligence\.js\?v=20261002-topic-funding-seo-v1/)
+  assert.match(template, /intelligence\.css\?v=20261002-topic-funding-seo-v1/)
   assert.match(styles, /grid-template-areas:"kicker art timeline" "title art timeline" "lede art timeline"/)
   assert.match(styles, /\.intel-hero > \.topic-hero-art \{\s*position:relative;/)
 })
@@ -87,4 +88,57 @@ test('every dossier receives fast, source-linked funding intelligence without co
   assert.match(migration, /from award_base/)
   assert.match(migration, /select public\.refresh_topic_funding_dossier_cache\(\)/)
   assert.match(migration, /'27 \*\/6 \* \* \*'/)
+})
+
+test('funding facts are rendered into the first topic HTML response and stay interactive', async () => {
+  const section = renderTopicFundingSection('Exercise', 'exercise', {
+    summary: {
+      direct_grants: 12, active_direct_grants: 7, direct_funders: 3,
+      grant_recipients: 5, direct_countries: 2, award_entities: 8,
+      acknowledgement_funders: 4, linked_publications: 11, linked_universities: 3,
+    },
+    direct_funders: [{ name: 'National Institutes of Health', grants: 8, active_grants: 4 }],
+    acknowledgement_funders: [{ name: 'Wellcome', slug: 'wellcome', awards: 6, publications: 9 }],
+    universities: [{ name: 'University of Oxford', slug: 'university-of-oxford', awards: 4, country_name: 'United Kingdom' }],
+    direct_countries: [{ country_name: 'United States', country_code: 'US', grants: 9 }],
+    direct_grant_years: [{ year: 2025, grants: 6 }],
+    recent_direct_grants: [{ title: 'Healthy ageing study', funder_name: 'National Institutes of Health', source_url: 'https://example.org/grant' }],
+    refreshed_at: '2026-10-02T10:00:00Z',
+  })
+  assert.match(section, /data-prerendered="true"/)
+  assert.match(section, />12<\/strong><span>Official grant records/)
+  assert.match(section, /Exercise currently connects to 12 official grant records/)
+  assert.match(section, /National Institutes of Health/)
+  assert.match(section, /University of Oxford/)
+  assert.doesNotMatch(section, /Loading the funding landscape/)
+
+  const shell = '<html><head><script type="application/ld+json">{"@graph":[{"@id":"https://www.immortal.life/topics/exercise#webpage"}]}</script></head><body><small id="topicFundingSummary">Loading source-linked awards…</small><section class="topic-funding" id="topicFunding"></section><section class="topic-trend" id="topicTrend"></section></body></html>'
+  const rendered = injectFundingSnapshot(shell, {
+    topic: { slug: 'exercise', name: 'Exercise' },
+    funding: { summary: { direct_grants: 12 }, direct_funders: [{ name: 'NIH', grants: 12 }] },
+    modified_at: '2026-10-02T11:00:00Z',
+  })
+  assert.match(rendered, /12 official grant records in connected grant sources/)
+  assert.match(rendered, /article:modified_time/)
+  assert.match(rendered, /dateModified/)
+})
+
+test('topic delivery uses a cached fail-safe prerender and meaningful sitemap dates', async () => {
+  const [handler, vercel, endpoint, pages, sitemapProxy, migration] = await Promise.all([
+    read('api/topic-page.js'), read('vercel.json'), read('supabase/functions/public-intelligence/index.ts'),
+    read('supabase/functions/public-pages/index.ts'), read('api/sitemap.js'),
+    read('supabase/migrations/20261002001000_meaningful_topic_content_timestamps.sql'),
+  ])
+  assert.match(handler, /injectFundingSnapshot/)
+  assert.match(handler, /s-maxage=21600/)
+  assert.match(handler, /static-fallback/)
+  assert.match(vercel, /"source": "\/topics\/:slug", "destination": "\/api\/topic-page\?slug=:slug"/)
+  assert.match(vercel, /"includeFiles": "dist\/topics\/\*\*"/)
+  assert.match(endpoint, /view === 'topic-funding-seo'/)
+  assert.match(endpoint, /topic_funding_dossier_cache/)
+  assert.match(pages, /fundingModified\.get\(row\.slug\)/)
+  assert.match(pages, /countModified\.get\(row\.slug\)/)
+  assert.match(sitemapProxy, /'topics'/)
+  assert.match(migration, /preserve_topic_funding_content_timestamp/)
+  assert.match(migration, /new\.dossier is distinct from old\.dossier/)
 })
