@@ -6,7 +6,7 @@
   "installCommand": "",
   "functions": {
     "api/topic-page.js": {
-      "includeFiles": "dist/topics/**",
+      "includeFiles": "dist/_topic-templates/**",
       "maxDuration": 10
     }
   },

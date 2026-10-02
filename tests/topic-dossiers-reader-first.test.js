@@ -133,7 +133,7 @@ test('topic delivery uses a cached fail-safe prerender and meaningful sitemap da
   assert.match(handler, /s-maxage=21600/)
   assert.match(handler, /static-fallback/)
   assert.match(vercel, /"source": "\/topics\/:slug", "destination": "\/api\/topic-page\?slug=:slug"/)
-  assert.match(vercel, /"includeFiles": "dist\/topics\/\*\*"/)
+  assert.match(vercel, /"includeFiles": "dist\/_topic-templates\/\*\*"/)
   assert.match(endpoint, /view === 'topic-funding-seo'/)
   assert.match(endpoint, /topic_funding_dossier_cache/)
   assert.match(pages, /fundingModified\.get\(row\.slug\)/)
@@ -141,4 +141,11 @@ test('topic delivery uses a cached fail-safe prerender and meaningful sitemap da
   assert.match(sitemapProxy, /'topics'/)
   assert.match(migration, /preserve_topic_funding_content_timestamp/)
   assert.match(migration, /new\.dossier is distinct from old\.dossier/)
+})
+
+test('topic build keeps templates private so dynamic routes and meaningful sitemap dates win', async () => {
+  const build = await read('build.js')
+  assert.match(build, /path\.join\(outputDir, '_topic-templates'\)/)
+  assert.doesNotMatch(build, /path\.join\(outputDir, 'topics'\)/)
+  assert.doesNotMatch(build, /writeFileSync\(path\.join\(sitemapDirectory, 'topics\.xml'\)/)
 })

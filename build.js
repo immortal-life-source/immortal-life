@@ -379,7 +379,10 @@ for (const page of intelligencePages) {
   fs.writeFileSync(path.join(outputDir, page.filename), intelligencePage(page));
 }
 
-const topicOutputDir = path.join(outputDir, 'topics');
+// Topic dossiers are private templates for the edge renderer. Keeping them out
+// of /dist/topics prevents the platform's static-file layer from bypassing the
+// server-rendered, crawlable funding snapshot.
+const topicOutputDir = path.join(outputDir, '_topic-templates');
 fs.mkdirSync(topicOutputDir, { recursive: true });
 for (const topic of intelligenceTopics) {
   const pilotInterpretation = `<section class="topic-current-interpretation" id="topicCurrentInterpretation" aria-labelledby="topicCurrentInterpretationTitle" hidden>
@@ -516,9 +519,9 @@ const staticRoutes = fs.readdirSync(outputDir)
     return `/${name.replace(/\.html$/, '')}`;
   })
   .sort();
-const topicRoutes = intelligenceTopics.map((topic) => `/topics/${topic.slug}`);
 fs.writeFileSync(path.join(sitemapDirectory, 'static.xml'), sitemapUrlset(staticRoutes));
-fs.writeFileSync(path.join(sitemapDirectory, 'topics.xml'), sitemapUrlset(topicRoutes));
+// /sitemaps/topics.xml is generated dynamically so its lastmod values reflect
+// meaningful evidence changes rather than the time of a routine site build.
 const sitemapPartitions = ['static', 'topics', 'research', 'trials', 'regulatory', 'integrity', 'briefings', 'universities', 'entities', 'funders'];
 fs.writeFileSync(path.join(outputDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapPartitions.map((name) => `  <sitemap><loc>${site}/sitemaps/${name}.xml</loc></sitemap>`).join('\n')}\n</sitemapindex>\n`);
 

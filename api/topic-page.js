@@ -6,7 +6,7 @@ const { injectFundingSnapshot } = require('./_topic-funding-ssr');
 
 const upstreamBase = 'https://nifbuyoghesveotugday.supabase.co/rest/v1/rpc/get_public_topic_funding_seo';
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const topicDirectory = path.join(process.cwd(), 'dist', 'topics');
+const topicDirectory = path.join(process.cwd(), 'dist', '_topic-templates');
 
 function sendHtml(response, status, html, source) {
   response.setHeader('Content-Type', 'text/html; charset=utf-8');
