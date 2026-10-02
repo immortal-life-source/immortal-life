@@ -110,7 +110,13 @@ test('entity pages, automated social cards, and briefing distribution are wired'
 });
 
 test('canonical discovery URLs use the deployed www host', () => {
-  assert.match(read('robots.txt'), /https:\/\/www\.immortal\.life\/sitemap\.xml/);
+  const robots = read('robots.txt');
+  assert.match(robots, /https:\/\/www\.immortal\.life\/sitemap\.xml/);
+  assert.match(robots, /User-agent: Amazonbot\s+Disallow: \//);
+  assert.match(robots, /User-agent: GoogleOther\s+Disallow: \//);
+  assert.match(robots, /User-agent: AhrefsBot\s+Crawl-delay: 10\s+Disallow: \/api\//);
+  assert.match(robots, /User-agent: SemrushBot\s+Crawl-delay: 10\s+Disallow: \/api\//);
+  assert.match(robots, /User-agent: \*\s+Allow: \/\s+Disallow: \/api\//);
   assert.match(read('supabase/functions/public-pages/index.ts'), /const SITE = 'https:\/\/www\.immortal\.life'/);
   assert.doesNotMatch(read('build.js'), /https:\/\/immortal\.life\/(research|trials|topics|quality|entities)/);
 });
