@@ -86,6 +86,20 @@
         ['Evidence Compare', 'Compare two longevity topics', '/compare'],
       ],
     },
+    '/funding': {
+      eyebrow: 'Longevity Funding Intelligence',
+      title: 'See who is funding the field—and where the money appears.',
+      copy: 'Explore official grant records separately from funding acknowledgements attached to longevity publications.',
+      action: ['Open Funding Radar', '/funding'],
+      links: [
+        ['Funding Radar', 'Search grants and publication-linked awards', '/funding'],
+        ['Direct grants', 'Official grant records with dates and reported amounts', '/funding#directGrantSection'],
+        ['Funder directory', 'Browse source-backed funding organizations', '/funders'],
+        ['Leading funders', 'See the most visible funders in indexed records', '/funding#fundingLandscape'],
+        ['Funding by topic', 'Filter funding across 180 longevity topics', '/funding#fundingControls'],
+        ['Funding and universities', 'Follow awards to connected institutions', '/funding#fundingList'],
+      ],
+    },
     '/you': {
       eyebrow: 'Your Longevity Watch',
       title: 'Turn the global index into your own research radar.',

@@ -42,7 +42,7 @@ test('changes-page totals are direct links to their relevant indexes', async () 
 test('shared portal script does not fail on informational pages without portal regions', async () => {
   const [portal, template] = await Promise.all([read('intelligence.js'), read('content-template.html')])
   assert.match(portal, /if \(!elements\.loading \|\| !elements\.error\) return/)
-  assert.match(template, /intelligence\.js\?v=20261002-university-topic-links-v2/)
+  assert.match(template, /intelligence\.js\?v=20261002-funding-menu/)
 })
 
 test('topic catalogue is compact, searchable, visual, and does not bury research or trials', async () => {
@@ -159,15 +159,29 @@ test('Funding Radar is source-linked, paginated, and distinguishes direct grants
   assert.match(css, /FUNDING RADAR/)
 })
 
-test('funder profiles are source-backed, conservative, searchable, and indexable only when useful', async () => {
-  const [migration, worker, pages, script, config, sitemapProxy] = await Promise.all([
+test('funder profiles are source-backed, conservative, searchable, fast, and indexable only when useful', async () => {
+  const [migration, fastProfileMigration, boundedProfileMigration, largeProfileMigration, fastestProfileMigration, worker, pages, script, config, sitemapProxy] = await Promise.all([
     read('supabase/migrations/20260928000800_funder_profiles.sql'),
+    read('supabase/migrations/20261002000300_fast_funder_profiles.sql'),
+    read('supabase/migrations/20261002000400_bounded_funder_profile_reads.sql'),
+    read('supabase/migrations/20261002000500_responsive_large_funder_profiles.sql'),
+    read('supabase/migrations/20261002000600_faster_largest_funder_profiles.sql'),
     read('supabase/functions/sync-funding-funders/index.ts'), read('supabase/functions/public-pages/index.ts'),
     read('intelligence.js'), read('vercel.json'), read('api/sitemap.js'),
   ])
   assert.match(migration, /create table if not exists public\.funding_funders/)
   assert.match(migration, /get_funder_directory/)
   assert.match(migration, /get_funder_page/)
+  assert.match(fastProfileMigration, /funding_awards_funder_id_latest_idx/)
+  assert.match(fastProfileMigration, /award_summary[\s\S]*work_summary[\s\S]*topic_summary[\s\S]*institution_summary/)
+  assert.doesNotMatch(fastProfileMigration.match(/award_summary as \([\s\S]*?\), work_summary/)?.[0] || '', /funding_award_works/)
+  assert.match(boundedProfileMigration, /latest_publication_date[\s\S]*count\(\*\)::bigint awards/)
+  assert.doesNotMatch(boundedProfileMigration, /join public\.university_research_works w using \(openalex_work_id\)[\s\S]*group by 1 order by 1 desc limit 20/)
+  assert.match(largeProfileMigration, /funding_radar_overview_cache/)
+  assert.match(largeProfileMigration, /limit 2500/)
+  assert.match(largeProfileMigration, /relationships_complete/)
+  assert.match(fastestProfileMigration, /limit 1000/)
+  assert.match(fastestProfileMigration, /headline totals still come from the full profile\/cache/i)
   assert.match(await read('supabase/migrations/20261001000600_strong_funding_database.sql'), /interval '7 days'/)
   assert.match(worker, /alternate_titles,country_code,description,homepage_url,ids,updated_date/)
   assert.doesNotMatch(worker, /image_url|image_thumbnail_url/)
@@ -175,11 +189,30 @@ test('funder profiles are source-backed, conservative, searchable, and indexable
   assert.match(pages, /mode === 'funder'/)
   assert.match(pages, /award_count \?\? 0\) >= 3/)
   assert.match(pages, /immortal\.life is not affiliated with this organization/)
+  assert.match(pages, /award entities last linked in this year/)
+  assert.match(pages, /How this large profile is summarized/)
+  assert.match(pages, /Linked publications in sample/)
   assert.match(script, /funderProfilePath/)
   assert.match(config, /funders\/:slug/)
   assert.match(config, /"source": "\/funders\/:path\*"/)
   assert.match(config, /sitemaps\/funders\.xml/)
   assert.match(sitemapProxy, /'funders'/)
+})
+
+test('Funding is a first-class global menu with useful desktop shortcuts', async () => {
+  const shells = await Promise.all([
+    read('index.html'), read('intelligence-template.html'), read('content-template.html'),
+    read('privacy.html'), read('institutional-pilot.html'), read('institutional-pilot2.html'),
+    read('auth-x.html'), read('auth-linkedin.html'), read('confirmed.html'), read('unsubscribed.html'),
+    read('dashboard.html'), read('join.html'), read('leaderboard.html'),
+    read('supabase/functions/public-pages/index.ts'),
+  ])
+  for (const shell of shells) assert.match(shell, /href="\/funding"[^>]*>Funding<\/a>/)
+  const navigation = await read('desktop-nav.js')
+  assert.match(navigation, /'\/funding': \{/)
+  assert.match(navigation, /Direct grants[\s\S]*Funder directory[\s\S]*Leading funders[\s\S]*Funding by topic/)
+  assert.match(await read('intelligence.js'), /summary\.topics, 'Longevity topics'/)
+  assert.doesNotMatch(await read('intelligence.js'), /summary\.identified_awards, 'Award identifiers'/)
 })
 
 test('Trial Radar has one canonical visitor route', async () => {
@@ -219,9 +252,9 @@ test('desktop homepage exposes the complete navigation and keeps motion clear of
   assert.match(css, /--orbit-size: clamp\(380px, 31vw, 480px\)/)
   assert.match(html, /<a href="\/topics" class="s1-nav-link">Topics<\/a>/)
   assert.match(html, /<a href="\/changes" class="s1-nav-link">News<\/a>/)
-  assert.match(html, /href="\/universities" class="s1-nav-link">Universities<\/a>[\s\S]*?href="\/research" class="s1-nav-link">Research<\/a>[\s\S]*?href="\/you" class="s1-nav-link s1-nav-you">You<\/a>/)
+  assert.match(html, /href="\/universities" class="s1-nav-link">Universities<\/a>[\s\S]*?href="\/research" class="s1-nav-link">Research<\/a>[\s\S]*?href="\/funding" class="s1-nav-link">Funding<\/a>[\s\S]*?href="\/you" class="s1-nav-link s1-nav-you">You<\/a>/)
   assert.match(css, /\.s1-nav-you[\s\S]*?box-shadow:/)
-  for (const href of ['/changes', '/topics', '/trials', '/universities', '/research', '/you', '/regulatory', '/resources', '/briefings', '/methodology']) assert.match(html, new RegExp(`href="${href}"`))
+  for (const href of ['/changes', '/topics', '/trials', '/universities', '/research', '/funding', '/you', '/regulatory', '/resources', '/briefings', '/methodology']) assert.match(html, new RegExp(`href="${href}"`))
   assert.match(html, /<a href="\/methodology" class="s1-nav-link">About<\/a>/)
   assert.doesNotMatch(html, /href="\/(?:discover|learn)"/)
   assert.doesNotMatch(html, /Newsreader/)
@@ -246,7 +279,7 @@ test('desktop navigation previews expose useful routes on every deployed page sh
   ])
   for (const shell of [home, intelligenceTemplate, contentTemplate, ...memberPages]) {
     assert.match(shell, /desktop-nav\.css\?v=20261001-nav-shell-all/)
-    assert.match(shell, /desktop-nav\.js\?v=20261001-all-pages/)
+    assert.match(shell, /desktop-nav\.js\?v=20261002-funding-menu/)
   }
   for (const shell of memberPages) {
     assert.match(shell, /href="\/you" class="m-member-nav-you">You<\/a>/)
@@ -412,10 +445,10 @@ test('university profile provenance and record links have non-overlapping spacin
   assert.match(css, /\.university-profile-metrics \+ \.record-links \+ \.quality-intro \{ max-width: 980px; margin: 20px 0 36px; \}/)
   assert.match(template, /intelligence\.css\?v=20261002-topic-art-layout/)
   assert.match(pages, /intelligence\.css\?v=20261002-topic-art-layout/)
-  assert.match(template, /intelligence\.js\?v=20261002-university-topic-links-v2/)
-  assert.match(pages, /intelligence\.js\?v=20261002-university-topic-links-v2/)
+  assert.match(template, /intelligence\.js\?v=20261002-funding-menu/)
+  assert.match(pages, /intelligence\.js\?v=20261002-funding-menu/)
   assert.match(pages, /desktop-nav\.css\?v=20261001-nav-shell-all/)
-  assert.match(pages, /desktop-nav\.js\?v=20261001-all-pages/)
+  assert.match(pages, /desktop-nav\.js\?v=20261002-funding-menu/)
   assert.match(await read('intelligence.js'), /\['universities', 'topic-dossier', 'trial-results-gap', 'funding'\]\.includes\(viewName\) \? 10000 : 6500/)
   assert.match(pages, /Full-history total not yet available/)
   assert.match(pages, /fullHistoryAvailable \? works : '—'/)

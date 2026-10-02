@@ -358,7 +358,7 @@
     topicSourceBasisList: document.getElementById('topicSourceBasisList'),
   };
 
-  document.querySelector(`[data-nav="${view === 'overview' || view === 'funding' ? 'research' : ['topic', 'compare'].includes(view) ? 'topics' : view === 'trial-results-gap' ? 'trials' : view}"]`)?.setAttribute('aria-current', 'page');
+  document.querySelector(`[data-nav="${view === 'overview' ? 'research' : ['topic', 'compare'].includes(view) ? 'topics' : view === 'trial-results-gap' ? 'trials' : view}"]`)?.setAttribute('aria-current', 'page');
   if (view === 'you') return;
 
   function setNavigation(open) {
@@ -1307,14 +1307,14 @@
     [
       [summary.awards, 'Award entities', 'Open source-linked award records'],
       [summary.direct_grants, 'Direct grants', 'Official grant-database records'],
-      [summary.identified_awards, 'Award identifiers', 'Records carrying a disclosed funder award reference'],
+      [summary.topics, 'Longevity topics', 'Tracked topics connected to funding records'],
       [summary.funders, 'Funders', 'Distinct OpenAlex funder identities'],
       [summary.institutions, 'Universities', 'Eligible institutions connected through publications'],
       [summary.linked_publications, 'Linked publications', 'Retained longevity works carrying award metadata'],
     ].forEach(([value, label, note], index) => {
       const button = el('button', `funding-stat${index === 0 ? ' is-primary' : ''}`); button.type = 'button';
       button.append(el('strong', '', numberFormatter.format(Number(value || 0))), el('span', '', label), el('small', '', note));
-      button.onclick = () => (label === 'Universities' ? location.assign('/universities') : label === 'Direct grants' && directGrantRows.length ? elements.directGrantList.scrollIntoView({ behavior: 'smooth', block: 'start' }) : elements.fundingList.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+      button.onclick = () => (label === 'Universities' ? location.assign('/universities') : label === 'Longevity topics' ? location.assign('/topics') : label === 'Direct grants' && directGrantRows.length ? elements.directGrantList.scrollIntoView({ behavior: 'smooth', block: 'start' }) : elements.fundingList.scrollIntoView({ behavior: 'smooth', block: 'start' }));
       elements.fundingStats.append(button);
     });
 
