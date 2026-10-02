@@ -458,18 +458,22 @@ test('university profile provenance and record links have non-overlapping spacin
   assert.match(pages, /fullHistoryAvailable \? works : '—'/)
 })
 
-test('private daily management report covers traffic, new knowledge and operational health', async () => {
+test('private daily management report is daily, numerical, and action-oriented', async () => {
   const [report, migration, config] = await Promise.all([
     read('supabase/functions/daily-management-report/index.ts'), read('supabase/migrations/20260926000400_daily_management_report.sql'), read('supabase/config.toml'),
   ])
   assert.match(report, /hello@immortal\.life/)
   assert.match(report, /Google Search Console/)
-  assert.match(report, /Website usage/)
-  assert.match(report, /Most visited pages/)
+  assert.match(report, /Google search · latest complete day/)
+  assert.match(report, /Visitor activity ·/)
   assert.match(report, /utility_event_daily/)
-  assert.match(report, /Primary-source opens/)
-  assert.match(report, /Knowledge added in the last 24 hours/)
-  assert.match(report, /Website health/)
+  assert.match(report, /Knowledge added · last 24 hours/)
+  assert.match(report, /Coverage progress · last 24 hours/)
+  assert.match(report, /Website health · right now/)
+  assert.match(report, /Actions for you/)
+  assert.match(report, /The connection is working/)
+  assert.match(report, /p_hours: 24/)
+  assert.doesNotMatch(report, /recordRows|Top landing pages|Most visited pages|latest 7 days|previous 7 days/)
   assert.match(report, /RESEND_API_KEY/)
   assert.match(migration, /0 17,18 \* \* \*/)
   assert.match(migration, /daily_management_reports/)

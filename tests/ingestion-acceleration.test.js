@@ -157,7 +157,7 @@ test('source reuse is fail-closed, auditable, expiring, and excluded from paid d
   assert.match(expiry, /delete from public\.intelligence_change_events/)
 })
 
-test('72-hour ingestion telemetry is collected privately and included in management reporting', async () => {
+test('ingestion telemetry is collected privately and the management report uses a daily window', async () => {
   const [migration, report] = await Promise.all([
     read('supabase/migrations/20260927000300_accelerate_history_and_enforce_source_policy.sql'),
     read('supabase/functions/daily-management-report/index.ts'),
@@ -165,6 +165,6 @@ test('72-hour ingestion telemetry is collected privately and included in managem
   assert.match(migration, /ingestion_throughput_snapshots/)
   assert.match(migration, /get_ingestion_throughput_report/)
   assert.match(migration, /immortal-life-ingestion-throughput/)
-  assert.match(report, /Historical coverage progress/)
-  assert.match(report, /p_hours: 72/)
+  assert.match(report, /Coverage progress · last 24 hours/)
+  assert.match(report, /p_hours: 24/)
 })
