@@ -33,8 +33,12 @@ module.exports = async function sitemapProxy(request, response) {
     if (!result.ok) throw new Error(`sitemap_${result.status}`);
     const body = await result.text();
     response.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    response.setHeader('Cache-Control', 'public, max-age=300, s-maxage=21600, stale-while-revalidate=86400, stale-if-error=604800');
-    response.setHeader('CDN-Cache-Control', 'public, s-maxage=21600, stale-while-revalidate=86400, stale-if-error=604800');
+    // Publication state changes continuously while the historical taxonomy
+    // pass is running. A six-hour sitemap snapshot could therefore keep URLs
+    // for records that had since been quarantined. Refresh the crawler view
+    // every five minutes so sitemap membership tracks public visibility.
+    response.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=3600, stale-if-error=86400');
+    response.setHeader('CDN-Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600, stale-if-error=86400');
     return response.status(200).send(body);
   } catch (_) {
     response.setHeader('Content-Type', 'application/xml; charset=utf-8');

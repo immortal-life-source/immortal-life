@@ -375,34 +375,44 @@ Deno.serve(async (req) => {
 
     if (view === 'topic-dossier') {
       if (!topic) return response(req, { error: 'Topic is required' }, 400)
+      const dossierStage = async (stage: string, operation: PromiseLike<any>) => {
+        const result = await operation
+        if (result?.error) throw { ...result.error, stage }
+        return result
+      }
       const sixWeeksAgo = new Date(Date.now() - 42 * 86400000).toISOString()
       const twelveWeeksAgo = new Date(Date.now() - 84 * 86400000).toISOString()
-      const researchRelation = 'research_item_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
+      const researchFields = 'id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,evidence_snapshot,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name)'
       const trialRelation = 'clinical_trial_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
       const [researchResult, trialResult, topicResult, evidenceResult, overviewResult, timelineResult, timelinePulseResult, sourcesResult, pilotResult, fundingResult, universityCountResult] = await Promise.all([
-        supabase.from('research_items')
-          .select(`id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,evidence_snapshot,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${researchRelation}`)
-          .eq('publication_state', 'published').eq('research_item_topics.topic_slug', topic).eq('research_item_topics.is_published', true)
-          .order('published_on', { ascending: false, nullsFirst: false }).order('id', { ascending: false }).limit(12),
-        supabase.from('clinical_trials')
+        // Start at the selective topic-link index. Beginning with the entire
+        // research table and asking PostgREST for an embedded inner relation
+        // caused rare topics to scan the growing global corpus before finding
+        // twelve matches.
+        dossierStage('recent-research', supabase.from('research_item_topics')
+          .select(`topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug),research_items!inner(${researchFields})`)
+          .eq('topic_slug', topic).eq('is_published', true).eq('research_items.publication_state', 'published')
+          .order('published_on', { referencedTable: 'research_items', ascending: false, nullsFirst: false })
+          .order('id', { referencedTable: 'research_items', ascending: false }).limit(12)),
+        dossierStage('recent-trials', supabase.from('clinical_trials')
           .select(`id,external_id,title,overall_status,phases,study_type,sponsor,enrollment,countries,start_date,completion_date,last_update_date,evidence_snapshot,source_url,editorial_summary,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name),${trialRelation}`)
           .eq('publication_state', 'published').eq('clinical_trial_topics.topic_slug', topic).eq('clinical_trial_topics.is_published', true)
-          .order('last_update_date', { ascending: false, nullsFirst: false }).order('id', { ascending: false }).limit(12),
-        supabase.from('intelligence_topics').select('slug,name,description,domain_slug,domain_name,domain_description').eq('slug', topic).eq('enabled', true).maybeSingle(),
-        supabase.rpc('get_topic_evidence_snapshot', { requested_topic: topic }),
-        supabase.rpc('get_topic_reader_overview', { requested_topic: topic }),
-        supabase.from('intelligence_change_events')
-          .select('id,event_type,importance,record_type,record_id,title,source_url,occurred_at,topic_slugs,metadata', { count: 'exact' })
-          .neq('event_type', 'quality_state_changed').contains('topic_slugs', [topic]).gte('occurred_at', sixWeeksAgo).order('occurred_at', { ascending: false }).limit(250),
-        supabase.from('intelligence_change_events')
-          .select('event_type,record_type,occurred_at', { count: 'exact' })
-          .neq('event_type', 'quality_state_changed').contains('topic_slugs', [topic]).gte('occurred_at', twelveWeeksAgo).order('occurred_at', { ascending: false }).limit(2000),
-        sourcesPromise,
-        supabase.rpc('get_topic_dossier_pilot', { requested_topic: topic }),
-        supabase.from('funding_award_topics').select('openalex_award_id', { count: 'exact', head: true }).eq('topic_slug', topic),
-        supabase.from('university_research_topic_metrics')
-          .select('openalex_id,university_research_institutions!inner(is_eligible)', { count: 'exact', head: true })
-          .eq('topic_slug', topic).gt('works_all_time', 0).eq('university_research_institutions.is_eligible', true),
+          .order('last_update_date', { ascending: false, nullsFirst: false }).order('id', { ascending: false }).limit(12)),
+        dossierStage('topic', supabase.from('intelligence_topics').select('slug,name,description,domain_slug,domain_name,domain_description').eq('slug', topic).eq('enabled', true).maybeSingle()),
+        dossierStage('evidence', supabase.rpc('get_topic_evidence_snapshot', { requested_topic: topic })),
+        dossierStage('overview', supabase.rpc('get_topic_reader_overview', { requested_topic: topic })),
+        dossierStage('timeline', supabase.from('intelligence_change_events')
+          .select('id,event_type,importance,record_type,record_id,title,source_url,occurred_at,topic_slugs,metadata', { count: 'planned' })
+          .neq('event_type', 'quality_state_changed').contains('topic_slugs', [topic]).gte('occurred_at', sixWeeksAgo).order('occurred_at', { ascending: false }).limit(250)),
+        dossierStage('timeline-pulse', supabase.from('intelligence_change_events')
+          .select('event_type,record_type,occurred_at', { count: 'planned' })
+          .neq('event_type', 'quality_state_changed').contains('topic_slugs', [topic]).gte('occurred_at', twelveWeeksAgo).order('occurred_at', { ascending: false }).limit(2000)),
+        dossierStage('sources', sourcesPromise),
+        dossierStage('interpretation', supabase.rpc('get_topic_dossier_pilot', { requested_topic: topic })),
+        dossierStage('funding-count', supabase.from('funding_award_topics').select('openalex_award_id', { count: 'planned', head: true }).eq('topic_slug', topic)),
+        dossierStage('university-count', supabase.from('university_research_topic_metrics')
+          .select('openalex_id,university_research_institutions!inner(is_eligible)', { count: 'planned', head: true })
+          .eq('topic_slug', topic).gt('works_all_time', 0).eq('university_research_institutions.is_eligible', true)),
       ])
       for (const result of [researchResult, trialResult, topicResult, evidenceResult, overviewResult, timelineResult, timelinePulseResult, sourcesResult, pilotResult, fundingResult, universityCountResult]) if (result.error) throw result.error
 
@@ -417,7 +427,12 @@ Deno.serve(async (req) => {
         relatedTopics = relatedSlugs.map(([slug, shared_events]) => ({ ...bySlug.get(slug), shared_events })).filter((item: any) => item.slug)
       }
 
-      const research = publicRecords(researchResult.data, 'research_item_topics').map((record: any) => ({
+      const researchRows = (researchResult.data ?? []).map((relation: any) => {
+        const item = Array.isArray(relation.research_items) ? relation.research_items[0] : relation.research_items
+        const { research_items: _item, ...topicRelation } = relation
+        return { ...(item ?? {}), research_item_topics: [topicRelation] }
+      }).filter((record: any) => record.id)
+      const research = publicRecords(researchRows, 'research_item_topics').map((record: any) => ({
         ...record,
         evidence_snapshot: record.evidence_snapshot && Object.keys(record.evidence_snapshot).length ? record.evidence_snapshot : researchEvidenceSnapshot(record),
       }))
@@ -813,8 +828,11 @@ Deno.serve(async (req) => {
         .order('id', { ascending: false })
         .limit(Math.min(limit, 12)),
       sourcesPromise,
-      supabase.from('research_items').select('*', { count: 'exact', head: true }).eq('publication_state', 'published'),
-      supabase.from('clinical_trials').select('*', { count: 'exact', head: true }).eq('publication_state', 'published'),
+      // The landing-page totals are orientation figures, not a billing or
+      // scientific audit. Planned counts avoid a full-table count across the
+      // continuously growing corpus on every cold overview request.
+      supabase.from('research_items').select('id', { count: 'planned', head: true }).eq('publication_state', 'published'),
+      supabase.from('clinical_trials').select('id', { count: 'planned', head: true }).eq('publication_state', 'published'),
     ])
     for (const result of [topicsResult, researchResult, trialsResult, sourcesResult, researchCount, trialsCount]) {
       if (result.error) throw result.error
@@ -834,7 +852,12 @@ Deno.serve(async (req) => {
       medical_notice: 'Research information only. Not medical advice, diagnosis, or treatment guidance.',
     })
   } catch (error) {
-    console.error('public-intelligence error:', error instanceof Error ? error.message : String(error))
+    const diagnostic = error instanceof Error
+      ? { name: error.name, message: error.message, stack: error.stack?.split('\n').slice(0, 4).join(' | ') }
+      : error && typeof error === 'object'
+        ? Object.fromEntries(['stage', 'code', 'message', 'details', 'hint'].map((key) => [key, String((error as Record<string, unknown>)[key] ?? '')]).filter(([, value]) => value))
+        : { message: String(error) }
+    console.error(`public-intelligence error: ${JSON.stringify({ view, topic: topic || null, diagnostic })}`)
     return response(req, { error: 'content_unavailable' }, 500)
   }
 })

@@ -174,7 +174,7 @@ module.exports = async function intelligenceProxy(request, response) {
   // complete index. Keep the proxy responsive, but allow the authoritative
   // aggregate enough time to answer.
   const filteredResearch = request.query?.view === 'research' && Boolean(request.query?.q || request.query?.topic || request.query?.evidence || request.query?.access);
-  const slowAggregate = filteredResearch || ['universities', 'topic-dossier', 'trial-results-gap', 'funding'].includes(request.query?.view);
+  const slowAggregate = filteredResearch || ['overview', 'universities', 'topic-dossier', 'trial-results-gap', 'funding'].includes(request.query?.view);
   const timeout = setTimeout(() => controller.abort(), slowAggregate ? 9000 : 3500);
   try {
     const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';

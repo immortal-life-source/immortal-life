@@ -387,7 +387,7 @@ test('university fallbacks never present a 100-row sample as complete global cov
   ])
   assert.match(proxy, /total_matching: null/)
   assert.match(proxy, /temporary sample, not index totals/)
-  assert.match(proxy, /\['universities', 'topic-dossier', 'trial-results-gap', 'funding'\]\.includes\(request\.query\?\.view\)/)
+  assert.match(proxy, /\['overview', 'universities', 'topic-dossier', 'trial-results-gap', 'funding'\]\.includes\(request\.query\?\.view\)/)
   assert.match(proxy, /slowAggregate \? 9000 : 3500/)
   assert.match(api, /country_name\.ilike/)
   assert.match(api, /\.select\(institutionFields, \{ count: 'planned' \}\)/)

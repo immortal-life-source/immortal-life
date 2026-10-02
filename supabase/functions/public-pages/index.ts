@@ -494,8 +494,8 @@ async function entityPage(supabase: any, kind: string, slug: string): Promise<st
   let researchQuery = supabase.from('research_items').select('id,title,published_on,relevance_confidence').eq('publication_state', 'published').limit(50)
   let trialQuery = supabase.from('clinical_trials').select('id,title,last_update_date,relevance_confidence').eq('publication_state', 'published').limit(50)
   if (kind === 'topic') {
-    researchQuery = supabase.from('research_items').select('id,title,published_on,relevance_confidence,research_item_topics!inner(topic_slug,matched_fields,is_published)').eq('publication_state', 'published').eq('research_item_topics.topic_slug', slug).eq('research_item_topics.is_published', true).limit(50)
-    trialQuery = supabase.from('clinical_trials').select('id,title,last_update_date,relevance_confidence,clinical_trial_topics!inner(topic_slug,matched_fields,is_published)').eq('publication_state', 'published').eq('clinical_trial_topics.topic_slug', slug).eq('clinical_trial_topics.is_published', true).limit(50)
+    researchQuery = supabase.from('research_item_topics').select('topic_slug,matched_fields,is_published,research_items!inner(id,title,published_on,relevance_confidence)').eq('topic_slug', slug).eq('is_published', true).eq('research_items.publication_state', 'published').limit(50)
+    trialQuery = supabase.from('clinical_trial_topics').select('topic_slug,matched_fields,is_published,clinical_trials!inner(id,title,last_update_date,relevance_confidence)').eq('topic_slug', slug).eq('is_published', true).eq('clinical_trials.publication_state', 'published').limit(50)
   } else if (kind === 'journal') {
     researchQuery = researchQuery.eq('journal', entity.name)
     trialQuery = trialQuery.eq('id', -1)
@@ -513,15 +513,29 @@ async function entityPage(supabase: any, kind: string, slug: string): Promise<st
     }
   }
   const [research, trials] = await Promise.all([
-    researchQuery.order('published_on', { ascending: false, nullsFirst: false }),
-    trialQuery.order('last_update_date', { ascending: false, nullsFirst: false }),
+    kind === 'topic'
+      ? researchQuery.order('published_on', { referencedTable: 'research_items', ascending: false, nullsFirst: false })
+      : researchQuery.order('published_on', { ascending: false, nullsFirst: false }),
+    kind === 'topic'
+      ? trialQuery.order('last_update_date', { referencedTable: 'clinical_trials', ascending: false, nullsFirst: false })
+      : trialQuery.order('last_update_date', { ascending: false, nullsFirst: false }),
   ])
   if (research.error) throw research.error
   if (trials.error) throw trials.error
   const canonical = `${SITE}/entities/${kind}/${slug}`
   const kindLabels: Record<string, string> = { topic: 'Topic', journal: 'Journal', sponsor: 'Trial sponsor', source: 'Scientific source' }
-  const visibleResearch = kind === 'topic' ? (research.data ?? []).filter((item: any) => hasPublicTopicRelation(item, 'research_item_topics', slug)) : (research.data ?? [])
-  const visibleTrials = kind === 'topic' ? (trials.data ?? []).filter((item: any) => hasPublicTopicRelation(item, 'clinical_trial_topics', slug)) : (trials.data ?? [])
+  const topicResearch = kind === 'topic' ? (research.data ?? []).map((relation: any) => {
+    const item = Array.isArray(relation.research_items) ? relation.research_items[0] : relation.research_items
+    const { research_items: _item, ...topicRelation } = relation
+    return { ...(item ?? {}), research_item_topics: [topicRelation] }
+  }).filter((item: any) => item.id) : []
+  const topicTrials = kind === 'topic' ? (trials.data ?? []).map((relation: any) => {
+    const item = Array.isArray(relation.clinical_trials) ? relation.clinical_trials[0] : relation.clinical_trials
+    const { clinical_trials: _item, ...topicRelation } = relation
+    return { ...(item ?? {}), clinical_trial_topics: [topicRelation] }
+  }).filter((item: any) => item.id) : []
+  const visibleResearch = kind === 'topic' ? topicResearch.filter((item: any) => hasPublicTopicRelation(item, 'research_item_topics', slug)) : (research.data ?? [])
+  const visibleTrials = kind === 'topic' ? topicTrials.filter((item: any) => hasPublicTopicRelation(item, 'clinical_trial_topics', slug)) : (trials.data ?? [])
   const recordCount = visibleResearch.length + visibleTrials.length
   const minimumRecords = Number(entity.metadata?.minimum_records ?? (kind === 'journal' ? 3 : kind === 'sponsor' ? 2 : 1))
   const body = `<section class="intel-section entity-detail"><div class="quality-stat"><span>Type</span><strong>${escapeHtml(kindLabels[kind] || kind)}</strong></div><a class="quality-stat quality-stat--link" href="#entity-records"><span>Eligible records</span><strong>${recordCount}</strong><small>View records →</small></a><div id="entity-records"><h2>Research</h2>${entityRecordList(visibleResearch, 'research')}<h2>Clinical trials</h2>${entityRecordList(visibleTrials, 'trials')}</div><aside class="automation-notice"><strong>Built automatically from source records</strong><p>Names and links come directly from source information. No human reviewer merges identities or evaluates individual records. Pages below their ${minimumRecords}-record usefulness threshold remain out of search results.</p>${kind === 'topic' ? `<p><a class="section-link" href="/topics/${encodeURIComponent(slug)}">Open the full topic guide</a></p>` : ''}</aside></section>`

@@ -2139,10 +2139,10 @@
   function renderUniversityStats(coverage) {
     elements.universityStats.replaceChildren();
     [
-      ['Universities indexed', coverage?.universities || 0, 'ranking'],
-      ['Countries represented', coverage?.countries || 0, 'countries'],
-      ['Longevity-topic links', coverage?.indexed_topic_links || 0, 'topics'],
-      ['Five-year work links', coverage?.indexed_works_five_year || 0, 'activity'],
+      ['Universities indexed', coverage?.universities, 'ranking'],
+      ['Countries represented', coverage?.countries, 'countries'],
+      ['Longevity-topic links', coverage?.indexed_topic_links, 'topics'],
+      ['Five-year work links', coverage?.indexed_works_five_year, 'activity'],
     ].forEach(([label, value, action]) => {
       const card = el('button', 'atlas-stat atlas-stat--action'); card.type = 'button';
       const available = value !== null && value !== undefined && Number.isFinite(Number(value));
