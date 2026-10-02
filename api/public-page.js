@@ -43,7 +43,11 @@ module.exports = async function publicPageProxy(request, response) {
   append(upstream, 'topic', request.query?.topic, slugPattern);
   const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), mode === 'funder' || mode === 'university' || mode === 'funders' ? 12_000 : 8_000);
+  // Cold database-backed pages can briefly exceed the warm response time when
+  // several crawler requests arrive together. Give the origin enough bounded
+  // time to produce one cacheable response instead of caching an error-shaped
+  // visitor experience; subsequent requests are served by the CDN.
+  const timeout = setTimeout(() => controller.abort(), 22_000);
   try {
     const result = await fetch(upstream, {
       headers: {

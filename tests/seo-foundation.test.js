@@ -48,6 +48,7 @@ test('major hubs and dynamic profiles use cacheable first-party HTML', () => {
   assert.match(hubs, /data-prerendered="true"/);
   assert.match(hubs, /stale-while-revalidate=86400/);
   assert.match(pages, /Vercel-CDN-Cache-Control/);
+  assert.match(pages, /controller\.abort\(\), 22_000/);
   assert.match(pages, /response\.redirect\(308, canonical\)/);
 });
 

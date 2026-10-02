@@ -14,7 +14,7 @@
       "maxDuration": 15
     },
     "api/public-page.js": {
-      "maxDuration": 15
+      "maxDuration": 30
     }
   },
   "redirects": [
