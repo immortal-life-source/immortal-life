@@ -1904,6 +1904,8 @@
       [linkedPublications, 'Linked publications', 'Papers connected to acknowledged awards', fundingHref],
       [linkedUniversities, 'Connected universities', 'Institutions on those linked publications', `/universities?topic=${encodeURIComponent(topicSlug)}`],
     ].filter(([value]) => Number(value) > 0);
+    const statColumns = statDefinitions.length > 6 ? 3 : Math.max(1, statDefinitions.length);
+    elements.topicFundingStats.style.setProperty('--topic-funding-stat-columns', String(statColumns));
     elements.topicFundingStats.replaceChildren(...statDefinitions.map(([value, label, note, href]) => stat(Number(value), label, note, href)));
 
     const makePathway = (tone, kicker, title, description, nodes, href) => {
