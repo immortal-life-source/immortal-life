@@ -4,7 +4,7 @@ const upstreamBase = 'https://nifbuyoghesveotugday.supabase.co/functions/v1/publ
 const allowedParameters = new Set([
   'view', 'limit', 'offset', 'topic', 'q', 'country', 'continent', 'sort',
   'status', 'phase', 'evidence', 'access', 'published_from', 'published_to',
-  'region', 'funder', 'institution', 'quality_rules', 'directory_contract',
+  'region', 'funder', 'institution', 'quality_rules', 'directory_contract', 'directory_rules',
 ]);
 
 async function fetchJson(url, timeoutMs = 2500) {

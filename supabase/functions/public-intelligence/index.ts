@@ -216,18 +216,22 @@ Deno.serve(async (req) => {
       // global scale that regularly approached the proxy deadline. This shape
       // uses university_topic_rank_idx directly and also returns the genuinely
       // strongest topic institutions, rather than sorting a general top-100
-      // sample in JavaScript after retrieval.
+      // sample in JavaScript after retrieval. Empty metric placeholders are
+      // never reader-visible, and all-history activity remains useful while
+      // the more recent rolling windows are still being assembled.
       let directoryQuery: any
       if (topic) {
         directoryQuery = supabase.from('university_research_topic_metrics')
           .select(`topic_slug,works_all_time,works_five_year,works_two_year,representative_citations,representative_open_access_count,representative_work_count,university_research_institutions!inner(${institutionFields})`, { count: 'planned' })
           .eq('topic_slug', topic)
+          .gt('works_all_time', 0)
           .eq('university_research_institutions.is_eligible', true)
           .range(offset, offset + universityLimit - 1)
         if (/^[A-Z]{2}$/.test(country)) directoryQuery = directoryQuery.eq('university_research_institutions.country_code', country)
         if (continent) directoryQuery = directoryQuery.eq('university_research_institutions.continent', continent)
         if (search) directoryQuery = directoryQuery.or(`name.ilike.%${search}%,city.ilike.%${search}%,country_name.ilike.%${search}%`, { referencedTable: 'university_research_institutions' })
         directoryQuery = directoryQuery
+          .order('works_all_time', { ascending: false })
           .order('works_five_year', { ascending: false })
           .order('works_two_year', { ascending: false })
           .order('openalex_id')

@@ -2200,7 +2200,7 @@
     if (topicSlug) {
       const topicMetric = (university.university_research_topic_metrics || []).find((metric) => metric.topic_slug === topicSlug);
       const topicName = elements.universityTopic.selectedOptions?.[0]?.textContent || topicSlug.replaceAll('-', ' ');
-      return { value: numberFormatter.format(Number(topicMetric?.works_five_year || 0)), label: `${topicName} work links` };
+      return { value: numberFormatter.format(Number(topicMetric?.works_all_time || 0)), label: `${topicName} research records` };
     }
     const sort = elements.universitySort?.value || 'index';
     if (sort === 'activity') return { value: university.indexed_works_five_year, label: 'five-year work links' };
@@ -2248,8 +2248,14 @@
       const topicMetrics = Array.isArray(university.university_research_topic_metrics) ? university.university_research_topic_metrics : [];
       const topicNames = topicMetrics.sort((left, right) => Number(right.works_five_year || 0) - Number(left.works_five_year || 0)).slice(0, 4).map((metric) => metric.topic_slug.replaceAll('-', ' '));
       const activeMetric = activeTopic ? topicMetrics.find((metric) => metric.topic_slug === activeTopic) : null;
+      const activeAllTime = Math.max(0, Number(activeMetric?.works_all_time || 0));
+      const activeFiveYear = Math.max(0, Number(activeMetric?.works_five_year || 0));
+      const activeTwoYear = Math.max(0, Number(activeMetric?.works_two_year || 0));
+      const activeRecentCopy = activeFiveYear > 0
+        ? ` ${numberFormatter.format(activeFiveYear)} fall within the rolling five-year window${activeTwoYear > 0 ? `; ${numberFormatter.format(activeTwoYear)} are from the last two years` : ''}.`
+        : '';
       main.append(el('p', '', activeTopic
-        ? `${numberFormatter.format(Number(activeMetric?.works_five_year || 0))} source-matched ${activeTopicName} work links in the five-year window; ${numberFormatter.format(Number(activeMetric?.works_two_year || 0))} are recent.`
+        ? `${numberFormatter.format(activeAllTime)} OpenAlex research records associated with this university matched the ${activeTopicName} search across available publication history.${activeRecentCopy}`
         : topicNames.length ? `Strongest indexed activity: ${topicNames.join(', ')}.` : `${numberFormatter.format(Number(university.indexed_topic_count || 0))} longevity topics represented.`));
       const signals = el('div', 'university-signals');
       signals.append(
@@ -2282,11 +2288,11 @@
       item.append(rank, main, score, compare); elements.universityList.append(item);
     });
     elements.universityResult.textContent = activeTopic
-      ? `Showing ${numberFormatter.format(visible.length)} universities with source-matched ${activeTopicName} activity, ranked by that topic’s indexed work links.`
+      ? `Showing ${numberFormatter.format(visible.length)} universities appearing in ${activeTopicName} research records in OpenAlex, ranked by the all-history topic result count.`
       : `Showing ${numberFormatter.format(visible.length)} matching universities from ${numberFormatter.format(universityRows.length)} loaded · ${numberFormatter.format(universityTotal || universityRows.length)} available.`;
     if (elements.universityHeading) elements.universityHeading.textContent = activeTopic ? `Universities researching ${activeTopicName}.` : 'Universities active in longevity research.';
     if (elements.universityIntro) elements.universityIntro.textContent = activeTopic
-      ? `This is a topic-specific view. Every university below has source-matched ${activeTopicName} research in the index; the ranking uses that topic’s five-year activity, not the general university list.`
+      ? `This is a topic-specific view. Every university below appears in research returned by the ${activeTopicName} search of OpenAlex affiliation data; the ranking uses available publication history, not the general university list.`
       : 'Explore universities through several lenses instead of relying on a single unexplained league table. The index retains all source-matched scholarly works and measures rolling activity, breadth across every longevity topic, recent momentum, and citation context across the complete linked corpus.';
     renderUniversityRegions(visible);
   }
@@ -2307,6 +2313,7 @@
       country: elements.universityCountry?.value || requestedCountry,
       continent: elements.universityContinent?.value || requestedContinent,
       sort: elements.universitySort?.value || requestedSort,
+      directory_rules: '20261002-positive-topic-links-v2',
     });
     const incoming = Array.isArray(data.universities) ? data.universities : [];
     if (append) {
@@ -2561,7 +2568,7 @@
   // Cache Storage survives ordinary reloads. Bump this contract whenever a
   // repaired public aggregation would otherwise remain hidden by an older
   // zero-value response in a visitor's browser.
-  const publicCacheName = 'immortal-life-public-intelligence-v10';
+  const publicCacheName = 'immortal-life-public-intelligence-v11';
   const publicCacheMaxAgeMs = 15 * 60 * 1000;
 
   async function readCachedRequest(url) {
@@ -2601,7 +2608,10 @@
   }
 
   async function request(viewName, limit, params = {}) {
-    const url = new URL(endpoint, window.location.origin);
+    const directUniversityEndpoint = viewName === 'universities' && window.IL_FN_BASE
+      ? `${window.IL_FN_BASE}/public-intelligence`
+      : endpoint;
+    const url = new URL(directUniversityEndpoint, window.location.origin);
     url.searchParams.set('quality_rules', '20260930-audited-pilot-metrics-b');
     url.searchParams.set('view', viewName);
     url.searchParams.set('limit', String(limit));
@@ -2613,7 +2623,21 @@
     const cached = await readCachedRequest(url);
     if (cached) return cached;
     const filteredResearch = viewName === 'research' && Boolean(params.q || params.topic || params.evidence || params.access);
-    const res = await fetchWithDeadline(url, filteredResearch || ['universities', 'topic-dossier', 'trial-results-gap', 'funding'].includes(viewName) ? 10000 : 6500);
+    const deadline = filteredResearch || ['universities', 'topic-dossier', 'trial-results-gap', 'funding'].includes(viewName) ? 10000 : 6500;
+    let res;
+    try {
+      res = await fetchWithDeadline(url, deadline);
+    } catch (error) {
+      if (viewName !== 'universities' || url.origin === window.location.origin) throw error;
+      const proxyUrl = new URL(endpoint, window.location.origin);
+      url.searchParams.forEach((value, key) => proxyUrl.searchParams.set(key, value));
+      res = await fetchWithDeadline(proxyUrl, deadline);
+    }
+    if (!res.ok && viewName === 'universities' && url.origin !== window.location.origin) {
+      const proxyUrl = new URL(endpoint, window.location.origin);
+      url.searchParams.forEach((value, key) => proxyUrl.searchParams.set(key, value));
+      res = await fetchWithDeadline(proxyUrl, deadline);
+    }
     if (res.ok) {
       const data = await res.json();
       await writeCachedRequest(url, data);
