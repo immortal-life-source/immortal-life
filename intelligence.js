@@ -916,12 +916,15 @@
   }
 
   function researchQueryParams(offset = 0) {
+    const urlParams = new URLSearchParams(location.search);
     return {
       offset,
       q: String(elements.researchSearch?.value || '').trim(),
       topic: elements.researchTopic?.value || '',
       evidence: elements.researchEvidence?.value || '',
       access: elements.researchAccess?.value || '',
+      published_from: urlParams.get('published_from')?.trim() || '',
+      published_to: urlParams.get('published_to')?.trim() || '',
     };
   }
 
@@ -1847,6 +1850,7 @@
 
   function renderTopicEvidence(data) {
     const evidence = data?.evidence || {};
+    const overview = data?.overview || {};
     if (!elements.topicDossierSnapshot || !elements.topicDossierAnswers) return;
     renderTopicReaderOverview(data);
     renderTopicPilot(data?.pilot);
@@ -1859,6 +1863,12 @@
     const recruiting = Number(evidence.recruiting_trials || 0);
     const results = Number(evidence.trials_with_results || 0);
     const enrollment = Number(evidence.registered_enrollment || 0);
+    const recentResearch = Number(overview.trend_recent_total || 0);
+    const universityTotal = Number(overview.university_total || 0);
+    const randomized = Number(evidence.randomized_human_total ?? evidence.research_by_stage?.['randomized-human'] ?? 0);
+    const currentYear = new Date().getFullYear();
+    const recentFrom = `${currentYear - 3}-01-01`;
+    const recentTo = `${currentYear - 1}-12-31`;
     const regulatory = Number(evidence.regulatory_total ?? events.filter((event) => event.record_type === 'regulatory').length);
     const integrity = Number(evidence.integrity_total ?? events.filter((event) => event.record_type === 'integrity').length);
     const lastUpdate = evidence.last_meaningful_update || events[0]?.occurred_at || evidence.generated_at;
@@ -1871,9 +1881,9 @@
     elements.topicDossierSnapshot.replaceChildren(
       metric('Matched research records', Number(evidence.research_total || 0), '#researchSection', 'See the papers and study records'),
       metric('Human-study records', humanTotal, '#dossier-human-evidence', 'See which evidence involves people'),
-      metric('Registered clinical trials', trialTotal, '#trialsSection', 'See the official registrations'),
-      metric('Active or recruiting trials', recruiting, `/trials?topic=${encodeURIComponent(topicSlug)}&status=Recruiting`, 'See studies currently moving forward'),
-      metric('People listed in trial registries', enrollment, '#dossier-trials', 'Planned or actual enrollment'),
+      metric(`Research records · ${currentYear - 3}–${currentYear - 1}`, recentResearch, `/research?topic=${encodeURIComponent(topicSlug)}&published_from=${recentFrom}&published_to=${recentTo}`, 'Latest three complete calendar years'),
+      metric('Active research institutions', universityTotal, `/universities?topic=${encodeURIComponent(topicSlug)}`, 'Universities and research institutions with linked work'),
+      metric('Randomized-human records', randomized, `/research?topic=${encodeURIComponent(topicSlug)}&evidence=randomized-human`, 'Study type, not a claim that results were positive'),
       metric('Source-linked funding records', Number(data?.funding?.award_count || 0), `/funding?topic=${encodeURIComponent(topicSlug)}`, 'See acknowledged awards'),
       metric('Latest important source change', lastUpdate ? formatTimestamp(lastUpdate) : 'None recorded', '#timelineSection', 'See what changed'),
     );
@@ -1895,7 +1905,6 @@
       }
       dynamic.append(article);
     };
-    const randomized = Number(evidence.randomized_human_total ?? evidence.research_by_stage?.['randomized-human'] ?? 0);
     const syntheses = Number(evidence.human_synthesis_total ?? evidence.research_by_stage?.['human-synthesis'] ?? 0);
     const phaseCounts = evidence.trials_by_phase || {};
     const phaseSummary = Object.entries(phaseCounts).filter(([, count]) => Number(count) > 0).map(([phase, count]) => `${readableStatus(phase)}: ${numberFormatter.format(Number(count))}`).join(' · ');
@@ -2630,7 +2639,14 @@
         renderSources(data.sources || [], true);
       } else if (view === 'research') {
         const params = new URLSearchParams(location.search);
-        const [data, topicEntries] = await Promise.all([request('research', 100, { q: params.get('search')?.trim() || '', topic: params.get('topic')?.trim() || '', evidence: params.get('evidence')?.trim() || '', access: params.get('access')?.trim() || '' }), catalogueTopicEntries()]);
+        const [data, topicEntries] = await Promise.all([request('research', 100, {
+          q: params.get('search')?.trim() || '',
+          topic: params.get('topic')?.trim() || '',
+          evidence: params.get('evidence')?.trim() || '',
+          access: params.get('access')?.trim() || '',
+          published_from: params.get('published_from')?.trim() || '',
+          published_to: params.get('published_to')?.trim() || '',
+        }), catalogueTopicEntries()]);
         researchNextOffset = data.next_offset;
         researchTotal = Number(data.total_matching || data.research?.length || 0);
         renderResearch(data.research || [], topicEntries);

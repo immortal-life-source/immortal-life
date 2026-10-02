@@ -605,7 +605,11 @@ Deno.serve(async (req) => {
       const search = publicSearchTerm(url.searchParams.get('q'))
       const evidence = cleanText(url.searchParams.get('evidence') ?? '', 40)
       const access = cleanText(url.searchParams.get('access') ?? '', 12)
-      const countMode = search || evidence || access || topic ? 'exact' : 'planned'
+      const publishedFromRaw = cleanText(url.searchParams.get('published_from') ?? '', 10)
+      const publishedToRaw = cleanText(url.searchParams.get('published_to') ?? '', 10)
+      const publishedFrom = /^\d{4}-\d{2}-\d{2}$/.test(publishedFromRaw) ? publishedFromRaw : ''
+      const publishedTo = /^\d{4}-\d{2}-\d{2}$/.test(publishedToRaw) ? publishedToRaw : ''
+      const countMode = search || evidence || access || publishedFrom || publishedTo || topic ? 'exact' : 'planned'
       // Only use an inner relationship when a topic filter needs it. An inner
       // join across every topic relation made the unfiltered global index and
       // its exact count increasingly expensive as historical coverage grew.
@@ -628,6 +632,8 @@ Deno.serve(async (req) => {
       else if (evidence) query = query.eq('evidence_level', evidence)
       if (access === 'open') query = query.eq('is_open_access', true)
       else if (access === 'restricted') query = query.eq('is_open_access', false)
+      if (publishedFrom) query = query.gte('published_on', publishedFrom)
+      if (publishedTo) query = query.lte('published_on', publishedTo)
       const [{ data, error, count }, { data: sources, error: sourcesError }] = await Promise.all([query, sourcesPromise])
       if (error) throw error
       if (sourcesError) throw sourcesError

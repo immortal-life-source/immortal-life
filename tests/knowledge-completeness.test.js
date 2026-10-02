@@ -41,7 +41,7 @@ test('public indexes avoid unfiltered exact scans while filtered views use exact
   const api = await read('supabase/functions/public-intelligence/index.ts')
   const researchView = api.slice(api.indexOf("if (view === 'research')"), api.indexOf("if (view === 'trials')"))
   const trialView = api.slice(api.indexOf("if (view === 'trials')"), api.indexOf("if (view === 'integrity')"))
-  assert.match(researchView, /countMode = search \|\| evidence \|\| access \|\| topic \? 'exact' : 'planned'/)
+  assert.match(researchView, /countMode = search \|\| evidence \|\| access \|\| publishedFrom \|\| publishedTo \|\| topic \? 'exact' : 'planned'/)
   assert.match(researchView, /count: countMode/)
   assert.match(researchView, /pageLength === limit/)
   assert.match(trialView, /countMode = search \|\| status \|\| phase \|\| country \|\| topic \? 'exact' : 'planned'/)

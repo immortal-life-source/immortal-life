@@ -40,8 +40,23 @@ test('topic pages explain evidence in reader language and keep conclusions readi
   assert.match(browser, /No notice is not the same as evidence of safety/)
   assert.match(browser, /coverage statement, not a claim/)
   assert.match(browser, /topicCurrentInterpretation\.hidden = true/)
-  assert.match(template, /intelligence\.js\?v=20261001-reader-dossiers/)
+  assert.match(template, /intelligence\.js\?v=20261002-dossier-scale/)
   assert.match(template, /intelligence\.css\?v=20261002-topic-art-layout/)
   assert.match(styles, /grid-template-areas:"kicker art timeline" "title art timeline" "lede art timeline"/)
   assert.match(styles, /\.intel-hero > \.topic-hero-art \{\s*position:relative;/)
+})
+
+test('dossier hero metrics show meaningful scale and open precisely filtered evidence', async () => {
+  const [browser, proxy, endpoint] = await Promise.all([
+    read('intelligence.js'),
+    read('api/intelligence.js'),
+    read('supabase/functions/public-intelligence/index.ts'),
+  ])
+  assert.match(browser, /Research records · \$\{currentYear - 3\}–\$\{currentYear - 1\}/)
+  assert.match(browser, /Active research institutions/)
+  assert.match(browser, /Randomized-human records/)
+  assert.match(browser, /published_from=\$\{recentFrom\}&published_to=\$\{recentTo\}/)
+  assert.match(proxy, /'published_from', 'published_to'/)
+  assert.match(endpoint, /query\.gte\('published_on', publishedFrom\)/)
+  assert.match(endpoint, /query\.lte\('published_on', publishedTo\)/)
 })

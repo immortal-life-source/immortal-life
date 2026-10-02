@@ -71,3 +71,16 @@ test('active complete-corpus passes do not duplicate work in the live queue', as
   assert.match(migration, /delete from public\.topic_reindex_queue/)
   assert.match(migration, /process_topic_reindex_queue\(60\)/)
 })
+
+test('all legacy topics receive controlled database matching profiles before taxonomy v2 runs', async () => {
+  const migration = await read('supabase/migrations/20261002000200_repair_legacy_topic_profiles.sql')
+  const profileSlugs = [...migration.matchAll(/\{"slug":"([^"]+)"/g)].map((match) => match[1])
+  assert.equal(profileSlugs.length, 82)
+  assert.equal(new Set(profileSlugs).size, 82)
+  assert.ok(profileSlugs.includes('frailty'))
+  assert.ok(profileSlugs.includes('senolytics'))
+  assert.match(migration, /incomplete_count <> 0/)
+  assert.match(migration, /Expected 180 enabled topics/)
+  assert.match(migration, /longevity-taxonomy-180-v2/)
+  assert.match(migration, /process_trial_taxonomy_reindex\(400\)/)
+})
