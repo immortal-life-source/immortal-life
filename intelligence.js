@@ -1803,9 +1803,17 @@
       : 'No topic-specific university activity is available yet.';
     if (elements.topicTrialSummary) elements.topicTrialSummary.textContent = `${numberFormatter.format(trialTotal)} registered · ${numberFormatter.format(recruiting)} recruiting or active.`;
     if (elements.topicResearchSummary) elements.topicResearchSummary.textContent = `${numberFormatter.format(researchTotal)} records · ${numberFormatter.format(humanTotal)} classified as human evidence.`;
-    if (elements.topicFundingSummary) elements.topicFundingSummary.textContent = directFundingTotal || acknowledgedFundingTotal
-      ? `${numberFormatter.format(directFundingTotal)} official grant ${directFundingTotal === 1 ? 'record' : 'records'} · ${numberFormatter.format(acknowledgedFundingTotal)} publication-linked award ${acknowledgedFundingTotal === 1 ? 'entity' : 'entities'}.`
-      : 'Funding relationships are still being assembled for this topic.';
+    if (elements.topicFundingSummary) {
+      if (directFundingTotal && acknowledgedFundingTotal) {
+        elements.topicFundingSummary.textContent = `${numberFormatter.format(directFundingTotal)} official grant ${directFundingTotal === 1 ? 'record' : 'records'} · ${numberFormatter.format(acknowledgedFundingTotal)} publication-linked award ${acknowledgedFundingTotal === 1 ? 'entity' : 'entities'}.`;
+      } else if (directFundingTotal) {
+        elements.topicFundingSummary.textContent = `${numberFormatter.format(directFundingTotal)} official grant ${directFundingTotal === 1 ? 'record' : 'records'} in connected grant sources.`;
+      } else if (acknowledgedFundingTotal) {
+        elements.topicFundingSummary.textContent = `${numberFormatter.format(acknowledgedFundingTotal)} publication-linked award ${acknowledgedFundingTotal === 1 ? 'entity' : 'entities'} currently identified.`;
+      } else {
+        elements.topicFundingSummary.textContent = 'Funding relationships are still being assembled for this topic.';
+      }
+    }
     if (elements.topicTrendSummary) elements.topicTrendSummary.textContent = `${trendLabel} across the latest complete three-year period.`;
 
     if (elements.topicUniversityGrid) {
@@ -1997,23 +2005,25 @@
       const card = link('topic-funding-ranked', '', href);
       card.append(el('span', '', String(index + 1).padStart(2, '0')), el('strong', '', title), el('b', '', value), el('small', '', note)); return card;
     };
-    renderRankedList(elements.topicDirectFunders, Array.isArray(funding?.direct_funders) ? funding.direct_funders : [], (row, index) => ranked(row, index, row.name || 'Unnamed funder', numberFormatter.format(Number(row.grants || 0)), directFilteredHref('search', row.name), `${numberFormatter.format(Number(row.active_grants || 0))} active grant${Number(row.active_grants || 0) === 1 ? '' : 's'}`), 'No direct funder is matched in the connected official grant sources.');
+    renderRankedList(elements.topicDirectFunders, Array.isArray(funding?.direct_funders) ? funding.direct_funders : [], (row, index) => ranked(row, index, row.name || 'Unnamed funder', numberFormatter.format(Number(row.grants || 0)), directFilteredHref('search', row.name), `${numberFormatter.format(Number(row.active_grants || 0))} current or undated record${Number(row.active_grants || 0) === 1 ? '' : 's'}`), 'No direct funder is matched in the connected official grant sources.');
     renderRankedList(elements.topicAcknowledgementFunders, Array.isArray(funding?.acknowledgement_funders) ? funding.acknowledgement_funders : [], (row, index) => ranked(row, index, row.name || 'Unnamed funder', numberFormatter.format(Number(row.awards || 0)), row.slug ? `/funders/${encodeURIComponent(row.slug)}` : `${fundingHref}&search=${encodeURIComponent(row.name || '')}`, `${numberFormatter.format(Number(row.publications || 0))} linked publication${Number(row.publications || 0) === 1 ? '' : 's'}`), 'No funder acknowledgement is matched on connected publications.');
     renderRankedList(elements.topicFundingUniversities, Array.isArray(funding?.universities) ? funding.universities : [], (row, index) => ranked(row, index, row.name || 'Unnamed institution', numberFormatter.format(Number(row.awards || 0)), `/universities/${encodeURIComponent(row.slug)}?topic=${encodeURIComponent(topicSlug)}`, `${row.country_name || row.country_code || 'Location unavailable'} · acknowledged awards`), 'No university connection is currently matched through funding acknowledgements.');
     document.querySelectorAll('.topic-funding-columns').forEach((row) => row.classList.toggle('topic-funding-columns--single', row.querySelectorAll('.topic-funding-panel:not([hidden])').length === 1));
 
     elements.topicFundingCountries.replaceChildren();
     const countryGroup = (title, rows, field, hrefBase) => {
+      if (!rows.length) return null;
       const group = el('div', 'topic-funding-country-group'); group.append(el('strong', '', title));
       const chips = el('div', 'topic-funding-chips');
-      if (!rows.length) chips.append(el('span', 'topic-funding-no-data', 'No location reported'));
       rows.slice(0, 8).forEach((row) => chips.append(link('topic-funding-chip', `${row.country_name || row.country_code} · ${numberFormatter.format(Number(row[field] || 0))}`, `${hrefBase}&country=${encodeURIComponent(row.country_code || '')}`)));
       group.append(chips); return group;
     };
-    elements.topicFundingCountries.append(
+    const countryGroups = [
       countryGroup('Official grant recipients', Array.isArray(funding?.direct_countries) ? funding.direct_countries : [], 'grants', fundingHref),
       countryGroup('Publication-linked institutions', Array.isArray(funding?.acknowledgement_countries) ? funding.acknowledgement_countries : [], 'awards', fundingHref),
-    );
+    ].filter(Boolean);
+    elements.topicFundingCountries.append(...countryGroups);
+    elements.topicFundingCountries.closest('.topic-funding-panel').hidden = !countryGroups.length;
 
     elements.topicFundingDirections.replaceChildren();
     const relatedTopics = Array.isArray(funding?.related_topics) ? funding.related_topics : [];
