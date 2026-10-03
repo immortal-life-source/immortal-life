@@ -77,7 +77,7 @@ module.exports = async function publicPageProxy(request, response) {
     response.setHeader('Content-Type', contentType);
     response.setHeader('Cache-Control', 'public, max-age=60, s-maxage=21600, stale-while-revalidate=86400, stale-if-error=604800');
     response.setHeader('CDN-Cache-Control', 'public, s-maxage=21600, stale-while-revalidate=86400, stale-if-error=604800');
-    response.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=21600, stale-while-revalidate=86400');
+    response.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=21600, stale-while-revalidate=86400, stale-if-error=604800');
     response.setHeader('X-Immortal-Page-Source', 'cached-public-page');
     return response.status(200).send(body);
   } catch (error) {

@@ -16,6 +16,7 @@ function sendHtml(response, status, html, source, options = {}) {
   } else {
     response.setHeader('Cache-Control', 'public, max-age=60, s-maxage=21600, stale-while-revalidate=86400, stale-if-error=604800');
     response.setHeader('CDN-Cache-Control', 'public, s-maxage=21600, stale-while-revalidate=86400, stale-if-error=604800');
+    response.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=21600, stale-while-revalidate=86400, stale-if-error=604800');
   }
   if (options.indexable === false) response.setHeader('X-Robots-Tag', 'noindex, follow');
   response.setHeader('X-Immortal-Topic-Page', source);

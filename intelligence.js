@@ -2797,15 +2797,22 @@
   // zero-value response in a visitor's browser.
   const publicCacheName = 'immortal-life-public-intelligence-v11';
   const publicCacheMaxAgeMs = 15 * 60 * 1000;
+  const publicCacheFallbackMaxAgeMs = 7 * 24 * 60 * 60 * 1000;
+  let lastVerifiedSnapshotAt = '';
 
-  async function readCachedRequest(url) {
+  async function readCachedRequest(url, maxAgeMs = publicCacheMaxAgeMs, markAsFallback = false) {
     if (!('caches' in window)) return null;
     try {
       const cached = await caches.open(publicCacheName).then((cache) => cache.match(url.toString()));
       if (!cached) return null;
       const cachedAt = Number(cached.headers.get('x-immortal-cached-at') || 0);
-      if (!cachedAt || Date.now() - cachedAt > publicCacheMaxAgeMs) return null;
-      return cached.json();
+      if (!cachedAt || Date.now() - cachedAt > maxAgeMs) return null;
+      const data = await cached.json();
+      if (markAsFallback) {
+        lastVerifiedSnapshotAt = new Date(cachedAt).toISOString();
+        return { ...data, last_verified_snapshot: true, last_verified_snapshot_at: lastVerifiedSnapshotAt };
+      }
+      return data;
     } catch (_) {
       return null;
     }
@@ -2855,10 +2862,18 @@
     try {
       res = await fetchWithDeadline(url, deadline);
     } catch (error) {
-      if (viewName !== 'universities' || url.origin === window.location.origin) throw error;
-      const proxyUrl = new URL(endpoint, window.location.origin);
-      url.searchParams.forEach((value, key) => proxyUrl.searchParams.set(key, value));
-      res = await fetchWithDeadline(proxyUrl, deadline);
+      if (viewName === 'universities' && url.origin !== window.location.origin) {
+        try {
+          const proxyUrl = new URL(endpoint, window.location.origin);
+          url.searchParams.forEach((value, key) => proxyUrl.searchParams.set(key, value));
+          res = await fetchWithDeadline(proxyUrl, deadline);
+        } catch (_) { /* The verified browser snapshot below is the final safe fallback. */ }
+      }
+      if (!res) {
+        const stale = await readCachedRequest(url, publicCacheFallbackMaxAgeMs, true);
+        if (stale) return stale;
+        throw error;
+      }
     }
     if (!res.ok && viewName === 'universities' && url.origin !== window.location.origin) {
       const proxyUrl = new URL(endpoint, window.location.origin);
@@ -2867,9 +2882,16 @@
     }
     if (res.ok) {
       const data = await res.json();
-      await writeCachedRequest(url, data);
+      if (!data?.fallback && !data?.unavailable) {
+        await writeCachedRequest(url, data);
+      } else {
+        const stale = await readCachedRequest(url, publicCacheFallbackMaxAgeMs, true);
+        if (stale) return stale;
+      }
       return data;
     }
+    const stale = await readCachedRequest(url, publicCacheFallbackMaxAgeMs, true);
+    if (stale) return stale;
     throw new Error(`Feed request failed with ${res.status}`);
   }
 
@@ -3004,6 +3026,14 @@
       } else if (view === 'quality') {
         const data = await request('quality', 100);
         renderQuality(data.telemetry || {});
+      }
+      if (lastVerifiedSnapshotAt) {
+        const verifiedAt = new Date(lastVerifiedSnapshotAt);
+        const label = Number.isNaN(verifiedAt.valueOf())
+          ? 'an earlier successful check'
+          : verifiedAt.toLocaleString('en', { dateStyle: 'medium', timeStyle: 'short' });
+        elements.freshness.dataset.health = 'delayed';
+        elements.freshnessText.textContent = `The live source is delayed. Showing the last verified snapshot from ${label}.`;
       }
       elements.loading.hidden = true;
     } catch (error) {

@@ -124,7 +124,7 @@ module.exports = async function hubPage(request, response) {
     response.setHeader('Content-Type', 'text/html; charset=utf-8');
     response.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400, stale-if-error=604800');
     response.setHeader('CDN-Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400, stale-if-error=604800');
-    response.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
+    response.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400, stale-if-error=604800');
     response.setHeader('X-Immortal-Hub-Source', 'server-rendered');
     return response.status(200).send(html);
   } catch (error) {
