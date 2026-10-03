@@ -1329,13 +1329,11 @@
       [summary.awards, 'Award entities', 'Open source-linked award records', 'awards'],
       [summary.direct_grants, 'Direct grants', 'Official grant-database records', 'grants'],
       [summary.topics, 'Longevity topics', 'Tracked topics connected to funding records', ''],
-      [summary.funders, 'Funders', 'Distinct OpenAlex funder identities', 'funders'],
+      [summary.funders, 'Funders', 'Distinct OpenAlex funder identities', ''],
       [summary.institutions, 'Universities', 'Eligible institutions connected through publications', ''],
       [summary.linked_publications, 'Linked publications', 'Retained longevity works carrying award metadata', ''],
     ].forEach(([value, label, note, action], index) => {
-      const card = action === 'funders'
-        ? link(`funding-stat${index === 0 ? ' is-primary' : ''}`, '', '/funders')
-        : action
+      const card = action
           ? el('button', `funding-stat${index === 0 ? ' is-primary' : ''}`)
           : el('div', `funding-stat funding-stat--static${index === 0 ? ' is-primary' : ''}`);
       if (card.tagName === 'BUTTON') card.type = 'button';
@@ -1366,7 +1364,7 @@
     };
     drawLeaders(elements.fundingFunders, overview.leading_funders || [], (item) => item.funder_name, (item) => {
       elements.fundingSearch.value = item.funder_name; reloadFunding().catch((error) => console.error('Funding filter failed:', error));
-    }, (item) => funderProfilePath(item.funder_name, item.funder_id));
+    }, (item) => item.funder_id ? `/funding?funder=${encodeURIComponent(item.funder_id)}` : '');
     drawLeaders(elements.fundingTopics, overview.leading_topics || [], (item) => item.name, (item) => {
       elements.fundingTopic.value = item.slug; reloadFunding().catch((error) => console.error('Funding filter failed:', error));
     }, (item) => `/topics/${encodeURIComponent(item.slug)}#topicFunding`);
@@ -2443,7 +2441,11 @@
         el('i', '', 'View regional ranking →'),
       );
       card.onclick = () => {
-        if (region !== 'Region unavailable') elements.universityContinent.value = region;
+        const filterValue = region === 'Region unavailable' ? 'unavailable' : region;
+        if (![...elements.universityContinent.options].some((option) => option.value === filterValue)) {
+          elements.universityContinent.append(new Option(region, filterValue));
+        }
+        elements.universityContinent.value = filterValue;
         fetchUniversityIndex().catch(showUniversityError);
         elements.universityControls.scrollIntoView({ behavior: 'smooth', block: 'start' });
       };
@@ -2825,7 +2827,7 @@
   // Cache Storage survives ordinary reloads. Bump this contract whenever a
   // repaired public aggregation would otherwise remain hidden by an older
   // zero-value response in a visitor's browser.
-  const publicCacheName = 'immortal-life-public-intelligence-v11';
+  const publicCacheName = 'immortal-life-public-intelligence-v12';
   const publicCacheMaxAgeMs = 15 * 60 * 1000;
   const publicCacheFallbackMaxAgeMs = 7 * 24 * 60 * 60 * 1000;
   let lastVerifiedSnapshotAt = '';

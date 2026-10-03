@@ -21,7 +21,7 @@ test('Signals is a permanent source-linked publication with three launch stories
   for (const story of signals.stories) assert.match(hub, new RegExp(`/signals/${story.slug}`));
   assert.match(hub, /Field maps/);
   assert.doesNotMatch(hub, /Interesting enough to share|selected automatically|Generated automatically/);
-  assert.match(hub, /intelligence\.js[^<]*number-integrity-v1/);
+  assert.match(hub, /intelligence\.js[^<]*number-integrity-v2/);
   assert.match(read('docs/editorial-signals-strategy.md'), /must not manufacture commentary/i);
 });
 

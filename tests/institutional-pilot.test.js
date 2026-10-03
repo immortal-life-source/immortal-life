@@ -67,7 +67,7 @@ test('new field-context views link every aggregate to its matching source cohort
   assert.match(portal, /trialStructuredText/);
   assert.match(portal, /Study theme:/);
   assert.match(portal, /Sponsor:/);
-  assert.match(intelligenceTemplate, /intelligence\.js\?v=20261003-number-integrity-v1/);
+  assert.match(intelligenceTemplate, /intelligence\.js\?v=20261003-number-integrity-v2/);
 });
 
 test('decision views state their limits rather than turning activity into efficacy claims', () => {

@@ -21,6 +21,7 @@ test('number drilldowns retain the filters that define their visible totals', as
   assert.match(proxy, /'status', 'phase', 'results', 'evidence', 'access', 'published_from', 'published_to'/)
   assert.match(hub, /'status', 'phase', 'results', 'evidence', 'access', 'published_from', 'published_to'/)
   assert.match(publicApi, /if \(results === 'posted'\) query = query\.eq\('metadata->>source_has_results', 'true'\)/)
+  assert.match(publicApi, /query\.in\('overall_status', \['Recruiting', 'Not Yet Recruiting', 'Enrolling By Invitation', 'Active Not Recruiting'\]\)/)
   assert.match(pages, /href="\/trials\?status=active"/)
 })
 
@@ -38,6 +39,10 @@ test('every visible exact count either opens its exact cohort or is deliberately
   assert.match(portal, /renderUniversityRegions\(visible, universityCoverage\)/)
   assert.match(portal, /topic-funding-stat topic-funding-stat--static/)
   assert.match(portal, /topic-funding-chip topic-funding-chip--static/)
+  assert.match(portal, /\[summary\.funders, 'Funders', 'Distinct OpenAlex funder identities', ''\]/)
+  assert.match(portal, /\/funding\?funder=\$\{encodeURIComponent\(item\.funder_id\)\}/)
+  assert.match(portal, /region === 'Region unavailable' \? 'unavailable' : region/)
+  assert.match(publicApi, /continent === 'unavailable'/)
   assert.match(styles, /\.topic-funding-stat--static/)
   assert.doesNotMatch(portal, /location\.assign\('\/universities'\)/)
   assert.doesNotMatch(portal, /location\.assign\('\/topics'\)/)
