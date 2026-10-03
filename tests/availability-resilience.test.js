@@ -26,12 +26,37 @@ test('independent availability workflow checks the critical public experience ev
 test('an independent noindex emergency mirror retains the complete static topic directory', () => {
   const workflow = read('.github/workflows/emergency-mirror.yml');
   const builder = read('scripts/build-emergency-site.mjs');
+  const dashboard = read('scripts/build-resilience-dashboard.mjs');
   assert.match(workflow, /actions\/deploy-pages@v4/);
-  assert.match(workflow, /cron: "37 3 \* \* \*"/);
+  assert.match(workflow, /cron: "17 \* \* \* \*"/);
+  assert.match(workflow, /check-public-availability\.mjs/);
+  assert.match(workflow, /build-resilience-dashboard\.mjs/);
   assert.match(builder, /noindex,nofollow,noarchive/);
   assert.match(builder, /nifbuyoghesveotugday\.supabase\.co\/functions\/v1\/public-intelligence/);
   assert.match(builder, /User-agent: \*\\nDisallow: \/\\n/);
   assert.match(builder, /intelligence-topics-round-three\.json/);
+  assert.match(dashboard, /status-data\.json/);
+  assert.match(dashboard, /database-backup\.yml/);
+  assert.match(dashboard, /database-restore-test\.yml/);
+  assert.match(dashboard, /availability-incident/);
+  assert.match(dashboard, /Sensitive cost details are not published/);
+});
+
+test('monthly recovery drill exercises alerts and recovery paths without taking production offline', () => {
+  const workflow = read('.github/workflows/resilience-drill.yml');
+  const drill = read('scripts/check-resilience-drill.mjs');
+  const mail = read('scripts/render-availability-email.mjs');
+  assert.match(workflow, /cron: "23 4 3 \* \*"/);
+  assert.match(workflow, /Production has not been intentionally interrupted/);
+  assert.match(workflow, /POSTALE_SMTP_PASSWORD/);
+  assert.match(workflow, /availability-drill/);
+  assert.match(workflow, /retention-days: 90/);
+  assert.match(drill, /database-backup\.yml/);
+  assert.match(drill, /database-restore-test\.yml/);
+  assert.match(drill, /Expected 180 topics/);
+  assert.match(drill, /Vercel rollback history/);
+  assert.match(mail, /\[DRILL PASSED\]/);
+  assert.match(mail, /\[DRILL STARTED\]/);
 });
 
 test('verified browser data survives a temporary live-source outage without caching fallback payloads', () => {
@@ -46,5 +71,6 @@ test('availability runbook preserves billing controls and records the shared Ver
   assert.match(runbook, /Supabase spending controls remain capped/);
   assert.match(runbook, /live\.im and immortal\.life share a Vercel team/i);
   assert.match(runbook, /must not be changed by code or automation/);
+  assert.match(runbook, /Non-disruptive recovery drill/);
 });
 

@@ -8,13 +8,17 @@ on:
       - intelligence-topics-expanded.json
       - intelligence-topics-round-three.json
       - scripts/build-emergency-site.mjs
+      - scripts/build-resilience-dashboard.mjs
+      - scripts/check-public-availability.mjs
       - .github/workflows/emergency-mirror.yml
   schedule:
-    - cron: "37 3 * * *"
+    - cron: "17 * * * *"
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
+  issues: read
   pages: write
   id-token: write
 
@@ -27,8 +31,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - name: Check the primary public routes
+        id: availability
+        continue-on-error: true
+        run: >-
+          node scripts/check-public-availability.mjs
+          --origin https://www.immortal.life
+          --attempts 2
+          --retry-delay-ms 3000
+          --timeout-ms 15000
+          --output uptime-report.json
       - name: Build the independent static continuity site
         run: node scripts/build-emergency-site.mjs
+      - name: Build the independent resilience dashboard
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERCEL_ACCESS_TOKEN: ${{ secrets.VERCEL_ACCESS_TOKEN }}
+          VERCEL_TEAM_ID: team_xfwIcV84myMfafZnF4SROOlT
+        run: >-
+          node scripts/build-resilience-dashboard.mjs
+          --availability uptime-report.json
+          --output tmp/emergency-site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:

@@ -1,0 +1,171 @@
+name: Resilience recovery drill
+
+on:
+  schedule:
+    - cron: "23 4 3 * *"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+concurrency:
+  group: immortal-life-resilience-drill
+  cancel-in-progress: false
+
+jobs:
+  drill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ALERT_EMAIL_FROM: hello@immortal.life
+      ALERT_EMAIL_TO: hello@immortal.life
+      POSTALE_SMTP_PASSWORD: ${{ secrets.POSTALE_SMTP_PASSWORD }}
+      VERCEL_ACCESS_TOKEN: ${{ secrets.VERCEL_ACCESS_TOKEN }}
+      VERCEL_TEAM_ID: team_xfwIcV84myMfafZnF4SROOlT
+      VERCEL_PROJECT_ID: prj_KBYMOWhurIkpL530OcpJEgbafQtL
+      GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Require the independent email channel
+        shell: bash
+        run: test -n "$POSTALE_SMTP_PASSWORD" || { echo "POSTALE_SMTP_PASSWORD is not configured" >&2; exit 1; }
+
+      - name: Open a clearly labelled drill incident
+        id: incident
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const label = 'availability-drill';
+            try {
+              await github.rest.issues.getLabel({ owner, repo, name: label });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              await github.rest.issues.createLabel({ owner, repo, name: label, color: 'd7a21e', description: 'Non-disruptive recovery verification' });
+            }
+            const issue = await github.rest.issues.create({
+              owner, repo,
+              title: `Recovery drill: ${new Date().toISOString().slice(0, 10)}`,
+              body: `A scheduled non-disruptive recovery drill started at **${new Date().toISOString()}**. Production has not been intentionally interrupted.\n\n[Open workflow run](${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId})`,
+              labels: [label],
+            });
+            core.setOutput('issue_number', issue.data.number);
+
+      - name: Send the simulated detection alert
+        shell: bash
+        run: |
+          printf '{"checked_at":"%s","status":"drill","healthy":0,"total":0,"results":[]}' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > drill-started.json
+          node scripts/render-availability-email.mjs drill-started drill-started.json drill-started-email.txt
+          curl --silent --show-error --fail \
+            --url 'smtps://mail.postale.io:465' \
+            --ssl-reqd \
+            --user "hello@immortal.life:$POSTALE_SMTP_PASSWORD" \
+            --mail-from 'hello@immortal.life' \
+            --mail-rcpt 'hello@immortal.life' \
+            --upload-file drill-started-email.txt
+
+      - name: Verify source and build integrity
+        id: build
+        continue-on-error: true
+        env:
+          SUPABASE_PUBLISHABLE_KEY: ci_drill_publishable_key
+        run: npm test && npm run build
+
+      - name: Verify the production routes
+        id: production
+        continue-on-error: true
+        run: >-
+          node scripts/check-public-availability.mjs
+          --origin https://www.immortal.life
+          --attempts 3
+          --retry-delay-ms 5000
+          --timeout-ms 15000
+          --output uptime-report.json
+
+      - name: Verify recovery paths and recovery evidence
+        id: recovery
+        continue-on-error: true
+        run: >-
+          node scripts/check-resilience-drill.mjs
+          --availability uptime-report.json
+          --mirror https://immortal-life-source.github.io/immortal-life
+          --output drill-report.json
+
+      - name: Resolve or retain the drill incident
+        id: result
+        if: always()
+        uses: actions/github-script@v8
+        env:
+          ISSUE_NUMBER: ${{ steps.incident.outputs.issue_number }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          PRODUCTION_OUTCOME: ${{ steps.production.outcome }}
+          RECOVERY_OUTCOME: ${{ steps.recovery.outcome }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const { owner, repo } = context.repo;
+            const issueNumber = Number(process.env.ISSUE_NUMBER);
+            const outcomes = {
+              'Source and build integrity': process.env.BUILD_OUTCOME,
+              'Production routes': process.env.PRODUCTION_OUTCOME,
+              'Recovery paths and evidence': process.env.RECOVERY_OUTCOME,
+            };
+            let report = { checked_at: new Date().toISOString(), status: 'attention', healthy: 0, total: 0, results: [] };
+            if (fs.existsSync('drill-report.json')) report = JSON.parse(fs.readFileSync('drill-report.json', 'utf8'));
+            for (const [name, outcome] of Object.entries(outcomes)) {
+              if (outcome !== 'success' && !report.results.some((item) => item.name === name)) {
+                report.results.push({ name, status: 'failed', final: { error: `Workflow step outcome: ${outcome}` } });
+              }
+            }
+            report.total = report.results.length;
+            report.healthy = report.results.filter((item) => item.status === 'healthy').length;
+            report.status = report.healthy === report.total ? 'healthy' : 'attention';
+            fs.writeFileSync('drill-report.json', `${JSON.stringify(report, null, 2)}\n`);
+            const table = report.results.map((item) => `| ${item.name} | ${item.status} | ${(item.final?.error || item.final?.detail || '').replaceAll('|', '\\|')} |`).join('\n');
+            const body = [`Recovery drill completed at **${report.checked_at}**.`, '', '| Check | State | Evidence |', '| --- | --- | --- |', table, '', `[Open workflow run](${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId})`].join('\n');
+            await github.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body });
+            if (report.status === 'healthy') {
+              await github.rest.issues.update({ owner, repo, issue_number: issueNumber, state: 'closed', state_reason: 'completed' });
+              core.setOutput('email_event', 'drill-recovered');
+              core.setOutput('passed', 'true');
+            } else {
+              core.setOutput('email_event', 'drill-failed');
+              core.setOutput('passed', 'false');
+            }
+
+      - name: Send the drill result
+        if: always() && steps.result.outputs.email_event != ''
+        shell: bash
+        env:
+          ALERT_EVENT: ${{ steps.result.outputs.email_event }}
+        run: |
+          node scripts/render-availability-email.mjs "$ALERT_EVENT" drill-report.json drill-result-email.txt
+          curl --silent --show-error --fail \
+            --url 'smtps://mail.postale.io:465' \
+            --ssl-reqd \
+            --user "hello@immortal.life:$POSTALE_SMTP_PASSWORD" \
+            --mail-from 'hello@immortal.life' \
+            --mail-rcpt 'hello@immortal.life' \
+            --upload-file drill-result-email.txt
+
+      - name: Retain drill evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: immortal-life-resilience-drill-${{ github.run_id }}
+          path: |
+            uptime-report.json
+            drill-report.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Fail when a recovery gap remains
+        if: always() && steps.result.outputs.passed != 'true'
+        run: exit 1

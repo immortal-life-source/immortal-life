@@ -37,9 +37,17 @@ The Postale password is stored only in the encrypted GitHub Actions secret `POST
 
 ## Independent emergency mirror
 
-`.github/workflows/emergency-mirror.yml` publishes a small static continuity site to GitHub Pages on relevant changes, once daily, and on manual request. It is hosted outside Vercel and does not require Supabase to display the complete 180-topic directory. When Supabase remains healthy, the mirror also connects directly to the read-only public index for a small latest-evidence view.
+`.github/workflows/emergency-mirror.yml` publishes a small static continuity site to GitHub Pages on relevant changes, every hour, and on manual request. It is hosted outside Vercel and does not require Supabase to display the complete 180-topic directory. When Supabase remains healthy, the mirror also connects directly to the read-only public index for a small latest-evidence view.
 
 The mirror is explicitly `noindex` and blocked by its own `robots.txt`, so it does not compete with the canonical immortal.life pages in search. It is an emergency access path, not a second canonical website. Automatic DNS failover is not enabled; changing DNS remains a deliberate recovery action.
+
+The continuity site is available at `https://immortal-life-source.github.io/immortal-life/`. Its independent dashboard is at `https://immortal-life-source.github.io/immortal-life/status.html`; `/status` on the primary website redirects there. The dashboard reports external route availability, public data-service freshness, backup age, restore-test age, the latest recovery drill, and active incidents. It never publishes passwords, tokens, database internals, raw billing data, or private records.
+
+## Non-disruptive recovery drill
+
+`.github/workflows/resilience-drill.yml` runs on the third day of every month and on manual request. It does not intentionally take production offline. It opens a clearly labelled drill issue, sends a simulated detection email to `hello@immortal.life`, verifies the source and build, checks all public routes, verifies the independent mirror and its 180-topic directory, confirms that the encrypted backup and isolated restore test are recent, checks Vercel rollback history when the private read-only token is connected, then sends a result email. A successful drill closes its issue; a failed drill leaves the issue open and the workflow red.
+
+Drill evidence is retained as a workflow artifact for 90 days. `POSTALE_SMTP_PASSWORD` and the optional `VERCEL_ACCESS_TOKEN` exist only as encrypted GitHub Actions secrets.
 
 ## Visitor fallback
 

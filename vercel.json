@@ -29,7 +29,8 @@
     { "source": "/dashboard", "destination": "/topics", "permanent": true },
     { "source": "/leaderboard", "destination": "/universities", "permanent": true },
     { "source": "/join", "destination": "/topics", "permanent": true },
-    { "source": "/invite/:code", "destination": "/topics", "permanent": true }
+    { "source": "/invite/:code", "destination": "/topics", "permanent": true },
+    { "source": "/status", "destination": "https://immortal-life-source.github.io/immortal-life/status.html", "permanent": false }
   ],
   "headers": [
     {
