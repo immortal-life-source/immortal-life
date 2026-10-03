@@ -751,7 +751,7 @@ Deno.serve(async (req) => {
         .range(offset, offset + limit - 1)
       if (topic) query = query.eq('clinical_trial_topics.topic_slug', topic).eq('clinical_trial_topics.is_published', true)
       if (search) query = query.or(`title.ilike.%${search}%,sponsor.ilike.%${search}%,external_id.ilike.%${search}%`)
-      if (status === 'active') query = query.in('overall_status', ['Recruiting', 'Not Yet Recruiting', 'Enrolling By Invitation', 'Active Not Recruiting'])
+      if (status === 'active') query = query.in('overall_status', ['Recruiting', 'Not Yet Recruiting', 'Enrolling by Invitation', 'Active Not Recruiting'])
       else if (status) query = query.eq('overall_status', status)
       if (phase) query = query.contains('phases', [phase])
       if (country) query = query.contains('countries', [country])
