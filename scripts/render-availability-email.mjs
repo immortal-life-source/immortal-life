@@ -48,6 +48,8 @@ const body = [
   '',
   `Checked: ${report.checked_at}`,
   `Overall state: ${report.status}`,
+  'Independent status: https://immortal-life-source.github.io/immortal-life/status.html',
+  'Continuity access: https://immortal-life-source.github.io/immortal-life/',
   '',
   ...lines,
   '',
