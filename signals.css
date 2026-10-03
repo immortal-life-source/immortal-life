@@ -220,7 +220,7 @@
 
 /* Automatically published topic pulses */
 .signal-auto-section { padding: clamp(4rem, 8vw, 8rem) clamp(1.25rem, 6vw, 6rem); border-top: 1px solid var(--signal-line); background: radial-gradient(circle at 8% 18%, rgba(211,47,107,.1), transparent 28rem), linear-gradient(145deg, rgba(255,255,255,.84), rgba(255,246,249,.72)); }
-.signal-auto-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-top: 2.5rem; }
+.signal-auto-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 2.5rem; }
 .signal-auto-card { min-height: 25rem; padding: 1.7rem; border: 1px solid rgba(211,47,107,.2); border-radius: 2rem; background: radial-gradient(circle at 82% 15%, rgba(246,177,199,.36), transparent 9rem), rgba(255,255,255,.78); box-shadow: 0 1.8rem 5rem rgba(93,37,59,.07); display: flex; flex-direction: column; overflow: hidden; position: relative; }
 .signal-auto-card::after { content: ''; position: absolute; width: 10rem; height: 10rem; right: -4rem; bottom: -5rem; border: 1px solid rgba(211,47,107,.16); border-radius: 50%; box-shadow: 0 0 3rem rgba(211,47,107,.12); }
 .signal-auto-card > span, .signal-auto-card > small { color: var(--signal-carmine); font-size: .7rem; letter-spacing: .13em; text-transform: uppercase; }
