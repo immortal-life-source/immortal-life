@@ -54,6 +54,14 @@
 .signals-orbit i:nth-child(4) { left: 57%; top: 21%; width: 5px; height: 5px; background: var(--signal-violet); }
 .signals-orbit i:nth-child(5) { left: 51%; top: 48%; width: 54px; height: 54px; border: 1px solid rgba(209, 50, 115, .25); background: rgba(255,255,255,.42); box-shadow: 0 0 60px rgba(209, 50, 115, .22); }
 
+/* The index opens directly onto its stories. Individual Signal pages retain
+   the larger editorial introduction used for one specific investigation. */
+.signals-main--hub .signals-hero { min-height: 0; padding: clamp(7rem, 9vw, 8.5rem) clamp(1.5rem, 6vw, 6rem) clamp(2rem, 3.5vw, 3rem); }
+.signals-main--hub .signals-hero-copy { max-width: 720px; }
+.signals-main--hub .signals-hero h1 { margin: .35rem 0 .6rem; font-size: clamp(3.2rem, 5.5vw, 5.8rem); }
+.signals-main--hub .signals-hero-copy > p { max-width: 620px; font-size: 1rem; }
+.signals-main--hub .signals-orbit { inset: 2.5rem 6vw auto auto; width: min(25vw, 330px); opacity: .58; }
+
 .signals-manifesto {
   display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(240px, .7fr); gap: 4rem;
   padding: clamp(3.5rem, 7vw, 7rem) clamp(1.5rem, 6vw, 6rem);
@@ -80,6 +88,12 @@
 .signal-card-art i:nth-child(2) { inset: 13% 47% 75%; background: var(--signal-carmine); border: 0; box-shadow: 0 0 20px var(--signal-rose); }
 .signal-card--violet .signal-card-art { filter: hue-rotate(30deg); }
 .signal-card--gold .signal-card-art { filter: hue-rotate(315deg) saturate(.75); }
+.signal-deep-dives { padding: clamp(2.5rem, 4vw, 4rem) clamp(1.25rem, 4vw, 4rem) clamp(4rem, 6vw, 6rem); background: var(--signal-paper); }
+.signal-deep-dives > .signal-section-heading { margin-bottom: 1.5rem; }
+.signal-deep-dives .signal-card-grid { padding: 0; }
+.signals-main--hub .signal-section-heading { margin-bottom: 1.5rem; }
+.signals-main--hub .signal-section-heading h2 { margin-bottom: 0; font-size: clamp(2.2rem, 3.7vw, 4rem); }
+.signals-main--hub .signal-card { min-height: 390px; }
 
 .signal-promise, .signal-journalist, .signal-split {
   display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: clamp(2rem, 6vw, 7rem);
@@ -245,6 +259,13 @@
 .signal-auto-card--universities div strong, .signal-auto-card--universities > span { color: #b7583c; }
 .signal-auto-card--connections { border-color: rgba(79,77,167,.23); background: radial-gradient(circle at 20% 16%, rgba(209,50,115,.14), transparent 9rem), radial-gradient(circle at 88% 80%, rgba(92,99,190,.2), transparent 12rem), #fff; }
 .signal-auto-card--connections div strong, .signal-auto-card--connections > span { color: #5752a5; }
+.signals-main--hub .signal-auto-section { padding: clamp(2.25rem, 3.5vw, 3.5rem) clamp(1.25rem, 4vw, 4rem) clamp(3rem, 5vw, 5rem); border-top: 0; }
+.signals-main--hub .signal-auto-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 1.5rem; }
+.signals-main--hub .signal-auto-card { min-height: 21rem; padding: 1.45rem; border-radius: 1.55rem; }
+.signals-main--hub .signal-auto-card h3 { margin: 1.35rem 0 .7rem; font-size: clamp(1.45rem, 2vw, 2.15rem); }
+.signals-main--hub .signal-auto-card p { margin: 0; }
+.signals-main--hub .signal-auto-card div { padding: 1rem 0; }
+.signals-main--hub .signal-auto-card div strong { font-size: clamp(2.3rem, 4vw, 4rem); }
 
 /* Each newsroom format has a distinct visual grammar while sharing the same
    source, accessibility and mobile contracts. */
@@ -306,6 +327,7 @@
 .signal-pulse-row .is-current { background: linear-gradient(90deg, var(--signal-carmine), #f39ab8); }
 .signal-pulse-row .is-previous { background: linear-gradient(90deg, rgba(203,159,48,.7), rgba(203,159,48,.22)); }
 
+@media (max-width: 1050px) { .signals-main--hub .signal-auto-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 900px) { .signal-auto-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 620px) {
   .signal-auto-grid { grid-template-columns: 1fr; }
@@ -320,6 +342,14 @@
   .signal-connection-orbit { grid-template-columns: 1fr; gap: .8rem; }
   .signal-connection-orbit > a { min-height: 13rem; }
   .signal-connection-orbit > i { width: 7rem; justify-self: center; margin: -2rem 0; z-index: 2; }
+  .signals-main--hub .signals-hero { min-height: 0; padding: 7.25rem 1.25rem 1.8rem; }
+  .signals-main--hub .signals-hero h1 { font-size: clamp(3rem, 17vw, 4.6rem); }
+  .signals-main--hub .signals-orbit { width: 11rem; right: -2.5rem; top: 4.6rem; opacity: .38; }
+  .signals-main--hub .signal-auto-section, .signal-deep-dives { padding: 2rem 1rem 3.5rem; }
+  .signals-main--hub .signal-auto-grid { grid-template-columns: 1fr; gap: .8rem; margin-top: 1.2rem; }
+  .signals-main--hub .signal-auto-card { min-height: 19rem; }
+  .signals-main--hub .signal-card-grid { padding: 0; }
+  .signals-main--hub .signal-card { min-height: 360px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

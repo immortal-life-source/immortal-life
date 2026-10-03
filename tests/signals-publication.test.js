@@ -19,8 +19,8 @@ test('Signals is a permanent source-linked publication with three launch stories
     eyebrow: 'Immortal.life Signals', heading: 'The stories hidden inside longevity data.', body: signals.hubBody(),
   });
   for (const story of signals.stories) assert.match(hub, new RegExp(`/signals/${story.slug}`));
-  assert.match(hub, /Interesting enough to share\. Careful enough to cite\./);
-  assert.match(hub, /Ask about the data/);
+  assert.match(hub, /Field maps/);
+  assert.doesNotMatch(hub, /Interesting enough to share|selected automatically|Generated automatically/);
   assert.match(hub, /intelligence\.js[^<]*signals-v1/);
   assert.match(read('docs/editorial-signals-strategy.md'), /must not manufacture commentary/i);
 });
@@ -107,7 +107,8 @@ test('automatic Signals are fact-only, source-linked and explicitly about index 
   assert.match(html, /met the publication rule/);
   assert.doesNotMatch(html, /editorial score/);
   assert.match(html, /\/trials\/4/);
-  assert.match(html, /Automatically selected from public-display-approved source metadata/);
+  assert.match(html, /Selected from public-display-approved source metadata/);
+  assert.doesNotMatch(html, /Automatically selected/);
 });
 
 test('automatic Signal generation is bounded, rights-aware, daily and discoverable', () => {
