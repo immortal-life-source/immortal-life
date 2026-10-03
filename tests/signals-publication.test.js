@@ -77,7 +77,7 @@ test('Signals is discoverable from briefings, navigation and a dedicated sitemap
   const injected = publicPages.injectSignalsFeature('<main></main><nav class="next-journey"></nav>');
   assert.match(injected, /Stories hidden inside longevity data/);
   assert.match(injected, /href="\/signals"/);
-  assert.match(read('desktop-nav.js'), /Immortal\.life Signals/);
+  assert.match(read('desktop-nav.js'), /'\/signals': \{/);
   assert.match(read('vercel.json'), /"source": "\/signals\/:slug"/);
   const map = signals.sitemap();
   for (const story of signals.stories) assert.match(map, new RegExp(`signals/${story.slug}`));

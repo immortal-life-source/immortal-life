@@ -219,6 +219,27 @@ test('Funding is a first-class global menu with useful desktop shortcuts', async
   assert.doesNotMatch(await read('intelligence.js'), /summary\.identified_awards, 'Award identifiers'/)
 })
 
+test('Signals and Sources replace overlapping regulatory, resource and briefing navigation', async () => {
+  const shells = await Promise.all([
+    read('index.html'), read('intelligence-template.html'), read('content-template.html'),
+    read('privacy.html'), read('institutional-pilot.html'), read('institutional-pilot2.html'),
+    read('auth-x.html'), read('auth-linkedin.html'), read('confirmed.html'), read('unsubscribed.html'),
+    read('dashboard.html'), read('join.html'), read('leaderboard.html'),
+    read('supabase/functions/public-pages/index.ts'), read('api/signals.js'),
+  ])
+  for (const shell of shells) {
+    assert.match(shell, /href="\/signals"[^>]*>Signals<\/a>/)
+    assert.match(shell, /href="\/resources"[^>]*>Sources<\/a>/)
+    assert.doesNotMatch(shell, /href="\/(?:regulatory|briefings)"[^>]*>(?:Regulatory|Briefings)<\/a>/)
+    assert.doesNotMatch(shell, /href="\/resources"[^>]*>Resources<\/a>/)
+  }
+  const navigation = await read('desktop-nav.js')
+  assert.match(navigation, /'\/signals': \{/)
+  assert.match(navigation, /Latest Signals[\s\S]*Global Trial Map[\s\S]*Trial Results Gap[\s\S]*Funding Map[\s\S]*Weekly briefings/)
+  assert.match(navigation, /'\/resources': \{[\s\S]*Global Source Directory[\s\S]*Regulatory & Safety[\s\S]*Corrections & Retractions[\s\S]*Public Data & Feeds[\s\S]*Quality & Methodology/)
+  assert.doesNotMatch(navigation, /'\/(?:regulatory|briefings)': \{/)
+})
+
 test('Trial Radar has one canonical visitor route', async () => {
   const [routes, home, template] = await Promise.all([read('vercel.json'), read('index.html'), read('intelligence-template.html')])
   assert.match(routes, /"source": "\/discover\/recruiting-trials", "destination": "\/trials", "permanent": true/)
@@ -256,9 +277,10 @@ test('desktop homepage exposes the complete navigation and keeps motion clear of
   assert.match(css, /--orbit-size: clamp\(380px, 31vw, 480px\)/)
   assert.match(html, /<a href="\/topics" class="s1-nav-link">Topics<\/a>/)
   assert.match(html, /<a href="\/changes" class="s1-nav-link">News<\/a>/)
-  assert.match(html, /href="\/universities" class="s1-nav-link">Universities<\/a>[\s\S]*?href="\/research" class="s1-nav-link">Research<\/a>[\s\S]*?href="\/funding" class="s1-nav-link">Funding<\/a>[\s\S]*?href="\/you" class="s1-nav-link s1-nav-you">You<\/a>/)
+  assert.match(html, /href="\/universities" class="s1-nav-link">Universities<\/a>[\s\S]*?href="\/research" class="s1-nav-link">Research<\/a>[\s\S]*?href="\/funding" class="s1-nav-link">Funding<\/a>[\s\S]*?href="\/signals" class="s1-nav-link">Signals<\/a>[\s\S]*?href="\/you" class="s1-nav-link s1-nav-you">You<\/a>[\s\S]*?href="\/resources" class="s1-nav-link">Sources<\/a>/)
   assert.match(css, /\.s1-nav-you[\s\S]*?box-shadow:/)
-  for (const href of ['/changes', '/topics', '/trials', '/universities', '/research', '/funding', '/you', '/regulatory', '/resources', '/briefings', '/methodology']) assert.match(html, new RegExp(`href="${href}"`))
+  for (const href of ['/changes', '/topics', '/trials', '/universities', '/research', '/funding', '/signals', '/you', '/resources', '/methodology']) assert.match(html, new RegExp(`href="${href}"`))
+  assert.doesNotMatch(html, /href="\/(?:regulatory|briefings)" class="s1-nav-link"/)
   assert.match(html, /<a href="\/methodology" class="s1-nav-link">About<\/a>/)
   assert.doesNotMatch(html, /href="\/(?:discover|learn)"/)
   assert.doesNotMatch(html, /Newsreader/)
@@ -283,7 +305,7 @@ test('desktop navigation previews expose useful routes on every deployed page sh
   ])
   for (const shell of [home, intelligenceTemplate, contentTemplate, ...memberPages]) {
     assert.match(shell, /desktop-nav\.css\?v=20261001-nav-shell-all/)
-    assert.match(shell, /desktop-nav\.js\?v=20261002-topic-funding-dossiers-v3/)
+    assert.match(shell, /desktop-nav\.js\?v=20261003-menu-simplified-v1/)
   }
   for (const shell of memberPages) {
     assert.match(shell, /href="\/you" class="m-member-nav-you">You<\/a>/)
@@ -452,7 +474,7 @@ test('university profile provenance and record links have non-overlapping spacin
   assert.match(template, /intelligence\.js\?v=20261002-topic-funding-seo-v1/)
   assert.match(pages, /intelligence\.js\?v=20261002-topic-funding-seo-v1/)
   assert.match(pages, /desktop-nav\.css\?v=20261001-nav-shell-all/)
-  assert.match(pages, /desktop-nav\.js\?v=20261002-topic-funding-dossiers-v3/)
+  assert.match(pages, /desktop-nav\.js\?v=20261003-menu-simplified-v1/)
   assert.match(await read('intelligence.js'), /\['universities', 'topic-dossier', 'trial-results-gap', 'funding'\]\.includes\(viewName\) \? 10000 : 6500/)
   assert.match(pages, /Full-history total not yet available/)
   assert.match(pages, /fullHistoryAvailable \? works : '—'/)
