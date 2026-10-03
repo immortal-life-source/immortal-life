@@ -21,9 +21,9 @@ test('number drilldowns retain the filters that define their visible totals', as
   assert.match(proxy, /'status', 'phase', 'results', 'evidence', 'access', 'published_from', 'published_to'/)
   assert.match(hub, /'status', 'phase', 'results', 'evidence', 'access', 'published_from', 'published_to'/)
   assert.match(publicApi, /if \(results === 'posted'\) query = query\.eq\('metadata->>source_has_results', 'true'\)/)
-  assert.match(publicApi, /query\.in\('overall_status', \['Recruiting', 'Not Yet Recruiting', 'Enrolling by Invitation', 'Active Not Recruiting'\]\)/)
+  assert.match(publicApi, /query\.in\('overall_status', \['Recruiting', 'Not Yet Recruiting', 'Enrolling By Invitation', 'Active Not Recruiting'\]\)/)
   assert.match(pages, /Number\(trialsResult\.count \?\? trials\.length\)/)
-  assert.match(pages, /\['Recruiting', 'Not Yet Recruiting', 'Enrolling by Invitation', 'Active Not Recruiting'\]/)
+  assert.match(pages, /\['Recruiting', 'Not Yet Recruiting', 'Enrolling By Invitation', 'Active Not Recruiting'\]/)
   assert.match(pages, /href="\/trials\?status=active"/)
 })
 
