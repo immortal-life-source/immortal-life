@@ -340,6 +340,13 @@ Deno.serve(async (req) => {
       const search = publicSearchTerm(url.searchParams.get('q'))
       const safeCountry = /^[A-Z]{2}$/.test(country) ? country : ''
       const safeInstitution = institution && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(institution) ? institution : ''
+      const directGrantFiltersSupported = !funder && !safeInstitution
+      const directGrantPromise = directGrantFiltersSupported
+        ? supabase.rpc('get_direct_grant_page', {
+          p_topic: topic, p_country: safeCountry, p_search: search,
+          p_offset: 0, p_limit: Math.min(limit, 24),
+        })
+        : Promise.resolve({ data: { records: [], total_matching: 0, by_source: [] }, error: null })
       const [awardResult, directGrantResult, overviewResult, syncResult, directSyncResult, { data: sources, error: sourcesError }] = await Promise.all([
         supabase.rpc('get_funding_award_page', {
           p_topic: topic, p_country: safeCountry, p_funder: funder,
@@ -347,10 +354,7 @@ Deno.serve(async (req) => {
           p_sort: ['recent', 'oldest', 'funder'].includes(sort) ? sort : 'recent',
           p_offset: offset, p_limit: limit,
         }),
-        supabase.rpc('get_direct_grant_page', {
-          p_topic: topic, p_country: safeCountry, p_search: search,
-          p_offset: 0, p_limit: Math.min(limit, 24),
-        }),
+        directGrantPromise,
         supabase.rpc('get_funding_radar_overview'),
         supabase.from('funding_radar_sync_state').select('processed_work_count,linked_award_count,completed_cycles,last_completed_at,last_error,updated_at').eq('id', true).maybeSingle(),
         supabase.from('funding_grant_sync_state').select('source_id,records_scanned,grants_retained,completed_cycles,last_completed_at,last_success_at,last_error,updated_at').order('source_id'),
@@ -375,7 +379,7 @@ Deno.serve(async (req) => {
         total_matching: count,
         offset,
         next_offset: offset + awards.length < count ? offset + awards.length : null,
-        filters: { topic: topic || null, country: country || null, funder: funder || null, institution: institution || null, search: search || null, sort },
+        filters: { topic: topic || null, country: country || null, funder: funder || null, institution: institution || null, search: search || null, sort, direct_grants_in_scope: directGrantFiltersSupported },
         overview,
         coverage_status: {
           historical_cycle_complete: Number(syncResult.data?.completed_cycles ?? 0) > 0,

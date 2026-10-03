@@ -1352,19 +1352,20 @@
       row.append(el('strong', '', cohort.year), bar, el('span', '', `${numberFormatter.format(cohort.awards)} awards · ${numberFormatter.format(cohort.publications)} publications`));
       elements.fundingYears.append(row);
     });
-    const drawLeaders = (target, rows, label, handler, hrefFor) => {
+    const drawLeaders = (target, rows, label, handler, hrefFor, showCount = true) => {
       target.replaceChildren();
       rows.slice(0, 8).forEach((item) => {
         const href = hrefFor?.(item);
         const control = href ? link('funding-leader', '', href) : el('button', 'funding-leader');
         if (!href) { control.type = 'button'; control.onclick = () => handler(item); }
-        control.append(el('span', '', label(item)), el('strong', '', numberFormatter.format(Number(item.awards || 0))));
+        control.append(el('span', '', label(item)));
+        if (showCount) control.append(el('strong', '', numberFormatter.format(Number(item.awards || 0))));
         const entry = el('li'); entry.append(control); target.append(entry);
       });
     };
     drawLeaders(elements.fundingFunders, overview.leading_funders || [], (item) => item.funder_name, (item) => {
       elements.fundingSearch.value = item.funder_name; reloadFunding().catch((error) => console.error('Funding filter failed:', error));
-    }, (item) => item.funder_id ? `/funding?funder=${encodeURIComponent(item.funder_id)}` : '');
+    }, (item) => item.funder_id ? `/funding?funder=${encodeURIComponent(item.funder_id)}` : '', false);
     drawLeaders(elements.fundingTopics, overview.leading_topics || [], (item) => item.name, (item) => {
       elements.fundingTopic.value = item.slug; reloadFunding().catch((error) => console.error('Funding filter failed:', error));
     }, (item) => `/topics/${encodeURIComponent(item.slug)}#topicFunding`);
@@ -2828,7 +2829,7 @@
   // Cache Storage survives ordinary reloads. Bump this contract whenever a
   // repaired public aggregation would otherwise remain hidden by an older
   // zero-value response in a visitor's browser.
-  const publicCacheName = 'immortal-life-public-intelligence-v15';
+  const publicCacheName = 'immortal-life-public-intelligence-v16';
   const publicCacheMaxAgeMs = 15 * 60 * 1000;
   const publicCacheFallbackMaxAgeMs = 7 * 24 * 60 * 60 * 1000;
   let lastVerifiedSnapshotAt = '';
