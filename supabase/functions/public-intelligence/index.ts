@@ -284,13 +284,14 @@ Deno.serve(async (req) => {
         else if (sort === 'open-access') directoryQuery = directoryQuery.order('representative_open_access_share', { ascending: false, nullsFirst: false }).order('indexed_works_five_year', { ascending: false })
         else directoryQuery = directoryQuery.order('research_index_score', { ascending: false }).order('indexed_works_five_year', { ascending: false })
       }
-      const [{ data: directoryData, error, count }, coverage, topicsResult, { data: sources, error: sourcesError }] = await Promise.all([
+      const [{ data: directoryData, error, count }, coverage, topicsResult, missingContinentResult, { data: sources, error: sourcesError }] = await Promise.all([
         directoryQuery,
         supabase.rpc('get_university_index_coverage'),
         supabase.from('intelligence_topics').select('slug,name,sort_order,domain_slug,domain_name,domain_sort').eq('enabled', true).order('sort_order'),
+        supabase.from('university_research_institutions').select('openalex_id', { count: 'exact', head: true }).eq('is_eligible', true).is('continent', null),
         sourcesPromise,
       ])
-      for (const result of [coverage, topicsResult]) if (result.error) throw result.error
+      for (const result of [coverage, topicsResult, missingContinentResult]) if (result.error) throw result.error
       if (error) throw error
       if (sourcesError) throw sourcesError
       const universities = topic
@@ -312,7 +313,10 @@ Deno.serve(async (req) => {
         total_matching: hasDirectoryFilters ? Number(count ?? 0) : Number(coverage.data?.universities ?? count ?? 0),
         offset,
         next_offset: offset + universities.length < Number(hasDirectoryFilters ? count ?? 0 : coverage.data?.universities ?? count ?? 0) ? offset + universities.length : null,
-        coverage: coverage.data ?? {},
+        coverage: {
+          ...(coverage.data ?? {}),
+          unavailable_region_universities: Number(missingContinentResult.count ?? 0),
+        },
         filters: { topic: topic || null, country: country || null, continent: continent || null, search: search || null, sort },
         topics: topicsResult.data ?? [],
         countries: countryDirectory,

@@ -2429,6 +2429,7 @@
       const region = country.continent || 'Region unavailable';
       exactRegionTotals.set(region, (exactRegionTotals.get(region) || 0) + Math.max(0, Number(country.universities || 0)));
     });
+    exactRegionTotals.set('Region unavailable', Math.max(0, Number(coverage.unavailable_region_universities || 0)));
     [...exactRegionTotals.entries()].sort((left, right) => right[1] - left[1]).forEach(([region, exactTotal]) => {
       const universities = groups.get(region) || [];
       const card = el('button', 'university-region-card'); card.type = 'button';
@@ -2827,7 +2828,7 @@
   // Cache Storage survives ordinary reloads. Bump this contract whenever a
   // repaired public aggregation would otherwise remain hidden by an older
   // zero-value response in a visitor's browser.
-  const publicCacheName = 'immortal-life-public-intelligence-v12';
+  const publicCacheName = 'immortal-life-public-intelligence-v13';
   const publicCacheMaxAgeMs = 15 * 60 * 1000;
   const publicCacheFallbackMaxAgeMs = 7 * 24 * 60 * 60 * 1000;
   let lastVerifiedSnapshotAt = '';
