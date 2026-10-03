@@ -197,6 +197,13 @@
   const view = body.dataset.view || 'overview';
   const topicSlug = body.dataset.topic || '';
   const endpoint = '/api/intelligence';
+  // Keep the first interactive view deliberately small. The complete corpus
+  // remains available through the existing progressive controls, but visitors
+  // should not have to build hundreds of cards before they can search or read.
+  const DIRECTORY_INITIAL_PAGE_SIZE = 30;
+  const DIRECTORY_LOAD_MORE_SIZE = 50;
+  const RESOURCE_INITIAL_VISIBLE = 36;
+  const RESOURCE_LOAD_MORE_SIZE = 36;
   const dateFormatter = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric' });
   const numberFormatter = new Intl.NumberFormat('en');
 
@@ -333,6 +340,7 @@
     resourceIntegration: document.getElementById('resourceIntegration'),
     resourceResult: document.getElementById('resourceResult'),
     resourceGrid: document.getElementById('resourceGrid'),
+    resourceLoadMore: document.getElementById('resourceLoadMore'),
     qualitySection: document.getElementById('qualitySection'),
     qualityGrid: document.getElementById('qualityGrid'),
     sourceSection: document.getElementById('sourceSection'),
@@ -1029,7 +1037,7 @@
 
   async function reloadResearch() {
     const version = ++researchRequestVersion;
-    const data = await request('research', 100, researchQueryParams(0));
+    const data = await request('research', DIRECTORY_INITIAL_PAGE_SIZE, researchQueryParams(0));
     if (version !== researchRequestVersion) return;
     searchableResearch = data.research || [];
     researchNextOffset = data.next_offset;
@@ -1050,7 +1058,7 @@
     elements.researchLoadMore.disabled = true;
     elements.researchLoadMore.textContent = 'Loading…';
     try {
-      const data = await request('research', 100, researchQueryParams(researchNextOffset));
+      const data = await request('research', DIRECTORY_LOAD_MORE_SIZE, researchQueryParams(researchNextOffset));
       const known = new Set(searchableResearch.map((record) => record.id));
       searchableResearch.push(...(data.research || []).filter((record) => !known.has(record.id)));
       researchNextOffset = data.next_offset;
@@ -1184,7 +1192,7 @@
 
   async function reloadTrials() {
     const version = ++trialRequestVersion;
-    const data = await request('trials', 100, trialQueryParams(0));
+    const data = await request('trials', DIRECTORY_INITIAL_PAGE_SIZE, trialQueryParams(0));
     if (version !== trialRequestVersion) return;
     searchableTrials = data.trials || [];
     trialNextOffset = data.next_offset;
@@ -1205,7 +1213,7 @@
     elements.trialLoadMore.disabled = true;
     elements.trialLoadMore.textContent = 'Loading…';
     try {
-      const data = await request('trials', 100, trialQueryParams(trialNextOffset));
+      const data = await request('trials', DIRECTORY_LOAD_MORE_SIZE, trialQueryParams(trialNextOffset));
       const known = new Set(searchableTrials.map((record) => record.id));
       searchableTrials.push(...(data.trials || []).filter((record) => !known.has(record.id)));
       trialNextOffset = data.next_offset;
@@ -2566,7 +2574,8 @@
     const requestedSearch = initialUniversityParams?.get('search')?.trim() || '';
     const requestedSort = initialUniversityParams?.get('sort')?.trim() || '';
     const activeTopic = elements.universityTopic?.value || requestedTopic;
-    const data = await request('universities', 100, {
+    const universityPageSize = append ? DIRECTORY_LOAD_MORE_SIZE : DIRECTORY_INITIAL_PAGE_SIZE;
+    const data = await request('universities', universityPageSize, {
       offset: append ? universityNextOffset || 0 : 0,
       q: elements.universitySearch?.value || requestedSearch,
       topic: activeTopic,
@@ -2585,8 +2594,8 @@
     universityCoverage = data.coverage || {};
     elements.universityLoadMore.hidden = universityNextOffset == null;
     if (!elements.universityLoadMore.hidden) elements.universityLoadMore.textContent = universityTotal == null
-      ? `Load 100 more · ${numberFormatter.format(universityRows.length)} shown`
-      : `Load 100 more · ${numberFormatter.format(universityRows.length)} of ${numberFormatter.format(universityTotal)} shown`;
+      ? `Load ${DIRECTORY_LOAD_MORE_SIZE} more · ${numberFormatter.format(universityRows.length)} shown`
+      : `Load ${DIRECTORY_LOAD_MORE_SIZE} more · ${numberFormatter.format(universityRows.length)} of ${numberFormatter.format(universityTotal)} shown`;
     renderUniversityStats(data.coverage || {});
     if (!universityControlsReady) {
       (data.topics || []).forEach((topic) => elements.universityTopic.append(new Option(topic.name, topic.slug)));
@@ -2731,16 +2740,18 @@
   }
 
   let atlasResources = [];
+  let resourceVisibleLimit = RESOURCE_INITIAL_VISIBLE;
 
   function renderFilteredResources(healthFilter = '') {
     const query = String(elements.resourceSearch.value || '').trim().toLowerCase();
     const region = elements.resourceRegion.value;
     const type = elements.resourceType.value;
     const integration = elements.resourceIntegration.value;
-    const visible = atlasResources.filter((resource) => {
+    const matches = atlasResources.filter((resource) => {
       const searchable = `${resource.name} ${resource.jurisdiction_name} ${resource.description} ${resource.resource_type}`.toLowerCase();
       return (!query || searchable.includes(query)) && (!region || resource.region === region) && (!type || resource.resource_type === type) && (!integration || resource.integration_status === integration) && (!healthFilter || resource.health === healthFilter);
     });
+    const visible = matches.slice(0, resourceVisibleLimit);
     elements.resourceGrid.replaceChildren();
     visible.forEach((resource) => {
       const card = el('article', 'resource-card');
@@ -2769,7 +2780,11 @@
       card.append(heading, title, jurisdiction, el('p', 'resource-description', resource.description), badges, limitations, actions, el('p', 'resource-check', `${checked} · ${resource.update_cadence}`));
       elements.resourceGrid.append(card);
     });
-    elements.resourceResult.textContent = `Showing ${numberFormatter.format(visible.length)} of ${numberFormatter.format(atlasResources.length)} official resources.`;
+    elements.resourceResult.textContent = `Showing ${numberFormatter.format(visible.length)} of ${numberFormatter.format(matches.length)} matching official resources · ${numberFormatter.format(atlasResources.length)} in the complete directory.`;
+    if (elements.resourceLoadMore) {
+      elements.resourceLoadMore.hidden = visible.length >= matches.length;
+      elements.resourceLoadMore.textContent = `Show ${numberFormatter.format(Math.min(RESOURCE_LOAD_MORE_SIZE, matches.length - visible.length))} more sources`;
+    }
     document.querySelectorAll('[data-resource-preset]').forEach((button) => {
       button.setAttribute('aria-pressed', String(button.dataset.resourcePreset === type));
     });
@@ -2785,13 +2800,21 @@
     types.forEach((type) => elements.resourceType.append(new Option(resourceLabel(type), type)));
     const initialRegion = new URLSearchParams(location.search).get('region');
     if (regions.includes(initialRegion)) elements.resourceRegion.value = initialRegion;
-    elements.resourceControls.addEventListener('input', renderFilteredResources);
+    elements.resourceControls.addEventListener('input', () => {
+      resourceVisibleLimit = RESOURCE_INITIAL_VISIBLE;
+      renderFilteredResources();
+    });
+    if (elements.resourceLoadMore) elements.resourceLoadMore.onclick = () => {
+      resourceVisibleLimit += RESOURCE_LOAD_MORE_SIZE;
+      renderFilteredResources();
+    };
     document.querySelectorAll('[data-resource-preset]').forEach((button) => {
       button.onclick = () => {
         elements.resourceSearch.value = '';
         elements.resourceRegion.value = '';
         elements.resourceIntegration.value = '';
         elements.resourceType.value = button.dataset.resourcePreset || '';
+        resourceVisibleLimit = RESOURCE_INITIAL_VISIBLE;
         renderFilteredResources();
         elements.resourceResult.scrollIntoView({ behavior: 'smooth', block: 'center' });
       };
@@ -2946,7 +2969,7 @@
         renderSources(data.sources || [], true);
       } else if (view === 'research') {
         const params = new URLSearchParams(location.search);
-        const [data, topicEntries] = await Promise.all([request('research', 100, {
+        const [data, topicEntries] = await Promise.all([request('research', DIRECTORY_INITIAL_PAGE_SIZE, {
           q: params.get('search')?.trim() || '',
           topic: params.get('topic')?.trim() || '',
           evidence: params.get('evidence')?.trim() || '',
@@ -2963,7 +2986,7 @@
       } else if (view === 'trials') {
         const params = new URLSearchParams(location.search);
         const requestedStatus = params.get('status')?.trim() || '';
-        const [data, topicEntries] = await Promise.all([request('trials', 100, { q: params.get('search')?.trim() || params.get('q')?.trim() || '', topic: params.get('topic')?.trim() || '', status: requestedStatus, phase: params.get('phase')?.trim() || '', country: params.get('country')?.trim() || '', results: params.get('results')?.trim() || '' }), catalogueTopicEntries()]);
+        const [data, topicEntries] = await Promise.all([request('trials', DIRECTORY_INITIAL_PAGE_SIZE, { q: params.get('search')?.trim() || params.get('q')?.trim() || '', topic: params.get('topic')?.trim() || '', status: requestedStatus, phase: params.get('phase')?.trim() || '', country: params.get('country')?.trim() || '', results: params.get('results')?.trim() || '' }), catalogueTopicEntries()]);
         trialNextOffset = data.next_offset;
         trialTotal = Number(data.total_matching || data.trials?.length || 0);
         renderTrials(data.trials || [], topicEntries);

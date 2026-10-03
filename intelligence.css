@@ -964,6 +964,16 @@ body { background: var(--bg); color: var(--text); font-weight: 400; }
 .record-card { padding: 28px 20px; border-color: var(--border); border-radius: 14px; }
 .record-card:hover { background: #fff7fa; }
 
+/* Long directories remain complete, while off-screen cards no longer consume
+   layout and paint time before a reader reaches them. */
+.record-card,
+.resource-card,
+.university-row,
+.funding-record {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 260px;
+}
+
 .topic-tools,
 .record-controls,
 .resource-controls,
