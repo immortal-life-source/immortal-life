@@ -42,7 +42,7 @@ test('changes-page totals are direct links to their relevant indexes', async () 
 test('shared portal script does not fail on informational pages without portal regions', async () => {
   const [portal, template] = await Promise.all([read('intelligence.js'), read('content-template.html')])
   assert.match(portal, /if \(!elements\.loading \|\| !elements\.error\) return/)
-  assert.match(template, /intelligence\.js\?v=20261003-number-integrity-v7/)
+  assert.match(template, /intelligence\.js\?v=20261003-number-integrity-v8/)
 })
 
 test('topic catalogue is compact, searchable, visual, and does not bury research or trials', async () => {
@@ -469,10 +469,10 @@ test('university profile provenance and record links have non-overlapping spacin
   ])
   assert.match(css, /\.university-profile-metrics \+ \.record-links \{ margin: 34px 0 0; \}/)
   assert.match(css, /\.university-profile-metrics \+ \.record-links \+ \.quality-intro \{ max-width: 980px; margin: 20px 0 36px; \}/)
-  assert.match(template, /intelligence\.css\?v=20261003-number-integrity-v7/)
-  assert.match(pages, /intelligence\.css\?v=20261003-number-integrity-v7/)
-  assert.match(template, /intelligence\.js\?v=20261003-number-integrity-v7/)
-  assert.match(pages, /intelligence\.js\?v=20261003-number-integrity-v7/)
+  assert.match(template, /intelligence\.css\?v=20261003-number-integrity-v8/)
+  assert.match(pages, /intelligence\.css\?v=20261003-number-integrity-v8/)
+  assert.match(template, /intelligence\.js\?v=20261003-number-integrity-v8/)
+  assert.match(pages, /intelligence\.js\?v=20261003-number-integrity-v8/)
   assert.match(pages, /desktop-nav\.css\?v=20261001-nav-shell-all/)
   assert.match(pages, /desktop-nav\.js\?v=20261003-menu-simplified-v1/)
   assert.match(await read('intelligence.js'), /\['universities', 'topic-dossier', 'trial-results-gap', 'funding'\]\.includes\(viewName\) \? 10000 : 6500/)

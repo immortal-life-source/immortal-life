@@ -1368,7 +1368,7 @@
     }, (item) => item.funder_id ? `/funding?funder=${encodeURIComponent(item.funder_id)}` : '', false);
     drawLeaders(elements.fundingTopics, overview.leading_topics || [], (item) => item.name, (item) => {
       elements.fundingTopic.value = item.slug; reloadFunding().catch((error) => console.error('Funding filter failed:', error));
-    }, (item) => `/topics/${encodeURIComponent(item.slug)}#topicFunding`);
+    }, (item) => `/topics/${encodeURIComponent(item.slug)}#topicFunding`, false);
     elements.fundingLandscape.hidden = !cohorts.length && !(overview.leading_funders || []).length;
   }
 

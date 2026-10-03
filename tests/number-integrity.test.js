@@ -44,6 +44,7 @@ test('every visible exact count either opens its exact cohort or is deliberately
   assert.match(portal, /\[summary\.funders, 'Funders', 'Distinct OpenAlex funder identities', ''\]/)
   assert.match(portal, /\/funding\?funder=\$\{encodeURIComponent\(item\.funder_id\)\}/)
   assert.match(portal, /showCount = true/)
+  assert.match(portal, /\/topics\/\$\{encodeURIComponent\(item\.slug\)\}#topicFunding`, false/)
   assert.match(publicApi, /const directGrantFiltersSupported = !funder && !safeInstitution/)
   assert.match(publicApi, /direct_grants_in_scope: directGrantFiltersSupported/)
   assert.match(portal, /region === 'Region unavailable' \? 'unavailable' : region/)
