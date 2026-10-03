@@ -39,3 +39,13 @@ test('the worldwide source atlas progressively reveals every matching source', a
   assert.match(template, /id="resourceLoadMore"/)
   assert.match(css, /content-visibility:\s*auto/)
 })
+
+test('the Signals front page does not block on every detailed field-map aggregate', async () => {
+  const signals = await read('api/signals.js')
+  const hub = signals.slice(signals.indexOf('async function renderHub()'), signals.indexOf('async function renderStory'))
+
+  assert.match(hub, /fetchJson\(\{ view: 'signals', limit: 20 \}\)/)
+  assert.doesNotMatch(hub, /view: 'trial-results-gap'/)
+  assert.doesNotMatch(hub, /status: 'Recruiting'/)
+  assert.doesNotMatch(hub, /view: 'funding'/)
+})

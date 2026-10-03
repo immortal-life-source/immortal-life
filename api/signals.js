@@ -378,25 +378,15 @@ function hubBody(live = {}, automaticStories = []) {
 }
 
 async function renderHub() {
-  const live = {};
   let automaticStories = [];
-  try {
-    const [recruiting, active, enrolling, gaps, funding] = await Promise.all([
-      fetchJson({ view: 'trials', status: 'Recruiting', limit: 1 }),
-      fetchJson({ view: 'trials', status: 'Active, Not Recruiting', limit: 1 }),
-      fetchJson({ view: 'trials', status: 'Enrolling By Invitation', limit: 1 }),
-      fetchJson({ view: 'trial-results-gap' }, 20_000),
-      fetchJson({ view: 'funding', limit: 1 }),
-    ]);
-    live['global-longevity-trial-map'] = `${number(Number(recruiting.total_matching || 0) + Number(active.total_matching || 0) + Number(enrolling.total_matching || 0))} active registrations`;
-    live['longevity-trial-results-gap'] = `${number(gaps.summary?.possible_gaps)} possible gaps to inspect`;
-    live['where-longevity-funding-flows'] = `${number(funding.direct_grant_total_matching)} direct grant records`;
-  } catch (_) { /* The hub remains useful without transient live counts. */ }
   try {
     const generated = await fetchJson({ view: 'signals', limit: 20 });
     automaticStories = generated.stories || [];
   } catch (_) { /* Automatic editions appear as soon as the publication store is available. */ }
-  return shell({ title: 'Immortal.life Signals — longevity data stories', description: 'New movements in longevity trials, funding, research and institutions.', canonical: `${SITE}/signals`, eyebrow: 'Immortal.life', heading: 'Signals', body: hubBody(live, automaticStories), compact: true });
+  // Keep the newsroom front page to one lightweight publication query. The
+  // three field-map pages calculate their detailed live figures only when a
+  // reader opens them; the hub should never wait on six unrelated aggregates.
+  return shell({ title: 'Immortal.life Signals — longevity data stories', description: 'New movements in longevity trials, funding, research and institutions.', canonical: `${SITE}/signals`, eyebrow: 'Immortal.life', heading: 'Signals', body: hubBody({}, automaticStories), compact: true });
 }
 
 async function renderStory(slug) {
