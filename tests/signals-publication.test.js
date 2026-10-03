@@ -129,6 +129,7 @@ test('automatic Signal generation is bounded, rights-aware, daily and discoverab
 
 test('the automatic newsroom uses distinct, source-bounded story formats', () => {
   const migration = read('supabase/migrations/20261003000300_automatic_signal_newsroom.sql');
+  const comparableMilestones = read('supabase/migrations/20261003000400_comparable_trial_milestone_signal.sql');
   for (const kind of ['trial-milestones', 'funding-movements', 'integrity-watch', 'evidence-maturity', 'trial-geography', 'university-network', 'topic-connections']) {
     assert.match(migration, new RegExp(kind));
   }
@@ -137,6 +138,8 @@ test('the automatic newsroom uses distinct, source-bounded story formats', () =>
   assert.match(migration, /Grant counts do not measure total spending, scientific quality, outcomes or impact/);
   assert.match(migration, /does not establish causality/);
   assert.match(migration, /select public\.refresh_automatic_signals\(\)/);
+  assert.match(comparableMilestones, /Same registry-update definition/);
+  assert.match(comparableMilestones, /generate_trial_milestone_signal/);
   const css = read('signals.css');
   for (const visual of ['milestone', 'capital', 'integrity', 'maturity', 'geography', 'universities', 'connections']) {
     assert.match(css, new RegExp(`signal-auto-card--${visual}`));
