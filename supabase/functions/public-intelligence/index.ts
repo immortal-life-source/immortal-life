@@ -113,6 +113,7 @@ Deno.serve(async (req) => {
   const url = new URL(req.url)
   const view = cleanText(url.searchParams.get('view') ?? 'overview', 30)
   const topic = cleanText(url.searchParams.get('topic') ?? '', 80)
+  const signalSlug = cleanText(url.searchParams.get('slug') ?? '', 180)
   const parsedLimit = Number.parseInt(url.searchParams.get('limit') ?? '24', 10)
   const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 500) : 24
   const parsedOffset = Number.parseInt(url.searchParams.get('offset') ?? '0', 10)
@@ -120,6 +121,9 @@ Deno.serve(async (req) => {
 
   if (topic && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(topic)) {
     return response(req, { error: 'Invalid topic' }, 400)
+  }
+  if (signalSlug && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(signalSlug)) {
+    return response(req, { error: 'Invalid Signal slug' }, 400)
   }
 
   try {
@@ -129,6 +133,34 @@ Deno.serve(async (req) => {
       .eq('enabled', true)
       .eq('public_display_allowed', true)
       .order('name')
+
+    if (view === 'signals') {
+      const fields = 'slug,story_kind,topic_slug,period_start,period_end,title,dek,question,summary,payload,generated_at,updated_at,automation_disclosure,intelligence_topics(name,description,domain_slug,domain_name)'
+      if (!signalSlug) {
+        const { data, error } = await supabase.from('signal_stories')
+          .select(fields).eq('publication_state', 'published')
+          .order('period_end', { ascending: false }).order('updated_at', { ascending: false }).limit(limit)
+        if (error) throw error
+        return response(req, { generated_at: new Date().toISOString(), stories: data ?? [] })
+      }
+      const { data: story, error } = await supabase.from('signal_stories')
+        .select(fields).eq('slug', signalSlug).eq('publication_state', 'published').maybeSingle()
+      if (error) throw error
+      if (!story) return response(req, { error: 'Signal not found' }, 404)
+      const ids = Array.isArray(story.payload?.event_ids)
+        ? story.payload.event_ids.map((value: unknown) => Number(value)).filter((value: number) => Number.isSafeInteger(value) && value > 0).slice(0, 12)
+        : []
+      let events: any[] = []
+      if (ids.length) {
+        const result = await supabase.from('intelligence_change_events')
+          .select('id,event_type,importance,record_type,record_id,title,source_url,occurred_at,topic_slugs,metadata')
+          .in('id', ids).neq('event_type', 'quality_state_changed')
+          .order('importance', { ascending: true }).order('occurred_at', { ascending: false })
+        if (result.error) throw result.error
+        events = result.data ?? []
+      }
+      return response(req, { generated_at: new Date().toISOString(), story, events })
+    }
 
     if (view === 'quality') {
       const { data: telemetry, error } = await supabase.rpc('get_intelligence_quality_telemetry')

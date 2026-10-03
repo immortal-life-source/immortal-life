@@ -28,6 +28,9 @@ if (!process.env.UAT_ROUTES) {
     const universities = await (await fetch(`${baseUrl}/sitemaps/universities.xml`)).text();
     const universitySample = universities.match(/<loc>https?:\/\/[^<]+(\/universities\/[^<]+)<\/loc>/)?.[1];
     if (universitySample) routes.splice(routes.indexOf('/universities') + 1, 0, universitySample);
+    const signals = await (await fetch(`${baseUrl}/sitemaps/signals.xml`)).text();
+    const automaticSignalSample = signals.match(/<loc>https?:\/\/[^<]+(\/signals\/topic-[^<]+)<\/loc>/)?.[1];
+    if (automaticSignalSample) routes.splice(routes.indexOf('/signals') + 1, 0, automaticSignalSample);
   } catch (_) { /* Dynamic record discovery is best-effort for local previews. */ }
 }
 

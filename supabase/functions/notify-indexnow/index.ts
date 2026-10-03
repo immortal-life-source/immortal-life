@@ -26,20 +26,22 @@ Deno.serve(async (req) => {
   if (!(await authorized(req, supabase))) return jsonResponse(req, { error: 'Unauthorized' }, 401, 'POST')
   try {
     const since = new Date(Date.now() - 7 * 60 * 60 * 1000).toISOString()
-    const [research, trials, regulatory, integrity, briefings] = await Promise.all([
+    const [research, trials, regulatory, integrity, briefings, signals] = await Promise.all([
       supabase.from('research_items').select('id').eq('publication_state', 'published').gte('last_seen_at', since).limit(1500),
       supabase.from('clinical_trials').select('id').eq('publication_state', 'published').gte('last_seen_at', since).limit(1500),
       supabase.from('regulatory_events').select('id').eq('publication_state', 'published').gte('last_seen_at', since).limit(500),
       supabase.from('research_integrity_events').select('id').eq('publication_state', 'published').gte('detected_at', since).limit(500),
       supabase.from('public_briefings').select('slug').gte('updated_at', since).limit(100),
+      supabase.from('signal_stories').select('slug').eq('publication_state', 'published').gte('updated_at', since).limit(100),
     ])
-    for (const result of [research, trials, regulatory, integrity, briefings]) if (result.error) throw result.error
+    for (const result of [research, trials, regulatory, integrity, briefings, signals]) if (result.error) throw result.error
     const urlList = [
       ...(research.data ?? []).map((row: any) => `${SITE}/research/${row.id}`),
       ...(trials.data ?? []).map((row: any) => `${SITE}/trials/${row.id}`),
       ...(regulatory.data ?? []).map((row: any) => `${SITE}/regulatory/${row.id}`),
       ...(integrity.data ?? []).map((row: any) => `${SITE}/integrity/${row.id}`),
       ...(briefings.data ?? []).map((row: any) => `${SITE}/briefings/${row.slug}`),
+      ...(signals.data ?? []).map((row: any) => `${SITE}/signals/${row.slug}`),
     ].slice(0, 10000)
     if (!urlList.length) {
       await supabase.from('indexing_submission_log').insert({ provider: 'indexnow', submitted_count: 0, succeeded: true, response_status: 204 })

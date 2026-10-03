@@ -54,6 +54,14 @@ The first three stories demonstrate the mature parts of the current index:
 
 Research-momentum, university-leadership, cross-topic and funding-versus-human-evidence stories must wait until their underlying reindex or historical coverage is complete enough for the exact claim being made. This is separate from the future all-at-once publication of maintained interpretations across all 180 Living Evidence Dossiers.
 
+## Automatic publication
+
+Signals creates a bounded weekly edition automatically and refreshes its facts every day. The automatic layer uses controlled topic-pulse templates; it does not ask a language model to invent headlines, explanations or conclusions.
+
+An automatic topic Signal qualifies only when the latest six-week window contains at least eight public-display-approved source events, includes multiple record types or an important event, and includes at least one trial, regulatory or integrity event. At most six topics are selected for a weekly edition. Every page names the rule, shows the previous six-week window, links its source events, and describes movement in the immortal.life index—not scientific progress in the outside world.
+
+Automatic pages must fail closed when their stored cohort or source events are unavailable. Historical ingestion and taxonomy backfill must never be described as a research breakthrough, evidence of effectiveness, or a real-world increase in scientific activity.
+
 ## Product placement
 
 Signals belongs within the existing Briefings journey and uses `/signals` as its concise public publication address. It should be discoverable from Briefings, News, You, sitemaps and related journeys without adding another crowded top-level desktop navigation item.

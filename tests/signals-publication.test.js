@@ -83,3 +83,46 @@ test('Signals is discoverable from briefings, navigation and a dedicated sitemap
   for (const story of signals.stories) assert.match(map, new RegExp(`signals/${story.slug}`));
   assert.match(read('api/sitemap.js'), /sitemaps\/signals\.xml/);
 });
+
+test('automatic Signals are fact-only, source-linked and explicitly about index activity', () => {
+  const html = signals.automaticStory({
+    generated_at: '2026-10-03T00:00:00Z',
+    story: {
+      slug: 'topic-sleep-week-of-2026-09-28', topic_slug: 'sleep',
+      title: 'What entered the Sleep evidence map in six weeks?',
+      question: 'What source-linked activity entered the immortal.life index for Sleep during the last six weeks?',
+      summary: 'The index recorded 12 source-linked changes.', period_end: '2026-10-03', updated_at: '2026-10-03T00:00:00Z',
+      intelligence_topics: { name: 'Sleep', domain_name: 'Lifestyle and environment' },
+      payload: {
+        current_total: 12, previous_total: 7, editorial_score: 88,
+        current_counts: { research: 8, trials: 3, regulatory: 1, integrity: 0 },
+        previous_counts: { research: 5, trials: 2, regulatory: 0, integrity: 0 },
+      },
+    },
+    events: [{ id: 1, event_type: 'trial_status_changed', record_type: 'trials', record_id: 4, title: 'Example registry update', occurred_at: '2026-10-02T00:00:00Z' }],
+  });
+  assert.match(html, /Two-window comparison/);
+  assert.match(html, /does not measure scientific importance or prove that the field itself accelerated/);
+  assert.match(html, /Qualified/);
+  assert.match(html, /met the publication rule/);
+  assert.doesNotMatch(html, /editorial score/);
+  assert.match(html, /\/trials\/4/);
+  assert.match(html, /Automatically selected from public-display-approved source metadata/);
+});
+
+test('automatic Signal generation is bounded, rights-aware, daily and discoverable', () => {
+  const migration = read('supabase/migrations/20261003000100_automatic_signals.sql');
+  const sourceDated = read('supabase/migrations/20261003000200_source_dated_automatic_signals.sql');
+  assert.match(migration, /source\.public_display_allowed/);
+  assert.match(migration, /current_window\.total >= 8/);
+  assert.match(migration, /current_window\.record_type_count >= 2/);
+  assert.match(migration, /limit 6/);
+  assert.match(migration, /immortal-life-automatic-signals/);
+  assert.match(migration, /42 6 \* \* \*/);
+  assert.match(sourceDated, /source_occurred_at/);
+  assert.match(sourceDated, /previous_window\.total >= 3/);
+  assert.match(sourceDated, /publication_state = 'withdrawn'/);
+  assert.match(read('supabase/functions/public-intelligence/index.ts'), /view === 'signals'/);
+  assert.match(read('supabase/functions/notify-indexnow/index.ts'), /signal_stories/);
+  assert.match(read('docs/editorial-signals-strategy.md'), /does not ask a language model to invent/i);
+});

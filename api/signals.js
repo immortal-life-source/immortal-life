@@ -48,6 +48,11 @@ function number(value) {
   return Number(value || 0).toLocaleString('en-US');
 }
 
+function counted(value, singular, plural = `${singular}s`) {
+  const amount = Number(value || 0);
+  return `${number(amount)} ${amount === 1 ? singular : plural}`;
+}
+
 function percentage(value) {
   const numeric = Number(value || 0);
   return `${numeric.toLocaleString('en-US', { maximumFractionDigits: 1 })}%`;
@@ -114,6 +119,25 @@ function disclosure({ complete = true, scope, meaning }) {
 
 function journalistBox(title, generatedAt, sourceLinks) {
   return `<section class="signal-journalist"><div><span class="signals-kicker">For journalists and researchers</span><h2>Use the figure. Check the records.</h2><p>Suggested citation: <cite>immortal.life Signals, “${escapeHtml(title)},” data accessed ${escapeHtml(formatDate(generatedAt))}.</cite></p></div><div class="signal-journalist-actions">${sourceLinks.map(([label, href]) => `<a href="${escapeHtml(href)}" data-il-event="${String(href).startsWith('/data') || String(href).startsWith('/datasets/') ? 'download_dataset' : 'open_source'}">${escapeHtml(label)} →</a>`).join('')}<a href="mailto:hello@immortal.life?subject=Immortal.life%20Signals%20press%20question" data-il-event="share_record">Ask about the data →</a></div></section>`;
+}
+
+function relationOne(value) {
+  return Array.isArray(value) ? value[0] || {} : value || {};
+}
+
+function eventLabel(value) {
+  const labels = {
+    new_research: 'New research record', research_updated: 'Research record updated',
+    new_trial: 'New trial registration', trial_status_changed: 'Trial status changed',
+    new_regulatory_notice: 'Regulatory notice', new_integrity_event: 'Integrity notice',
+  };
+  return labels[value] || String(value || 'Source update').replace(/_/g, ' ');
+}
+
+function eventPath(event) {
+  const routes = { research: 'research', trials: 'trials', regulatory: 'regulatory', integrity: 'integrity' };
+  const route = routes[event?.record_type];
+  return route && Number.isSafeInteger(Number(event?.record_id)) ? `/${route}/${Number(event.record_id)}` : safeExternalUrl(event?.source_url) || '/changes';
 }
 
 async function fetchJson(params, timeoutMs = 14_000) {
@@ -262,16 +286,51 @@ function fundingStory(story, data) {
   ${journalistBox(story.title, data.generated_at, [['Open Funding Radar', '/funding'], ['Browse funder profiles', '/funders'], ['Read the methodology', '/methodology']])}</article>`;
 }
 
-function hubBody(live = {}) {
+function automaticStory(data) {
+  const story = data.story || {};
+  const topic = relationOne(story.intelligence_topics);
+  const payload = story.payload || {};
+  const current = payload.current_counts || {};
+  const previous = payload.previous_counts || {};
+  const eventRows = (data.events || []).map((event) => `<li><span>${escapeHtml(eventLabel(event.event_type))} · indexed ${escapeHtml(formatDate(event.occurred_at))}</span><a href="${escapeHtml(eventPath(event))}">${escapeHtml(event.title || 'Source-linked update')}</a><small>${escapeHtml(event.record_type === 'trials' ? 'Registry activity' : event.record_type === 'research' ? 'Research metadata' : 'Official or integrity metadata')}</small></li>`).join('');
+  const categories = [
+    ['Research', 'research'], ['Trials', 'trials'], ['Regulatory', 'regulatory'], ['Integrity', 'integrity'],
+  ];
+  const maximum = Math.max(1, ...categories.flatMap(([, key]) => [Number(current[key] || 0), Number(previous[key] || 0)]));
+  const comparison = categories.map(([label, key]) => `<div class="signal-pulse-row"><strong>${label}</strong><div><i class="is-current" style="--value:${(Number(current[key] || 0) / maximum) * 100}%"></i><i class="is-previous" style="--value:${(Number(previous[key] || 0) / maximum) * 100}%"></i></div><span>${number(current[key])} now · ${number(previous[key])} before</span></div>`).join('');
+  const lead = `This source-dated six-week snapshot contains ${counted(current.research, 'research record')}, ${counted(current.trials, 'trial record')}, and ${counted(Number(current.regulatory || 0) + Number(current.integrity || 0), 'regulatory or integrity signal')}. Every visible item opens its underlying record.`;
+  const topicSlug = story.topic_slug || '';
+  const automaticDefinition = `Public, quality-eligible source events linked to ${topic.name || topicSlug}, organized by source publication, registry-update, announcement or detection date during the 42 days ending ${story.period_end || 'the snapshot date'}, compared with the preceding 42 days.`;
+  const view = { accent: 'rose', number: 'Auto', question: story.question || `What entered the index for ${topic.name || 'this topic'}?` };
+  return `${storyHeader(view, story.updated_at || data.generated_at, lead, [
+    metric(number(payload.current_total), 'source-linked changes', 'Current six-week window', `/changes?topic=${encodeURIComponent(topicSlug)}`),
+    metric(number(current.research), 'research records', 'Additions or updates', `/research?topic=${encodeURIComponent(topicSlug)}`),
+    metric(number(current.trials), 'trial records', 'Additions or status changes', `/trials?topic=${encodeURIComponent(topicSlug)}`),
+    metric(number(Number(current.regulatory || 0) + Number(current.integrity || 0)), 'oversight signals', 'Regulatory or integrity', `/regulatory?topic=${encodeURIComponent(topicSlug)}`),
+  ])}
+  <section class="signal-visual signal-visual--pulse"><div class="signal-section-heading"><span>Two-window comparison</span><h2>What the index saw in two consecutive six-week periods.</h2><p>This comparison measures source records entering or changing inside immortal.life. It does not measure scientific importance or prove that the field itself accelerated.</p></div><div class="signal-pulse-legend"><span class="is-current">Latest six weeks</span><span class="is-previous">Previous six weeks</span></div><div class="signal-pulse-chart">${comparison}</div></section>
+  <section class="signal-split signal-split--statement"><div><span class="signals-kicker">Why it was selected</span><strong class="signal-big-statement">Qualified</strong><p>This movement met the publication rule: enough source-dated activity, more than one kind of record, and a real preceding period for comparison.</p></div><div><span class="signals-kicker">What it means</span><h2>A traceable movement worth inspecting.</h2><p>The Signal identifies a change in the index worth opening. Its prominence does not rank the topic, intervention or institutions involved.</p></div></section>
+  <section class="signal-records"><div class="signal-section-heading"><span>Open the movement</span><h2>Source-linked events behind this Signal</h2></div><ol>${eventRows || '<li>The linked event list is refreshing.</li>'}</ol><a class="signal-primary-action" href="/topics/${encodeURIComponent(topicSlug)}">Open the complete Living Evidence Dossier →</a></section>
+  ${disclosure({ scope: automaticDefinition, meaning: 'Automatically selected from public-display-approved source metadata. Counts describe index activity, not effectiveness, safety, consensus, research quality or a recommendation.' })}
+  ${journalistBox(story.title || 'Automatic topic Signal', story.updated_at || data.generated_at, [[`Open the ${topic.name || 'topic'} dossier`, `/topics/${encodeURIComponent(topicSlug)}`], ['Open its timeline', `/changes?topic=${encodeURIComponent(topicSlug)}`], ['Read the methodology', '/methodology']])}</article>`;
+}
+
+function hubBody(live = {}, automaticStories = []) {
   const cards = stories.map((story) => {
     const figure = live[story.slug];
     return `<article class="signal-card signal-card--${story.accent}"><div class="signal-card-art" aria-hidden="true"><i></i><i></i><i></i></div><span>${escapeHtml(story.number)} · ${escapeHtml(story.eyebrow)}</span><h2><a href="/signals/${story.slug}">${escapeHtml(story.title)}</a></h2><p>${escapeHtml(story.description)}</p>${figure ? `<strong>${escapeHtml(figure)}</strong>` : '<strong>Live source-linked view</strong>'}<a href="/signals/${story.slug}">Open the story →</a></article>`;
   }).join('');
-  return `<section class="signals-manifesto"><p>Most longevity websites repeat claims. <strong>Signals starts with a measurable question, shows the connected records, and states what the numbers cannot prove.</strong></p><div><span>Live data</span><span>Permanent sources</span><span>Explicit limits</span><span>Reusable figures</span></div></section><section class="signal-card-grid">${cards}</section><section class="signal-promise"><div><span class="signals-kicker">The editorial standard</span><h2>Interesting enough to share. Careful enough to cite.</h2></div><div><p>Every story has a snapshot date, a precise cohort definition, a route to the underlying records and a compact explanation of what the data does not mean.</p><p>Signals does not give personal medical advice, rank treatments, infer effectiveness from volume, or turn missing metadata into an accusation.</p></div></section>${journalistBox('Immortal.life Signals', new Date(), [['Read the methodology', '/methodology'], ['Download public data', '/data'], ['See corrections', '/corrections']])}`;
+  const automaticCards = automaticStories.map((story) => {
+    const topic = relationOne(story.intelligence_topics);
+    return `<article class="signal-auto-card"><span>Generated automatically · ${escapeHtml(formatDate(story.updated_at))}</span><h3><a href="/signals/${escapeHtml(story.slug)}">${escapeHtml(story.title)}</a></h3><p>${escapeHtml(story.dek)}</p><div><strong>${number(story.payload?.current_total)}</strong><small>source-linked changes in six weeks</small></div><a href="/signals/${escapeHtml(story.slug)}">Inspect this Signal →</a><small>${escapeHtml(topic.domain_name || 'Longevity evidence')}</small></article>`;
+  }).join('');
+  const automaticSection = automaticCards ? `<section class="signal-auto-section"><div class="signal-section-heading"><span>Published by the index</span><h2>Fresh Signals, selected automatically.</h2><p>Every day the engine checks for topic movements that meet a visible evidence-diversity rule. At most six qualify per weekly edition.</p></div><div class="signal-auto-grid">${automaticCards}</div></section>` : '';
+  return `<section class="signals-manifesto"><p>Most longevity websites repeat claims. <strong>Signals starts with a measurable question, shows the connected records, and states what the numbers cannot prove.</strong></p><div><span>Live data</span><span>Permanent sources</span><span>Explicit limits</span><span>Reusable figures</span></div></section><section class="signal-card-grid">${cards}</section>${automaticSection}<section class="signal-promise"><div><span class="signals-kicker">The editorial standard</span><h2>Interesting enough to share. Careful enough to cite.</h2></div><div><p>Every story has a snapshot date, a precise cohort definition, a route to the underlying records and a compact explanation of what the data does not mean.</p><p>Signals does not give personal medical advice, rank treatments, infer effectiveness from volume, or turn missing metadata into an accusation.</p></div></section>${journalistBox('Immortal.life Signals', new Date(), [['Read the methodology', '/methodology'], ['Download public data', '/data'], ['See corrections', '/corrections']])}`;
 }
 
 async function renderHub() {
   const live = {};
+  let automaticStories = [];
   try {
     const [recruiting, active, enrolling, gaps, funding] = await Promise.all([
       fetchJson({ view: 'trials', status: 'Recruiting', limit: 1 }),
@@ -284,12 +343,26 @@ async function renderHub() {
     live['longevity-trial-results-gap'] = `${number(gaps.summary?.possible_gaps)} possible gaps to inspect`;
     live['where-longevity-funding-flows'] = `${number(funding.direct_grant_total_matching)} direct grant records`;
   } catch (_) { /* The hub remains useful without transient live counts. */ }
-  return shell({ title: 'Immortal.life Signals — stories hidden inside longevity data', description: 'Source-linked maps, graphs and data stories revealing where longevity trials, results and funding are moving.', canonical: `${SITE}/signals`, eyebrow: 'Immortal.life Signals', heading: 'The stories hidden inside longevity data.', body: hubBody(live) });
+  try {
+    const generated = await fetchJson({ view: 'signals', limit: 6 });
+    automaticStories = generated.stories || [];
+  } catch (_) { /* Automatic editions appear as soon as the publication store is available. */ }
+  return shell({ title: 'Immortal.life Signals — stories hidden inside longevity data', description: 'Source-linked maps, graphs and data stories revealing where longevity trials, results and funding are moving.', canonical: `${SITE}/signals`, eyebrow: 'Immortal.life Signals', heading: 'The stories hidden inside longevity data.', body: hubBody(live, automaticStories) });
 }
 
 async function renderStory(slug) {
   const story = storyBySlug.get(slug);
-  if (!story) return null;
+  if (!story) {
+    try {
+      const automatic = await fetchJson({ view: 'signals', slug });
+      const record = automatic.story;
+      if (!record) return null;
+      return shell({ title: `${record.title} — Immortal.life Signals`, description: record.dek, canonical: `${SITE}/signals/${record.slug}`, eyebrow: 'Immortal.life Signals · Published automatically', heading: record.title, date: record.updated_at, body: automaticStory(automatic) });
+    } catch (error) {
+      if (error instanceof Error && error.message === 'signals_origin_404') return null;
+      throw error;
+    }
+  }
   let body;
   if (slug === 'global-longevity-trial-map') body = activeTrialStory(story, await activeTrialSnapshot());
   if (slug === 'longevity-trial-results-gap') body = resultsGapStory(story, await fetchJson({ view: 'trial-results-gap' }, 20_000));
@@ -297,8 +370,8 @@ async function renderStory(slug) {
   return shell({ title: `${story.title} — Immortal.life Signals`, description: story.description, canonical: `${SITE}/signals/${story.slug}`, eyebrow: `Immortal.life Signals · ${story.eyebrow}`, heading: story.title, body });
 }
 
-function sitemap() {
-  const urls = [{ path: '/signals', modified: STORY_DATE }, ...stories.map((story) => ({ path: `/signals/${story.slug}`, modified: STORY_DATE }))];
+function sitemap(automaticStories = []) {
+  const urls = [{ path: '/signals', modified: STORY_DATE }, ...stories.map((story) => ({ path: `/signals/${story.slug}`, modified: STORY_DATE })), ...automaticStories.map((story) => ({ path: `/signals/${story.slug}`, modified: String(story.updated_at || story.period_end || STORY_DATE).slice(0, 10) }))];
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((item) => `<url><loc>${escapeXml(`${SITE}${item.path}`)}</loc><lastmod>${item.modified}</lastmod></url>`).join('')}</urlset>\n`;
 }
 
@@ -310,10 +383,12 @@ module.exports = async function signalsHandler(request, response) {
   if (String(request.query?.mode || '') === 'sitemap') {
     response.setHeader('Content-Type', 'application/xml; charset=utf-8');
     response.setHeader('Cache-Control', 'public, max-age=300, s-maxage=21600, stale-while-revalidate=86400');
-    return response.status(200).send(request.method === 'HEAD' ? '' : sitemap());
+    let automaticStories = [];
+    try { automaticStories = (await fetchJson({ view: 'signals', limit: 100 })).stories || []; } catch (_) { /* Preserve the fixed-story sitemap during a transient source delay. */ }
+    return response.status(200).send(request.method === 'HEAD' ? '' : sitemap(automaticStories));
   }
   const slug = String(request.query?.slug || '').trim();
-  if (slug && !storyBySlug.has(slug)) return response.status(404).send('Not found');
+  if (slug && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return response.status(404).send('Not found');
   try {
     const html = slug ? await renderStory(slug) : await renderHub();
     if (!html) return response.status(404).send('Not found');
@@ -335,4 +410,5 @@ module.exports.hubBody = hubBody;
 module.exports.activeTrialStory = activeTrialStory;
 module.exports.resultsGapStory = resultsGapStory;
 module.exports.fundingStory = fundingStory;
+module.exports.automaticStory = automaticStory;
 module.exports.sitemap = sitemap;
