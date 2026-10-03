@@ -126,3 +126,42 @@ test('automatic Signal generation is bounded, rights-aware, daily and discoverab
   assert.match(read('supabase/functions/notify-indexnow/index.ts'), /signal_stories/);
   assert.match(read('docs/editorial-signals-strategy.md'), /does not ask a language model to invent/i);
 });
+
+test('the automatic newsroom uses distinct, source-bounded story formats', () => {
+  const migration = read('supabase/migrations/20261003000300_automatic_signal_newsroom.sql');
+  for (const kind of ['trial-milestones', 'funding-movements', 'integrity-watch', 'evidence-maturity', 'trial-geography', 'university-network', 'topic-connections']) {
+    assert.match(migration, new RegExp(kind));
+  }
+  assert.match(migration, /source\.public_display_allowed/g);
+  assert.match(migration, /rights_review_due_at/g);
+  assert.match(migration, /Grant counts do not measure total spending, scientific quality, outcomes or impact/);
+  assert.match(migration, /does not establish causality/);
+  assert.match(migration, /select public\.refresh_automatic_signals\(\)/);
+  const css = read('signals.css');
+  for (const visual of ['milestone', 'capital', 'integrity', 'maturity', 'geography', 'universities', 'connections']) {
+    assert.match(css, new RegExp(`signal-auto-card--${visual}`));
+  }
+});
+
+test('newsroom pages explain observable movement without turning it into advice', () => {
+  const html = signals.automaticNewsroomStory({
+    generated_at: '2026-10-03T00:00:00Z',
+    story: {
+      story_kind: 'funding-movements', title: 'Where did new longevity grants become visible?',
+      dek: 'Official direct grants.', question: 'Which grants started?', summary: '12 grants are visible.',
+      updated_at: '2026-10-03T00:00:00Z', payload: {
+        primary_value: 12,
+        metrics: [{ value: 12, label: 'direct official grants', note: 'Source dated', href: '/funding' }],
+        bars: [{ label: 'Cellular senescence', value: 5, href: '/topics/cellular-senescence' }],
+        items: [{ eyebrow: 'NIH RePORTER', title: 'Example award', href: 'https://example.org/grant', note: 'Official record' }],
+        scope: 'Official grants in 42 days.',
+        meaning: 'Grant counts do not measure spending, quality or impact.',
+      },
+    }, events: [],
+  });
+  assert.match(html, /New funding became visible/);
+  assert.match(html, /<strong>12<\/strong><span>direct official grants/);
+  assert.match(html, /https:\/\/example\.org\/grant/);
+  assert.match(html, /Grant counts do not measure spending, quality or impact/);
+  assert.match(html, /Missing or ambiguous cohorts remain unpublished/);
+});

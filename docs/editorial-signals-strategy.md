@@ -62,6 +62,10 @@ An automatic topic Signal qualifies only when the latest six-week window contain
 
 Automatic pages must fail closed when their stored cohort or source events are unavailable. Historical ingestion and taxonomy backfill must never be described as a research breakthrough, evidence of effectiveness, or a real-world increase in scientific activity.
 
+The automatic newsroom also maintains seven deliberately different factual formats: trial milestones, direct official funding movements, formal integrity notices, clinical-phase snapshots, trial geography, university activity maps, and recent topic co-occurrence. Each has its own minimum publication threshold, source-date rule, visual language and interpretation boundary. Direct grants remain separate from publication acknowledgements; registry status remains separate from results; integrity labels repeat the issuing source rather than alleging misconduct; university activity is never described as quality; and topic overlap is never described as causality.
+
+One scheduled refresh updates the current weekly URLs idempotently. If a cohort no longer qualifies, that current edition is withdrawn. Weak, rights-ambiguous or source-poor candidates stay unpublished, while prior editions remain versioned.
+
 ## Product placement
 
 Signals belongs within the existing Briefings journey and uses `/signals` as its concise public publication address. It should be discoverable from Briefings, News, You, sitemaps and related journeys without adding another crowded top-level desktop navigation item.

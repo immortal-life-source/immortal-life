@@ -98,7 +98,7 @@ function shell({ title, description, canonical, eyebrow, heading, body, date = S
 <meta property="og:type" content="article"><meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${escapeHtml(description)}"><meta property="og:url" content="${escapeHtml(canonical)}"><meta property="og:image" content="${SITE}/og-image.png">
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(title)}"><meta name="twitter:description" content="${escapeHtml(description)}">
 <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}</script>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,300&family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/intelligence.css?v=20261002-topic-funding-seo-v1"><link rel="stylesheet" href="/desktop-nav.css?v=20261001-nav-shell-all"><link rel="stylesheet" href="/signals.css?v=20261003-signals-v2"><link rel="icon" href="/favicon.ico"></head>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,300&family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/intelligence.css?v=20261002-topic-funding-seo-v1"><link rel="stylesheet" href="/desktop-nav.css?v=20261001-nav-shell-all"><link rel="stylesheet" href="/signals.css?v=20261003-newsroom-v3"><link rel="icon" href="/favicon.ico"></head>
 <body><header class="intel-header"><a class="intel-logo" href="/" aria-label="immortal.life home"><img src="/linkedin-app-logo.png?v=20260926-color" width="54" height="54" alt="" decoding="async"><span>immortal.life</span></a><button class="intel-nav-toggle" id="intelNavToggle" type="button" aria-expanded="false" aria-controls="intelNav"><span>Menu</span><i aria-hidden="true"></i></button><nav class="intel-nav" id="intelNav" aria-label="Primary navigation"><div class="intel-nav-top"><a href="/changes">News</a><a href="/topics">Topics</a><a href="/trials">Trials</a><a href="/universities">Universities</a><a href="/research">Research</a><a href="/funding">Funding</a><a href="/you" class="intel-nav-you">You</a><a href="/regulatory">Regulatory</a><a href="/resources">Resources</a><a href="/briefings">Briefings</a><a href="/methodology">About</a></div><form class="intel-nav-search" role="search"><input type="search" aria-label="Search longevity topics" placeholder="Search topics…"><button type="submit">Search</button></form></nav></header>
 <main class="signals-main"><section class="signals-hero"><div class="signals-orbit" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><div class="signals-hero-copy"><span class="signals-kicker">${escapeHtml(eyebrow)}</span><h1>${escapeHtml(heading)}</h1><p>${escapeHtml(description)}</p></div></section>${body}<nav class="next-journey" aria-label="Continue exploring"><span>Continue exploring</span><a href="/signals">All Signals</a><a href="/briefings">Weekly briefings</a><a href="/trials">Trial Radar</a><a href="/funding">Funding Radar</a></nav></main>
 <footer class="intel-footer"><p><strong>Source-linked automated data publication.</strong> Figures are generated from the stated public-source metadata and dated so they can be checked. No scientist, clinician, editor or human reviewer evaluates each story before publication. The figures describe indexed activity—not medical effectiveness, safety, scientific quality or personal advice.</p><div><a href="/signals">Signals</a><a href="/methodology">Methodology</a><a href="/corrections">Corrections</a><a href="mailto:hello@immortal.life" data-il-event="share_record">Press contact</a><span>© 2026 immortal.life</span></div></footer><nav class="mobile-dock" aria-label="Mobile navigation"><a href="/"><span aria-hidden="true">⌂</span>Home</a><a href="/topics"><span aria-hidden="true">◇</span>Topics</a><a href="/trials"><span aria-hidden="true">＋</span>Trials</a><a href="/changes"><span aria-hidden="true">↻</span>News</a><a class="mobile-dock-you" href="/you"><span aria-hidden="true">✦</span>You</a></nav><script src="/il-config.js"></script><script src="/intelligence.js?v=20261003-signals-v1"></script><script src="/desktop-nav.js?v=20261003-signals-v1"></script><script src="/telemetry.js?v=20261002-utility-v1"></script></body></html>`;
@@ -123,6 +123,12 @@ function journalistBox(title, generatedAt, sourceLinks) {
 
 function relationOne(value) {
   return Array.isArray(value) ? value[0] || {} : value || {};
+}
+
+function storyHref(value, fallback = '/signals') {
+  const candidate = String(value || '').trim();
+  if (candidate.startsWith('/') && !candidate.startsWith('//')) return candidate;
+  return safeExternalUrl(candidate) || fallback;
 }
 
 function eventLabel(value) {
@@ -288,6 +294,7 @@ function fundingStory(story, data) {
 
 function automaticStory(data) {
   const story = data.story || {};
+  if (story.story_kind && story.story_kind !== 'topic-pulse') return automaticNewsroomStory(data);
   const topic = relationOne(story.intelligence_topics);
   const payload = story.payload || {};
   const current = payload.current_counts || {};
@@ -315,6 +322,45 @@ function automaticStory(data) {
   ${journalistBox(story.title || 'Automatic topic Signal', story.updated_at || data.generated_at, [[`Open the ${topic.name || 'topic'} dossier`, `/topics/${encodeURIComponent(topicSlug)}`], ['Open its timeline', `/changes?topic=${encodeURIComponent(topicSlug)}`], ['Read the methodology', '/methodology']])}</article>`;
 }
 
+const newsroomTypes = {
+  'trial-milestones': { accent: 'milestone', number: 'Trial watch', kicker: 'Registry milestones', heading: 'The registry moved.', source: ['Open Trial Radar', '/trials'] },
+  'funding-movements': { accent: 'capital', number: 'Funding watch', kicker: 'Official grants', heading: 'New funding became visible.', source: ['Open Funding Radar', '/funding'] },
+  'integrity-watch': { accent: 'integrity', number: 'Integrity watch', kicker: 'Formal notices', heading: 'The published record changed.', source: ['Open Integrity Monitor', '/integrity'] },
+  'evidence-maturity': { accent: 'maturity', number: 'Phase watch', kicker: 'Clinical maturity', heading: 'See the stages—not a promise.', source: ['Open Trial Radar', '/trials'] },
+  'trial-geography': { accent: 'geography', number: 'World watch', kicker: 'Trial geography', heading: 'See where registrations point.', source: ['Open the global trial view', '/trials'] },
+  'university-network': { accent: 'universities', number: 'Network watch', kicker: 'University activity', heading: 'See the institutions connecting the field.', source: ['Open University Index', '/universities'] },
+  'topic-connections': { accent: 'connections', number: 'Connection watch', kicker: 'Unexpected overlap', heading: 'Two fields appeared together.', source: ['Explore all topics', '/topics'] },
+};
+
+function automaticNewsroomStory(data) {
+  const story = data.story || {};
+  const payload = story.payload || {};
+  const type = newsroomTypes[story.story_kind] || newsroomTypes['trial-milestones'];
+  const metrics = (Array.isArray(payload.metrics) ? payload.metrics : []).slice(0, 4).map((item) => metric(number(item.value), item.label || 'indexed records', item.note || 'Source-linked count', storyHref(item.href)));
+  const bars = (Array.isArray(payload.bars) ? payload.bars : []).slice(0, 20);
+  const maximum = Math.max(1, ...bars.map((item) => Number(item.value || 0)));
+  const barMarkup = bars.map((item, index) => `<a class="signal-newsroom-bar" href="${escapeHtml(storyHref(item.href, '#signalSources'))}" style="--bar:${Math.max(3, (Number(item.value || 0) / maximum) * 100)}%;--delay:${index * 35}ms"><span>${escapeHtml(item.label || 'Not reported')}</span><i></i><strong>${number(item.value)}</strong>${item.note ? `<small>${escapeHtml(item.note)}</small>` : ''}</a>`).join('');
+  const links = (Array.isArray(payload.links) ? payload.links : []).slice(0, 10).map((item) => `<a href="${escapeHtml(storyHref(item.href))}"><span>${escapeHtml(item.label)}</span><strong>${number(item.value)}</strong></a>`).join('');
+  const suppliedItems = Array.isArray(payload.items) ? payload.items : [];
+  const eventItems = (data.events || []).map((event) => ({
+    eyebrow: `${eventLabel(event.event_type)} · indexed ${formatDate(event.occurred_at)}`,
+    title: event.title || 'Source-linked update', href: eventPath(event),
+    note: event.record_type === 'trials' ? 'Official registry record' : 'Official source record',
+  }));
+  const items = (suppliedItems.length ? suppliedItems : eventItems).slice(0, 12).map((item) => `<li><span>${escapeHtml(item.eyebrow || 'Source-linked record')}</span><a href="${escapeHtml(storyHref(item.href))}">${escapeHtml(item.title || 'Open source record')}</a>${item.note ? `<small>${escapeHtml(item.note)}</small>` : ''}</li>`).join('');
+  const connection = payload.left_topic && payload.right_topic ? `<div class="signal-connection-orbit"><a href="/topics/${encodeURIComponent(payload.left_topic.slug)}">${escapeHtml(payload.left_topic.name)}</a><i><strong>${number(payload.primary_value)}</strong><small>shared records</small></i><a href="/topics/${encodeURIComponent(payload.right_topic.slug)}">${escapeHtml(payload.right_topic.name)}</a></div>` : '';
+  const visual = connection || `<div class="signal-newsroom-bars">${barMarkup || '<p>The source-linked breakdown is refreshing.</p>'}</div>`;
+  const linksMarkup = links ? `<div class="signal-newsroom-links">${links}</div>` : '';
+  const lead = story.summary || 'This edition reports source-linked activity visible in the immortal.life index.';
+  const view = { accent: type.accent, number: type.number, question: story.question || story.title };
+  return `${storyHeader(view, story.updated_at || data.generated_at, lead, metrics)}
+  <section class="signal-newsroom-visual signal-newsroom-visual--${type.accent}"><div class="signal-section-heading"><span>${escapeHtml(type.kicker)}</span><h2>${escapeHtml(type.heading)}</h2><p>${escapeHtml(story.dek || '')}</p></div>${visual}${linksMarkup}</section>
+  <section class="signal-split signal-split--statement signal-newsroom-meaning"><div><span class="signals-kicker">Why it was published</span><strong class="signal-big-statement">Verified</strong><p>The edition passed its minimum source-volume and reuse-rights rules. Missing or ambiguous cohorts remain unpublished.</p></div><div><span class="signals-kicker">What it means</span><h2>One observable movement, clearly bounded.</h2><p>${escapeHtml(payload.meaning || 'The figures describe indexed source activity and do not establish effectiveness, safety, causality or scientific quality.')}</p></div></section>
+  ${items ? `<section class="signal-records" id="signalSources"><div class="signal-section-heading"><span>Open the evidence</span><h2>Records behind this Signal</h2></div><ol>${items}</ol></section>` : ''}
+  ${disclosure({ scope: payload.scope || 'Public-display-approved source metadata inside the stated edition window.', meaning: payload.meaning || 'Counts describe index activity, not a recommendation or scientific conclusion.' })}
+  ${journalistBox(story.title || 'Automatic Signal', story.updated_at || data.generated_at, [type.source, ['Read the methodology', '/methodology'], ['See corrections', '/corrections']])}</article>`;
+}
+
 function hubBody(live = {}, automaticStories = []) {
   const cards = stories.map((story) => {
     const figure = live[story.slug];
@@ -322,9 +368,12 @@ function hubBody(live = {}, automaticStories = []) {
   }).join('');
   const automaticCards = automaticStories.map((story) => {
     const topic = relationOne(story.intelligence_topics);
-    return `<article class="signal-auto-card"><span>Generated automatically · ${escapeHtml(formatDate(story.updated_at))}</span><h3><a href="/signals/${escapeHtml(story.slug)}">${escapeHtml(story.title)}</a></h3><p>${escapeHtml(story.dek)}</p><div><strong>${number(story.payload?.current_total)}</strong><small>source-linked changes in six weeks</small></div><a href="/signals/${escapeHtml(story.slug)}">Inspect this Signal →</a><small>${escapeHtml(topic.domain_name || 'Longevity evidence')}</small></article>`;
+    const type = newsroomTypes[story.story_kind];
+    const value = story.payload?.primary_value ?? story.payload?.current_total;
+    const label = type ? type.kicker : 'source-linked changes in six weeks';
+    return `<article class="signal-auto-card signal-auto-card--${escapeHtml(type?.accent || 'topic')}"><span>Generated automatically · ${escapeHtml(formatDate(story.updated_at))}</span><h3><a href="/signals/${escapeHtml(story.slug)}">${escapeHtml(story.title)}</a></h3><p>${escapeHtml(story.dek)}</p><div><strong>${number(value)}</strong><small>${escapeHtml(label)}</small></div><a href="/signals/${escapeHtml(story.slug)}">Inspect this Signal →</a><small>${escapeHtml(topic.domain_name || type?.number || 'Longevity evidence')}</small></article>`;
   }).join('');
-  const automaticSection = automaticCards ? `<section class="signal-auto-section"><div class="signal-section-heading"><span>Published by the index</span><h2>Fresh Signals, selected automatically.</h2><p>Every day the engine checks for topic movements that meet a visible evidence-diversity rule. At most six qualify per weekly edition.</p></div><div class="signal-auto-grid">${automaticCards}</div></section>` : '';
+  const automaticSection = automaticCards ? `<section class="signal-auto-section"><div class="signal-section-heading"><span>Published by the index</span><h2>Fresh Signals, selected automatically.</h2><p>Every day the engine checks trials, grants, integrity notices, research connections, geography and institutions against strict source and publication rules. Only qualifying editions appear.</p></div><div class="signal-auto-grid">${automaticCards}</div></section>` : '';
   return `<section class="signals-manifesto"><p>Most longevity websites repeat claims. <strong>Signals starts with a measurable question, shows the connected records, and states what the numbers cannot prove.</strong></p><div><span>Live data</span><span>Permanent sources</span><span>Explicit limits</span><span>Reusable figures</span></div></section><section class="signal-card-grid">${cards}</section>${automaticSection}<section class="signal-promise"><div><span class="signals-kicker">The editorial standard</span><h2>Interesting enough to share. Careful enough to cite.</h2></div><div><p>Every story has a snapshot date, a precise cohort definition, a route to the underlying records and a compact explanation of what the data does not mean.</p><p>Signals does not give personal medical advice, rank treatments, infer effectiveness from volume, or turn missing metadata into an accusation.</p></div></section>${journalistBox('Immortal.life Signals', new Date(), [['Read the methodology', '/methodology'], ['Download public data', '/data'], ['See corrections', '/corrections']])}`;
 }
 
@@ -344,7 +393,7 @@ async function renderHub() {
     live['where-longevity-funding-flows'] = `${number(funding.direct_grant_total_matching)} direct grant records`;
   } catch (_) { /* The hub remains useful without transient live counts. */ }
   try {
-    const generated = await fetchJson({ view: 'signals', limit: 6 });
+    const generated = await fetchJson({ view: 'signals', limit: 20 });
     automaticStories = generated.stories || [];
   } catch (_) { /* Automatic editions appear as soon as the publication store is available. */ }
   return shell({ title: 'Immortal.life Signals — stories hidden inside longevity data', description: 'Source-linked maps, graphs and data stories revealing where longevity trials, results and funding are moving.', canonical: `${SITE}/signals`, eyebrow: 'Immortal.life Signals', heading: 'The stories hidden inside longevity data.', body: hubBody(live, automaticStories) });
@@ -411,4 +460,5 @@ module.exports.activeTrialStory = activeTrialStory;
 module.exports.resultsGapStory = resultsGapStory;
 module.exports.fundingStory = fundingStory;
 module.exports.automaticStory = automaticStory;
+module.exports.automaticNewsroomStory = automaticNewsroomStory;
 module.exports.sitemap = sitemap;
