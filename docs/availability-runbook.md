@@ -31,7 +31,15 @@ Monitored routes:
 - `/institutional-pilot`
 - `/api/intelligence?view=topic-dossier&topic=exercise&limit=12`
 
-On a persistent failure, the workflow opens or updates one GitHub issue labelled `availability-incident` and fails the workflow. GitHub notifications are the independent alert path. When all routes recover, the workflow comments with the recovery time and closes the incident.
+On a persistent failure, the workflow opens or updates one GitHub issue labelled `availability-incident`, emails `hello@immortal.life` directly through Postale, and fails the workflow. Repeated failed checks update the same incident without repeatedly emailing. When all routes recover, the workflow comments with the recovery time, sends one recovery email, and closes the incident.
+
+The Postale password is stored only in the encrypted GitHub Actions secret `POSTALE_SMTP_PASSWORD`. It must never be committed, printed, copied into an issue, or pasted into project documentation.
+
+## Independent emergency mirror
+
+`.github/workflows/emergency-mirror.yml` publishes a small static continuity site to GitHub Pages on relevant changes, once daily, and on manual request. It is hosted outside Vercel and does not require Supabase to display the complete 180-topic directory. When Supabase remains healthy, the mirror also connects directly to the read-only public index for a small latest-evidence view.
+
+The mirror is explicitly `noindex` and blocked by its own `robots.txt`, so it does not compete with the canonical immortal.life pages in search. It is an emergency access path, not a second canonical website. Automatic DNS failover is not enabled; changing DNS remains a deliberate recovery action.
 
 ## Visitor fallback
 

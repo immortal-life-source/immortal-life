@@ -1,0 +1,47 @@
+name: Emergency mirror
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - intelligence-topics.json
+      - intelligence-topics-expanded.json
+      - intelligence-topics-round-three.json
+      - scripts/build-emergency-site.mjs
+      - .github/workflows/emergency-mirror.yml
+  schedule:
+    - cron: "37 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages-emergency-mirror
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build the independent static continuity site
+        run: node scripts/build-emergency-site.mjs
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: tmp/emergency-site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy independent mirror
+        id: deployment
+        uses: actions/deploy-pages@v4
+

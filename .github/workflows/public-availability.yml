@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
+    inputs:
+      send_test_email:
+        description: Send a direct test email to hello@immortal.life
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -41,6 +47,7 @@ jobs:
           retention-days: 14
 
       - name: Open, update, or resolve the availability incident
+        id: incident
         if: always()
         uses: actions/github-script@v8
         env:
@@ -80,6 +87,7 @@ jobs:
                 await github.rest.issues.createComment({ owner, repo, issue_number: incident.number, body });
               } else {
                 await github.rest.issues.create({ owner, repo, title, body, labels: ['availability-incident'] });
+                core.setOutput('email_event', 'incident');
               }
               return;
             }
@@ -90,7 +98,30 @@ jobs:
                 body: `Recovered at **${report.checked_at}**. All ${report.total} monitored routes passed.\n\n[Open recovery check](${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId})`,
               });
               await github.rest.issues.update({ owner, repo, issue_number: incident.number, state: 'closed', state_reason: 'completed' });
+              core.setOutput('email_event', 'recovered');
             }
+
+      - name: Prepare and send the independent Postale alert
+        if: steps.incident.outputs.email_event != '' || inputs.send_test_email == true
+        env:
+          ALERT_EVENT: ${{ inputs.send_test_email == true && 'test' || steps.incident.outputs.email_event }}
+          ALERT_EMAIL_FROM: hello@immortal.life
+          ALERT_EMAIL_TO: hello@immortal.life
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          POSTALE_SMTP_PASSWORD: ${{ secrets.POSTALE_SMTP_PASSWORD }}
+        run: |
+          if [ -z "$POSTALE_SMTP_PASSWORD" ]; then
+            echo "::error::POSTALE_SMTP_PASSWORD is not configured; direct availability email could not be sent."
+            exit 1
+          fi
+          node scripts/render-availability-email.mjs "$ALERT_EVENT" uptime-report.json uptime-email.txt
+          curl --silent --show-error --fail \
+            --url 'smtps://mail.postale.io:465' \
+            --ssl-reqd \
+            --user "hello@immortal.life:$POSTALE_SMTP_PASSWORD" \
+            --mail-from 'hello@immortal.life' \
+            --mail-rcpt 'hello@immortal.life' \
+            --upload-file uptime-email.txt
 
       - name: Fail the workflow when the public check failed
         if: steps.availability.outcome != 'success'
