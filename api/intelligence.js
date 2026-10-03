@@ -3,7 +3,7 @@
 const upstreamBase = 'https://nifbuyoghesveotugday.supabase.co/functions/v1/public-intelligence';
 const allowedParameters = new Set([
   'view', 'limit', 'offset', 'topic', 'q', 'country', 'continent', 'sort',
-  'status', 'phase', 'evidence', 'access', 'published_from', 'published_to',
+  'status', 'phase', 'results', 'evidence', 'access', 'published_from', 'published_to',
   'region', 'funder', 'institution', 'quality_rules', 'directory_contract', 'directory_rules',
 ]);
 
@@ -144,7 +144,8 @@ async function sourceFallback(query) {
   // A filtered evidence view promises a classified subset of the verified
   // index. A broad upstream source search cannot preserve that promise, so it
   // must fail closed instead of silently showing unrelated records.
-  if (view === 'research' && (query.evidence || query.access)) return null;
+  if (view === 'research' && (query.evidence || query.access || query.published_from || query.published_to)) return null;
+  if (view === 'trials' && query.results) return null;
   if (view === 'research') return researchFallback(query, limit);
   if (view === 'trials') return trialsFallback(query, limit);
   if (view === 'universities') return universitiesFallback(query, limit);
@@ -180,7 +181,7 @@ module.exports = async function intelligenceProxy(request, response) {
   // aborting that early cached a 100-row OpenAlex sample as if it were the
   // complete index. Keep the proxy responsive, but allow the authoritative
   // aggregate enough time to answer.
-  const filteredResearch = request.query?.view === 'research' && Boolean(request.query?.q || request.query?.topic || request.query?.evidence || request.query?.access);
+  const filteredResearch = request.query?.view === 'research' && Boolean(request.query?.q || request.query?.topic || request.query?.evidence || request.query?.access || request.query?.published_from || request.query?.published_to);
   const slowAggregate = filteredResearch || ['overview', 'universities', 'topic-dossier', 'trial-results-gap', 'funding'].includes(request.query?.view);
   const timeout = setTimeout(() => controller.abort(), slowAggregate ? 9000 : 3500);
   try {

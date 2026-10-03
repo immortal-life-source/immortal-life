@@ -67,7 +67,7 @@ test('new field-context views link every aggregate to its matching source cohort
   assert.match(portal, /trialStructuredText/);
   assert.match(portal, /Study theme:/);
   assert.match(portal, /Sponsor:/);
-  assert.match(intelligenceTemplate, /intelligence\.js\?v=20261002-topic-funding-seo-v1/);
+  assert.match(intelligenceTemplate, /intelligence\.js\?v=20261003-number-integrity-v1/);
 });
 
 test('decision views state their limits rather than turning activity into efficacy claims', () => {
@@ -119,7 +119,7 @@ test('research metric destinations open the matching evidence set', () => {
   assert.match(script, /Indexed research'[\s\S]*researchRoute\(\)/);
   assert.match(script, /Human studies'[\s\S]*researchRoute\('&evidence=human'\)/);
   assert.match(proxy, /'evidence', 'access'/);
-  assert.match(proxy, /view === 'research' && \(query\.evidence \|\| query\.access\)\) return null/);
+  assert.match(proxy, /view === 'research' && \(query\.evidence \|\| query\.access \|\| query\.published_from \|\| query\.published_to\)\) return null/);
   assert.match(proxy, /filteredResearch/);
 });
 

@@ -618,6 +618,9 @@
     const topicPath = (topic) => `/topics/${encodeURIComponent(topic.slug)}`;
     const researchPath = (topic, evidence = '') => `/research?topic=${encodeURIComponent(topic.slug)}${evidence ? `&evidence=${encodeURIComponent(evidence)}` : ''}`;
     const trialPath = (topic, status = '') => `/trials?topic=${encodeURIComponent(topic.slug)}${status ? `&status=${encodeURIComponent(status)}` : ''}`;
+    const postedTrialPath = (topic) => `/trials?topic=${encodeURIComponent(topic.slug)}&results=posted`;
+    const completeYear = new Date().getFullYear() - 1;
+    const recentResearchPath = (topic) => `${researchPath(topic)}&published_from=${completeYear - 2}-01-01&published_to=${completeYear}-12-31`;
     const metricLink = (topic, value, href, context) => {
       const item = link('compare-value', '', href);
       item.append(el('strong', '', value), el('small', '', context));
@@ -665,15 +668,15 @@
     ]);
     group('Clinical trial landscape', 'Registry metadata describes study plans and status. It is not a result.', [
       row('Registered trials', 'All matched registrations currently eligible for the public index.', numberFormatter.format(leftTrials), numberFormatter.format(rightTrials), trialPath(leftTopic), trialPath(rightTopic)),
-      row('Recruiting or active', 'Current status can change; verify eligibility and locations in the registry.', numberFormatter.format(Number(leftEvidence.recruiting_trials || 0)), numberFormatter.format(Number(rightEvidence.recruiting_trials || 0)), trialPath(leftTopic, 'Recruiting'), trialPath(rightTopic, 'Recruiting')),
-      row('Posted-results coverage', 'Registrations with reusable structured results compared with all matched trials.', resultCoverage(leftResults, leftTrials), resultCoverage(rightResults, rightTrials), trialPath(leftTopic), trialPath(rightTopic), 'Inspect trial results and registrations', 'Inspect trial results and registrations'),
+      row('Recruiting or active', 'Current status can change; verify eligibility and locations in the registry.', numberFormatter.format(Number(leftEvidence.recruiting_trials || 0)), numberFormatter.format(Number(rightEvidence.recruiting_trials || 0)), trialPath(leftTopic, 'active'), trialPath(rightTopic, 'active')),
+      row('Posted-results coverage', 'Registrations with reusable structured results compared with all matched trials.', resultCoverage(leftResults, leftTrials), resultCoverage(rightResults, rightTrials), postedTrialPath(leftTopic), postedTrialPath(rightTopic), 'Open registrations with posted results', 'Open registrations with posted results'),
       row('Participants listed', 'Registry enrollment may be planned or actual and can change over time.', numberFormatter.format(Number(leftEvidence.registered_enrollment || 0)), numberFormatter.format(Number(rightEvidence.registered_enrollment || 0)), trialPath(leftTopic), trialPath(rightTopic), 'Verify participant fields at source', 'Verify participant fields at source'),
       row('Highest registered phase', 'Highest phase label found among matched registrations.', compareHighestPhase(leftEvidence.trials_by_phase), compareHighestPhase(rightEvidence.trials_by_phase), trialPath(leftTopic), trialPath(rightTopic)),
     ]);
     group('Momentum and research activity', 'Publication volume measures indexed activity, not whether results are positive or clinically useful.', [
       row('Recent direction', 'Latest complete three-year period compared with the preceding three years.', compareTrendLabel(leftOverview.trend_direction), compareTrendLabel(rightOverview.trend_direction), `${topicPath(leftTopic)}#topicTrend`, `${topicPath(rightTopic)}#topicTrend`, 'Open trend and yearly counts', 'Open trend and yearly counts'),
-      row('Recent indexed records', 'Records in the latest complete three-year comparison period.', numberFormatter.format(Number(leftOverview.trend_recent_total || 0)), numberFormatter.format(Number(rightOverview.trend_recent_total || 0)), researchPath(leftTopic), researchPath(rightTopic)),
-      row('Leading institutions shown', 'The dossiers show a small research-activity sample; open the full topic-specific university view.', numberFormatter.format((leftOverview.universities || []).length), numberFormatter.format((rightOverview.universities || []).length), `/universities?topic=${encodeURIComponent(leftTopic.slug)}`, `/universities?topic=${encodeURIComponent(rightTopic.slug)}`, 'Open topic university activity', 'Open topic university activity'),
+      row('Recent indexed records', 'Records in the latest complete three-year comparison period.', numberFormatter.format(Number(leftOverview.trend_recent_total || 0)), numberFormatter.format(Number(rightOverview.trend_recent_total || 0)), recentResearchPath(leftTopic), recentResearchPath(rightTopic)),
+      row('Institutions with linked research', 'Complete topic-specific university result count.', numberFormatter.format(Number(leftOverview.university_total || 0)), numberFormatter.format(Number(rightOverview.university_total || 0)), `/universities?topic=${encodeURIComponent(leftTopic.slug)}`, `/universities?topic=${encodeURIComponent(rightTopic.slug)}`, 'Open exact topic university set', 'Open exact topic university set'),
     ]);
     group('Regulation, integrity, and uncertainty', 'Absence of a matched notice is not evidence of approval, safety, or scientific agreement.', [
       row('Official regulatory notices', 'Product-, indication-, date-, and jurisdiction-specific notices matched to the topic.', numberFormatter.format(Number(leftEvidence.regulatory_total || 0)), numberFormatter.format(Number(rightEvidence.regulatory_total || 0)), `/regulatory?topic=${encodeURIComponent(leftTopic.slug)}`, `/regulatory?topic=${encodeURIComponent(rightTopic.slug)}`),
@@ -943,6 +946,7 @@
   }
 
   function trialQueryParams(offset = 0) {
+    const urlParams = new URLSearchParams(location.search);
     const selectedStatus = elements.trialStatus?.value || '';
     return {
       offset,
@@ -951,6 +955,7 @@
       status: selectedStatus,
       phase: elements.trialPhase?.value || '',
       country: elements.trialCountry?.value || '',
+      results: urlParams.get('results')?.trim() || '',
     };
   }
 
@@ -1123,7 +1128,8 @@
     );
     drawTrials(filtered, 'No clinical trial matches these filters. Try a broader search or clear one of the filters.');
     if (elements.trialResult) {
-      const resultSummary = `Showing ${numberFormatter.format(filtered.length)} matching trials from ${numberFormatter.format(searchableTrials.length)} loaded · ${numberFormatter.format(trialTotal || searchableTrials.length)} available.`;
+      const postedResultsOnly = new URLSearchParams(location.search).get('results') === 'posted';
+      const resultSummary = `Showing ${numberFormatter.format(filtered.length)} matching trials from ${numberFormatter.format(searchableTrials.length)} loaded · ${numberFormatter.format(trialTotal || searchableTrials.length)} available${postedResultsOnly ? ' with posted registry results' : ''}.`;
       const requestedMetric = new URLSearchParams(location.search).get('metric');
       const listedEnrollment = filtered.reduce((sum, record) => sum + Math.max(0, Number(record.enrollment) || 0), 0);
       const enrollmentSummary = requestedMetric === 'enrollment'
@@ -1218,6 +1224,7 @@
       q: elements.fundingSearch?.value.trim() || '',
       topic: elements.fundingTopic?.value || '',
       country: elements.fundingCountry?.value || '',
+      funder: new URLSearchParams(location.search).get('funder')?.trim() || '',
       institution: new URLSearchParams(location.search).get('institution')?.trim() || '',
       sort: elements.fundingSort?.value || 'recent',
     };
@@ -1319,17 +1326,23 @@
     const summary = overview.summary || {};
     elements.fundingStats.replaceChildren();
     [
-      [summary.awards, 'Award entities', 'Open source-linked award records'],
-      [summary.direct_grants, 'Direct grants', 'Official grant-database records'],
-      [summary.topics, 'Longevity topics', 'Tracked topics connected to funding records'],
-      [summary.funders, 'Funders', 'Distinct OpenAlex funder identities'],
-      [summary.institutions, 'Universities', 'Eligible institutions connected through publications'],
-      [summary.linked_publications, 'Linked publications', 'Retained longevity works carrying award metadata'],
-    ].forEach(([value, label, note], index) => {
-      const button = el('button', `funding-stat${index === 0 ? ' is-primary' : ''}`); button.type = 'button';
-      button.append(el('strong', '', numberFormatter.format(Number(value || 0))), el('span', '', label), el('small', '', note));
-      button.onclick = () => (label === 'Universities' ? location.assign('/universities') : label === 'Longevity topics' ? location.assign('/topics') : label === 'Direct grants' && directGrantRows.length ? elements.directGrantList.scrollIntoView({ behavior: 'smooth', block: 'start' }) : elements.fundingList.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-      elements.fundingStats.append(button);
+      [summary.awards, 'Award entities', 'Open source-linked award records', 'awards'],
+      [summary.direct_grants, 'Direct grants', 'Official grant-database records', 'grants'],
+      [summary.topics, 'Longevity topics', 'Tracked topics connected to funding records', ''],
+      [summary.funders, 'Funders', 'Distinct OpenAlex funder identities', 'funders'],
+      [summary.institutions, 'Universities', 'Eligible institutions connected through publications', ''],
+      [summary.linked_publications, 'Linked publications', 'Retained longevity works carrying award metadata', ''],
+    ].forEach(([value, label, note, action], index) => {
+      const card = action === 'funders'
+        ? link(`funding-stat${index === 0 ? ' is-primary' : ''}`, '', '/funders')
+        : action
+          ? el('button', `funding-stat${index === 0 ? ' is-primary' : ''}`)
+          : el('div', `funding-stat funding-stat--static${index === 0 ? ' is-primary' : ''}`);
+      if (card.tagName === 'BUTTON') card.type = 'button';
+      card.append(el('strong', '', numberFormatter.format(Number(value || 0))), el('span', '', label), el('small', '', note));
+      if (action === 'awards') card.onclick = () => elements.fundingList.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (action === 'grants') card.onclick = () => elements.directGrantList.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      elements.fundingStats.append(card);
     });
 
     elements.fundingYears.replaceChildren();
@@ -1888,21 +1901,21 @@
     const fundingHref = `/funding?topic=${encodeURIComponent(topicSlug)}`;
     const directHref = `${fundingHref}#directGrantSection`;
     const directFilteredHref = (key, value) => `/funding?topic=${encodeURIComponent(topicSlug)}&${key}=${encodeURIComponent(value || '')}#directGrantSection`;
-    const stat = (value, label, note, href) => {
-      const card = link('topic-funding-stat', '', href);
+    const stat = (value, label, note, href = '') => {
+      const card = href ? link('topic-funding-stat', '', href) : el('div', 'topic-funding-stat topic-funding-stat--static');
       card.append(el('strong', '', numberFormatter.format(value)), el('span', '', label), el('small', '', note));
       return card;
     };
     const statDefinitions = [
       [directGrants, 'Official grant records', 'Directly reported by connected grant sources', directHref],
-      [activeGrants, 'Current or undated grants', 'Records not outside their reported date window; some sources omit dates', directHref],
-      [Number(summary.direct_funders || 0), 'Official grant funders', 'Distinct funders named by direct grant sources', directHref],
-      [Number(summary.grant_recipients || 0), 'Grant recipients', 'Organisations named on official grant records', directHref],
-      [Number(summary.direct_countries || 0), 'Recipient countries', 'Countries reported for direct grant recipients', directHref],
+      [activeGrants, 'Current or undated grants', 'Records not outside their reported date window; some sources omit dates', ''],
+      [Number(summary.direct_funders || 0), 'Official grant funders', 'Distinct funders named by direct grant sources', ''],
+      [Number(summary.grant_recipients || 0), 'Grant recipients', 'Organisations named on official grant records', ''],
+      [Number(summary.direct_countries || 0), 'Recipient countries', 'Countries reported for direct grant recipients', ''],
       [awardEntities, 'Acknowledged awards', 'Award identifiers attached to publications', fundingHref],
-      [acknowledgementFunders, 'Acknowledgement funders', 'Distinct funders named on publications', fundingHref],
-      [linkedPublications, 'Linked publications', 'Papers connected to acknowledged awards', fundingHref],
-      [linkedUniversities, 'Connected universities', 'Institutions on those linked publications', `/universities?topic=${encodeURIComponent(topicSlug)}`],
+      [acknowledgementFunders, 'Acknowledgement funders', 'Distinct funders named on publications', ''],
+      [linkedPublications, 'Linked publications', 'Papers connected to acknowledged awards', ''],
+      [linkedUniversities, 'Connected universities', 'Institutions on those linked publications', ''],
     ].filter(([value]) => Number(value) > 0);
     const statColumns = statDefinitions.length > 6 ? 3 : Math.max(1, statDefinitions.length);
     elements.topicFundingStats.style.setProperty('--topic-funding-stat-columns', String(statColumns));
@@ -1955,7 +1968,7 @@
     const chart = el('div', 'topic-funding-trend-chart');
     const maximum = Math.max(1, ...years.flatMap((item) => [item.publications, item.grants]));
     years.forEach((item) => {
-      const group = el('a', 'topic-funding-year'); group.href = fundingHref;
+      const group = el('div', 'topic-funding-year');
       group.setAttribute('aria-label', hasAcknowledgementHistory ? `${item.year}: ${numberFormatter.format(item.publications)} linked publications and ${numberFormatter.format(item.grants)} official grants beginning` : `${item.year}: ${numberFormatter.format(item.grants)} official grants beginning`);
       const bars = el('span', 'topic-funding-year-bars');
       const ack = el('i', 'topic-funding-year-ack'); ack.style.setProperty('--funding-bar', `${Math.max(item.publications ? 4 : 0, Math.round(item.publications / maximum * 100))}%`);
@@ -2019,8 +2032,8 @@
       card.append(el('span', '', String(index + 1).padStart(2, '0')), el('strong', '', title), el('b', '', value), el('small', '', note)); return card;
     };
     renderRankedList(elements.topicDirectFunders, Array.isArray(funding?.direct_funders) ? funding.direct_funders : [], (row, index) => ranked(row, index, row.name || 'Unnamed funder', numberFormatter.format(Number(row.grants || 0)), directFilteredHref('search', row.name), `${numberFormatter.format(Number(row.active_grants || 0))} current or undated record${Number(row.active_grants || 0) === 1 ? '' : 's'}`), 'No direct funder is matched in the connected official grant sources.');
-    renderRankedList(elements.topicAcknowledgementFunders, Array.isArray(funding?.acknowledgement_funders) ? funding.acknowledgement_funders : [], (row, index) => ranked(row, index, row.name || 'Unnamed funder', numberFormatter.format(Number(row.awards || 0)), row.slug ? `/funders/${encodeURIComponent(row.slug)}` : `${fundingHref}&search=${encodeURIComponent(row.name || '')}`, `${numberFormatter.format(Number(row.publications || 0))} linked publication${Number(row.publications || 0) === 1 ? '' : 's'}`), 'No funder acknowledgement is matched on connected publications.');
-    renderRankedList(elements.topicFundingUniversities, Array.isArray(funding?.universities) ? funding.universities : [], (row, index) => ranked(row, index, row.name || 'Unnamed institution', numberFormatter.format(Number(row.awards || 0)), `/universities/${encodeURIComponent(row.slug)}?topic=${encodeURIComponent(topicSlug)}`, `${row.country_name || row.country_code || 'Location unavailable'} · acknowledged awards`), 'No university connection is currently matched through funding acknowledgements.');
+    renderRankedList(elements.topicAcknowledgementFunders, Array.isArray(funding?.acknowledgement_funders) ? funding.acknowledgement_funders : [], (row, index) => ranked(row, index, row.name || 'Unnamed funder', numberFormatter.format(Number(row.awards || 0)), `${fundingHref}&search=${encodeURIComponent(row.name || '')}`, `${numberFormatter.format(Number(row.publications || 0))} linked publication${Number(row.publications || 0) === 1 ? '' : 's'}`), 'No funder acknowledgement is matched on connected publications.');
+    renderRankedList(elements.topicFundingUniversities, Array.isArray(funding?.universities) ? funding.universities : [], (row, index) => ranked(row, index, row.name || 'Unnamed institution', numberFormatter.format(Number(row.awards || 0)), `${fundingHref}&institution=${encodeURIComponent(row.slug || '')}`, `${row.country_name || row.country_code || 'Location unavailable'} · acknowledged awards`), 'No university connection is currently matched through funding acknowledgements.');
     document.querySelectorAll('.topic-funding-columns').forEach((row) => row.classList.toggle('topic-funding-columns--single', row.querySelectorAll('.topic-funding-panel:not([hidden])').length === 1));
 
     elements.topicFundingCountries.replaceChildren();
@@ -2042,7 +2055,7 @@
     const relatedTopics = Array.isArray(funding?.related_topics) ? funding.related_topics : [];
     elements.topicFundingDirections.closest('.topic-funding-directions').hidden = !relatedTopics.length;
     if (!relatedTopics.length) elements.topicFundingDirections.append(el('p', 'topic-funding-no-data', 'No shared-award topic connection is currently available.'));
-    relatedTopics.slice(0, 8).forEach((row) => elements.topicFundingDirections.append(link('topic-funding-chip', `${row.name} · ${numberFormatter.format(Number(row.shared_awards || 0))}`, `/topics/${encodeURIComponent(row.slug)}`)));
+    relatedTopics.slice(0, 8).forEach((row) => elements.topicFundingDirections.append(el('span', 'topic-funding-chip topic-funding-chip--static', `${row.name} · ${numberFormatter.format(Number(row.shared_awards || 0))} shared awards`)));
 
     const recordCard = (title, meta, href, badge) => {
       const card = el('article', 'topic-funding-record');
@@ -2146,7 +2159,7 @@
       : 'No registered clinical trial currently matches this topic in the index. Absence from this collection is not proof that no study exists.', [['Open all matching trials', `/trials?topic=${encodeURIComponent(topicSlug)}`]]);
     answer('dossier-results', '07', 'Are results available, or only registrations?', results
       ? `${numberFormatter.format(results)} matched trial registration${results === 1 ? '' : 's'} currently report posted results. The remaining registrations may describe planned, active, completed, withdrawn, or otherwise updated studies without reusable results.`
-      : trialTotal ? 'The matched trial registrations do not currently expose reusable posted results. A registration describes a study plan or status; it does not demonstrate that an intervention worked.' : 'There are no matched trial registrations from which posted results could be assessed.', [['Inspect trial records', `/trials?topic=${encodeURIComponent(topicSlug)}`]]);
+      : trialTotal ? 'The matched trial registrations do not currently expose reusable posted results. A registration describes a study plan or status; it does not demonstrate that an intervention worked.' : 'There are no matched trial registrations from which posted results could be assessed.', [['Inspect trials with posted results', `/trials?topic=${encodeURIComponent(topicSlug)}&results=posted`]]);
     answer('dossier-safety', '08', 'What safety concerns have been reported?', regulatory
       ? `${numberFormatter.format(regulatory)} matched official regulatory notice${regulatory === 1 ? '' : 's'} appear in the topic timeline. Their scope is product-, indication-, date-, and jurisdiction-specific. This automated dossier does not constitute a complete safety assessment.`
       : 'No matched official regulatory notice is currently indexed. That is not evidence of safety. Safety may be reported in study results, product information, or authorities that are not connected to this topic.', [['Check official notices', `/regulatory?topic=${encodeURIComponent(topicSlug)}`]]);
@@ -2233,7 +2246,7 @@
       ['Randomized human studies', randomized, 'Compares assigned groups, while still depending on population, outcomes, duration, and study quality.', `/research?topic=${encodeURIComponent(topicSlug)}&evidence=randomized-human`],
       ['Evidence reviews', syntheses, 'Studies that bring multiple human records together; their methods and included evidence still matter.', `/research?topic=${encodeURIComponent(topicSlug)}&evidence=human-synthesis`],
       ['Registered clinical trials', trialTotal, 'Official study registrations. Registration describes a study, not its result.', `/trials?topic=${encodeURIComponent(topicSlug)}`],
-      ['Trials with posted results', results, 'Registrations that currently expose structured results in the connected registry.', `/trials?topic=${encodeURIComponent(topicSlug)}`],
+      ['Trials with posted results', results, 'Registrations that currently expose structured results in the connected registry.', `/trials?topic=${encodeURIComponent(topicSlug)}&results=posted`],
     ];
     elements.topicEvidenceLadderSteps.replaceChildren();
     ladderSteps.forEach(([label, value, explanation, href], index) => {
@@ -2364,6 +2377,7 @@
   let universityRows = [];
   let universityNextOffset = null;
   let universityTotal = 0;
+  let universityCoverage = {};
   let universityControlsReady = false;
   const comparedUniversities = new Map();
 
@@ -2395,22 +2409,37 @@
     });
   }
 
-  function renderUniversityRegions(rows) {
+  function renderUniversityRegions(rows, coverage = {}) {
+    const regionSection = elements.universityRegionGrid.closest('.university-regions');
+    const filtered = Boolean(
+      String(elements.universitySearch?.value || '').trim() ||
+      elements.universityTopic?.value ||
+      elements.universityCountry?.value ||
+      elements.universityContinent?.value
+    );
     elements.universityRegionGrid.replaceChildren();
+    if (regionSection) regionSection.hidden = filtered;
+    if (filtered) return;
     const groups = new Map();
     rows.forEach((university) => {
       const region = university.continent || 'Region unavailable';
       if (!groups.has(region)) groups.set(region, []);
       groups.get(region).push(university);
     });
-    [...groups.entries()].sort((left, right) => right[1].length - left[1].length).forEach(([region, universities]) => {
+    const exactRegionTotals = new Map();
+    (coverage.country_directory || []).forEach((country) => {
+      const region = country.continent || 'Region unavailable';
+      exactRegionTotals.set(region, (exactRegionTotals.get(region) || 0) + Math.max(0, Number(country.universities || 0)));
+    });
+    [...exactRegionTotals.entries()].sort((left, right) => right[1] - left[1]).forEach(([region, exactTotal]) => {
+      const universities = groups.get(region) || [];
       const card = el('button', 'university-region-card'); card.type = 'button';
       const leaders = [...universities].sort((left, right) => Number(right.indexed_works_five_year || 0) - Number(left.indexed_works_five_year || 0)).slice(0, 3);
       card.append(
         el('span', 'section-index', region),
-        el('strong', '', numberFormatter.format(universities.length)),
-        el('small', '', universities.length === 1 ? 'university in this result' : 'universities in this result'),
-        el('p', '', leaders.map((university) => university.name).join(' · ')),
+        el('strong', '', numberFormatter.format(exactTotal)),
+        el('small', '', exactTotal === 1 ? 'indexed university' : 'indexed universities'),
+        el('p', '', leaders.length ? leaders.map((university) => university.name).join(' · ') : 'Open the complete regional ranking.'),
         el('i', '', 'View regional ranking →'),
       );
       card.onclick = () => {
@@ -2521,7 +2550,7 @@
     if (elements.universityIntro) elements.universityIntro.textContent = activeTopic
       ? `This is a topic-specific view. Every university below appears in research returned by the ${activeTopicName} search of OpenAlex affiliation data; the ranking uses available publication history, not the general university list.`
       : 'Explore universities through several lenses instead of relying on a single unexplained league table. The index retains all source-matched scholarly works and measures rolling activity, breadth across every longevity topic, recent momentum, and citation context across the complete linked corpus.';
-    renderUniversityRegions(visible);
+    renderUniversityRegions(visible, universityCoverage);
   }
 
   async function fetchUniversityIndex(append = false) {
@@ -2549,6 +2578,7 @@
     } else universityRows = incoming;
     universityNextOffset = data.next_offset;
     universityTotal = data.total_matching != null && Number.isFinite(Number(data.total_matching)) ? Number(data.total_matching) : null;
+    universityCoverage = data.coverage || {};
     elements.universityLoadMore.hidden = universityNextOffset == null;
     if (!elements.universityLoadMore.hidden) elements.universityLoadMore.textContent = universityTotal == null
       ? `Load 100 more · ${numberFormatter.format(universityRows.length)} shown`
@@ -2856,7 +2886,7 @@
     if (topicSlug) url.searchParams.set('topic', topicSlug);
     const cached = await readCachedRequest(url);
     if (cached) return cached;
-    const filteredResearch = viewName === 'research' && Boolean(params.q || params.topic || params.evidence || params.access);
+    const filteredResearch = viewName === 'research' && Boolean(params.q || params.topic || params.evidence || params.access || params.published_from || params.published_to);
     const deadline = filteredResearch || ['universities', 'topic-dossier', 'trial-results-gap', 'funding'].includes(viewName) ? 10000 : 6500;
     let res;
     try {
@@ -2929,7 +2959,7 @@
       } else if (view === 'trials') {
         const params = new URLSearchParams(location.search);
         const requestedStatus = params.get('status')?.trim() || '';
-        const [data, topicEntries] = await Promise.all([request('trials', 100, { q: params.get('search')?.trim() || params.get('q')?.trim() || '', topic: params.get('topic')?.trim() || '', status: requestedStatus, phase: params.get('phase')?.trim() || '', country: params.get('country')?.trim() || '' }), catalogueTopicEntries()]);
+        const [data, topicEntries] = await Promise.all([request('trials', 100, { q: params.get('search')?.trim() || params.get('q')?.trim() || '', topic: params.get('topic')?.trim() || '', status: requestedStatus, phase: params.get('phase')?.trim() || '', country: params.get('country')?.trim() || '', results: params.get('results')?.trim() || '' }), catalogueTopicEntries()]);
         trialNextOffset = data.next_offset;
         trialTotal = Number(data.total_matching || data.trials?.length || 0);
         renderTrials(data.trials || [], topicEntries);
@@ -2943,7 +2973,7 @@
       } else if (view === 'funding') {
         const params = new URLSearchParams(location.search);
         const [data, topicEntries] = await Promise.all([request('funding', FUNDING_PAGE_SIZE, {
-          q: params.get('search')?.trim() || '', topic: params.get('topic')?.trim() || '', country: params.get('country')?.trim() || '', institution: params.get('institution')?.trim() || '', sort: params.get('sort')?.trim() || 'recent',
+          q: params.get('search')?.trim() || '', topic: params.get('topic')?.trim() || '', country: params.get('country')?.trim() || '', funder: params.get('funder')?.trim() || '', institution: params.get('institution')?.trim() || '', sort: params.get('sort')?.trim() || 'recent',
         }), catalogueTopicEntries()]);
         fundingRows = data.awards || []; fundingNextOffset = data.next_offset; fundingTotal = Number(data.total_matching || fundingRows.length);
         directGrantRows = data.direct_grants || []; directGrantTotal = Number(data.direct_grant_total_matching || directGrantRows.length);

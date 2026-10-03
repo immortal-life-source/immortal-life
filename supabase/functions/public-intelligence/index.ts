@@ -254,7 +254,7 @@ Deno.serve(async (req) => {
       let directoryQuery: any
       if (topic) {
         directoryQuery = supabase.from('university_research_topic_metrics')
-          .select(`topic_slug,works_all_time,works_five_year,works_two_year,representative_citations,representative_open_access_count,representative_work_count,university_research_institutions!inner(${institutionFields})`, { count: 'planned' })
+          .select(`topic_slug,works_all_time,works_five_year,works_two_year,representative_citations,representative_open_access_count,representative_work_count,university_research_institutions!inner(${institutionFields})`, { count: 'exact' })
           .eq('topic_slug', topic)
           .gt('works_all_time', 0)
           .eq('university_research_institutions.is_eligible', true)
@@ -268,8 +268,9 @@ Deno.serve(async (req) => {
           .order('works_two_year', { ascending: false })
           .order('openalex_id')
       } else {
+        const filteredDirectory = Boolean(search || continent || /^[A-Z]{2}$/.test(country))
         directoryQuery = supabase.from('university_research_institutions')
-          .select(institutionFields, { count: 'planned' })
+          .select(institutionFields, { count: filteredDirectory ? 'exact' : 'planned' })
           .eq('is_eligible', true)
           .range(offset, offset + universityLimit - 1)
         if (/^[A-Z]{2}$/.test(country)) directoryQuery = directoryQuery.eq('country_code', country)
@@ -303,13 +304,12 @@ Deno.serve(async (req) => {
       const hasDirectoryFilters = Boolean(topic || search || continent || /^[A-Z]{2}$/.test(country))
       return response(req, {
         generated_at: new Date().toISOString(),
-        // PostgreSQL's planned count keeps the first topic page fast, but it
-        // is not an audited total and may underestimate a growing corpus. Do
-        // not display it or use it to stop pagination; a full final page is
-        // the only completion signal for topic browsing.
-        total_matching: hasDirectoryFilters ? null : Number(coverage.data?.universities ?? count ?? 0),
+        // Filtered requests use indexed exact counts so a number clicked from
+        // a dossier or region card always matches the destination result set.
+        // The global directory retains the cached coverage total for speed.
+        total_matching: hasDirectoryFilters ? Number(count ?? 0) : Number(coverage.data?.universities ?? count ?? 0),
         offset,
-        next_offset: universities.length === universityLimit ? offset + universities.length : null,
+        next_offset: offset + universities.length < Number(hasDirectoryFilters ? count ?? 0 : coverage.data?.universities ?? count ?? 0) ? offset + universities.length : null,
         coverage: coverage.data ?? {},
         filters: { topic: topic || null, country: country || null, continent: continent || null, search: search || null, sort },
         topics: topicsResult.data ?? [],
@@ -446,7 +446,7 @@ Deno.serve(async (req) => {
       const twelveWeeksAgo = new Date(Date.now() - 84 * 86400000).toISOString()
       const researchFields = 'id,external_id,title,authors,journal,published_on,doi,publication_type,evidence_level,evidence_snapshot,source_url,is_open_access,cited_by_count,editorial_summary,status,relevance_confidence,source_quality_score,freshness_score,match_explanation,quality_checked_at,content_sources(name)'
       const trialRelation = 'clinical_trial_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
-      const [researchResult, trialResult, topicResult, evidenceResult, overviewResult, timelineResult, timelinePulseResult, sourcesResult, pilotResult, fundingResult, universityCountResult] = await Promise.all([
+      const [researchResult, trialResult, topicResult, evidenceResult, overviewResult, timelineResult, timelinePulseResult, sourcesResult, pilotResult, fundingResult, fundingAwardCountResult, directGrantCountResult, universityCountResult] = await Promise.all([
         // Start at the selective topic-link index. Beginning with the entire
         // research table and asking PostgREST for an embedded inner relation
         // caused rare topics to scan the growing global corpus before finding
@@ -472,11 +472,17 @@ Deno.serve(async (req) => {
         dossierStage('sources', sourcesPromise),
         dossierStage('interpretation', supabase.rpc('get_topic_dossier_pilot', { requested_topic: topic })),
         dossierStage('funding', supabase.rpc('get_topic_funding_dossier', { requested_topic: topic })),
+        dossierStage('funding-award-count', supabase.rpc('get_funding_award_page', {
+          p_topic: topic, p_country: '', p_funder: '', p_institution: '', p_search: '', p_sort: 'recent', p_offset: 0, p_limit: 1,
+        })),
+        dossierStage('direct-grant-count', supabase.rpc('get_direct_grant_page', {
+          p_topic: topic, p_country: '', p_search: '', p_offset: 0, p_limit: 1,
+        })),
         dossierStage('university-count', supabase.from('university_research_topic_metrics')
-          .select('openalex_id,university_research_institutions!inner(is_eligible)', { count: 'planned', head: true })
+          .select('openalex_id,university_research_institutions!inner(is_eligible)', { count: 'exact', head: true })
           .eq('topic_slug', topic).gt('works_all_time', 0).eq('university_research_institutions.is_eligible', true)),
       ])
-      for (const result of [researchResult, trialResult, topicResult, evidenceResult, overviewResult, timelineResult, timelinePulseResult, sourcesResult, pilotResult, fundingResult, universityCountResult]) if (result.error) throw result.error
+      for (const result of [researchResult, trialResult, topicResult, evidenceResult, overviewResult, timelineResult, timelinePulseResult, sourcesResult, pilotResult, fundingResult, fundingAwardCountResult, directGrantCountResult, universityCountResult]) if (result.error) throw result.error
 
       const related = new Map<string, number>()
       for (const event of timelineResult.data ?? []) for (const slug of event.topic_slugs ?? []) if (slug !== topic) related.set(slug, (related.get(slug) ?? 0) + 1)
@@ -540,6 +546,20 @@ Deno.serve(async (req) => {
           })),
         }
       }
+      const cachedFunding = fundingResult.data ?? {
+        summary: {}, reported_amounts: [], direct_funders: [], acknowledgement_funders: [],
+        universities: [], acknowledgement_countries: [], direct_countries: [],
+        acknowledgement_years: [], direct_grant_years: [], recent_direct_grants: [],
+        recent_awards: [], related_topics: [], direct_sources: [],
+      }
+      const funding = {
+        ...cachedFunding,
+        summary: {
+          ...(cachedFunding.summary ?? {}),
+          award_entities: Number(fundingAwardCountResult.data?.total_matching ?? cachedFunding.summary?.award_entities ?? 0),
+          direct_grants: Number(directGrantCountResult.data?.total_matching ?? cachedFunding.summary?.direct_grants ?? 0),
+        },
+      }
       return response(req, {
         generated_at: new Date().toISOString(),
         research,
@@ -562,12 +582,7 @@ Deno.serve(async (req) => {
           },
         },
         pilot: pilotResult.data ?? null,
-        funding: fundingResult.data ?? {
-          summary: {}, reported_amounts: [], direct_funders: [], acknowledgement_funders: [],
-          universities: [], acknowledgement_countries: [], direct_countries: [],
-          acknowledgement_years: [], direct_grant_years: [], recent_direct_grants: [],
-          recent_awards: [], related_topics: [], direct_sources: [],
-        },
+        funding,
         sources: (sourcesResult.data ?? []).map(publicSourceState),
       })
     }
@@ -717,7 +732,8 @@ Deno.serve(async (req) => {
       const status = cleanText(url.searchParams.get('status') ?? '', 80)
       const phase = cleanText(url.searchParams.get('phase') ?? '', 80)
       const country = cleanText(url.searchParams.get('country') ?? '', 120)
-      const countMode = search || status || phase || country || topic ? 'exact' : 'planned'
+      const results = cleanText(url.searchParams.get('results') ?? '', 20)
+      const countMode = search || status || phase || country || results || topic ? 'exact' : 'planned'
       const topicRelation = 'clinical_trial_topics!inner(topic_slug,relevance_score,match_reasons,matched_fields,is_published,intelligence_topics(name,slug))'
       let query = supabase
         .from('clinical_trials')
@@ -733,6 +749,7 @@ Deno.serve(async (req) => {
       else if (status) query = query.eq('overall_status', status)
       if (phase) query = query.contains('phases', [phase])
       if (country) query = query.contains('countries', [country])
+      if (results === 'posted') query = query.eq('metadata->>source_has_results', 'true')
       const [{ data, error, count }, { data: sources, error: sourcesError }] = await Promise.all([query, sourcesPromise])
       if (error) throw error
       if (sourcesError) throw sourcesError
