@@ -2829,7 +2829,7 @@
   // Cache Storage survives ordinary reloads. Bump this contract whenever a
   // repaired public aggregation would otherwise remain hidden by an older
   // zero-value response in a visitor's browser.
-  const publicCacheName = 'immortal-life-public-intelligence-v16';
+  const publicCacheName = 'immortal-life-public-intelligence-v17';
   const publicCacheMaxAgeMs = 15 * 60 * 1000;
   const publicCacheFallbackMaxAgeMs = 7 * 24 * 60 * 60 * 1000;
   let lastVerifiedSnapshotAt = '';
