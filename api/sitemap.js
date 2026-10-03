@@ -2,6 +2,7 @@
 
 const upstreamBase = 'https://nifbuyoghesveotugday.supabase.co/functions/v1/public-pages';
 const restBase = 'https://nifbuyoghesveotugday.supabase.co/rest/v1/rpc/get_public_topic_sitemap';
+const SITE_ORIGIN = 'https://www.immortal.life';
 const directoryTypes = new Set(['index', 'static', 'topics', 'briefings', 'universities', 'entities', 'funders']);
 const recordTypePattern = /^(research|trials|regulatory|integrity)(?:-(\d+))?$/;
 
@@ -57,7 +58,10 @@ module.exports = async function sitemapProxy(request, response) {
       signal: controller.signal,
     });
     if (!result.ok) throw new Error(`sitemap_${result.status}`);
-    const body = await result.text();
+    let body = await result.text();
+    if (type === 'index' && body.includes('</sitemapindex>') && !body.includes('/sitemaps/signals.xml')) {
+      body = body.replace('</sitemapindex>', `<sitemap><loc>${SITE_ORIGIN}/sitemaps/signals.xml</loc></sitemap></sitemapindex>`);
+    }
     response.setHeader('Content-Type', 'application/xml; charset=utf-8');
     // Publication state changes continuously while the historical taxonomy
     // pass is running. A six-hour sitemap snapshot could therefore keep URLs

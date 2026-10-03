@@ -13,7 +13,9 @@ mkdirSync(artifacts, { recursive: true });
 const defaultRoutes = [
   '/', '/you', '/research', '/trials', '/topics', '/topics/rapamycin',
   '/changes', '/discover/recruiting-trials', '/reports',
-  '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/methodology',
+  '/regulatory', '/integrity', '/evidence-graph', '/briefings', '/signals',
+  '/signals/global-longevity-trial-map', '/signals/longevity-trial-results-gap',
+  '/signals/where-longevity-funding-flows', '/methodology',
   '/resources', '/universities', '/entities', '/entities/topic/rapamycin', '/quality', '/automation', '/publication-policy', '/corrections', '/data', '/dashboard', '/join',
   '/privacy', '/confirmed', '/unsubscribed',
 ];
@@ -278,7 +280,7 @@ try {
   await cdp.call('Network.enable');
   const desktop = await runViewport(cdp, 'desktop', 1440, 1000, false);
   const mobile = await runViewport(cdp, 'mobile', 390, 844, true);
-  const endpointChecks = await Promise.all(['/sitemap.xml', '/sitemaps/static.xml', '/sitemaps/research.xml', '/sitemaps/universities.xml', '/feed.xml', '/feed.atom', '/feed.json', '/changes/feed.xml', '/changes/feed.json', '/feeds/topics/rapamycin.xml', '/datasets/trials.csv', '/datasets/research.json', '/datasets/universities.csv', '/datasets/universities.json', '/api/subscribe?action=confirm&token=bad', '/social-card/entity/topic-rapamycin.png', '/social-card/changes/latest.png', '/social-card/university/harvard-university-i136199984.png'].map(async (route) => {
+  const endpointChecks = await Promise.all(['/sitemap.xml', '/sitemaps/static.xml', '/sitemaps/research.xml', '/sitemaps/universities.xml', '/sitemaps/signals.xml', '/feed.xml', '/feed.atom', '/feed.json', '/changes/feed.xml', '/changes/feed.json', '/feeds/topics/rapamycin.xml', '/datasets/trials.csv', '/datasets/research.json', '/datasets/universities.csv', '/datasets/universities.json', '/api/subscribe?action=confirm&token=bad', '/social-card/entity/topic-rapamycin.png', '/social-card/changes/latest.png', '/social-card/university/harvard-university-i136199984.png'].map(async (route) => {
     const response = await fetch(`${baseUrl}${route}`);
     return { route, status: response.status, contentType: response.headers.get('content-type'), ok: response.ok };
   }));

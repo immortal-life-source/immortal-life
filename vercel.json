@@ -15,6 +15,9 @@
     },
     "api/public-page.js": {
       "maxDuration": 30
+    },
+    "api/signals.js": {
+      "maxDuration": 30
     }
   },
   "redirects": [
@@ -69,7 +72,7 @@
       ]
     },
     {
-      "source": "/(style.css|main.js|intelligence.css|intelligence.js|institutional-pilot.css|institutional-pilot.js)",
+      "source": "/(style.css|main.js|intelligence.css|intelligence.js|institutional-pilot.css|institutional-pilot.js|signals.css)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800" }
       ]
@@ -176,6 +179,8 @@
     }
   ],
   "rewrites": [
+    { "source": "/signals", "destination": "/api/signals" },
+    { "source": "/signals/:slug", "destination": "/api/signals?slug=:slug" },
     { "source": "/topics/:slug", "destination": "/api/topic-page?slug=:slug" },
     { "source": "/research", "destination": "/api/hub-page?view=research" },
     { "source": "/trials", "destination": "/api/hub-page?view=trials" },
@@ -218,6 +223,7 @@
     { "source": "/sitemaps/entities.xml", "destination": "/api/sitemap?type=entities" },
     { "source": "/sitemaps/funders.xml", "destination": "/api/sitemap?type=funders" },
     { "source": "/sitemaps/topics.xml", "destination": "/api/sitemap?type=topics" },
+    { "source": "/sitemaps/signals.xml", "destination": "/api/signals?mode=sitemap" },
     { "source": "/feed.xml", "destination": "/api/feed?format=rss" },
     { "source": "/feed.atom", "destination": "/api/feed?format=atom" },
     { "source": "/feed.json", "destination": "/api/feed?format=json" },

@@ -20,6 +20,12 @@ function expectedPath(query) {
   return '';
 }
 
+function injectSignalsFeature(html) {
+  if (String(html || '').includes('href="/signals"')) return html;
+  const feature = `<section class="intel-section"><div class="section-heading"><div><span class="section-index">Immortal.life Signals</span><h2>Stories hidden inside longevity data</h2></div><a class="section-link" href="/signals">Explore all Signals →</a></div><div class="briefing-list"><article class="briefing-card"><span class="section-index">Global trial geography</span><h2><a href="/signals/global-longevity-trial-map">Where active longevity trials are being registered</a></h2><p>A source-linked view of countries, phases, sponsors and planned enrolment.</p></article><article class="briefing-card"><span class="section-index">Trial transparency</span><h2><a href="/signals/longevity-trial-results-gap">The distance between trial completion and visible results</a></h2><p>Completed registrations, structured results and possible gaps to inspect.</p></article><article class="briefing-card"><span class="section-index">Funding connections</span><h2><a href="/signals/where-longevity-funding-flows">Where longevity research funding is visible</a></h2><p>Official grants and publication acknowledgements, kept meaningfully separate.</p></article></div></section>`;
+  return String(html || '').replace('<nav class="next-journey"', `${feature}<nav class="next-journey"`);
+}
+
 function append(upstream, name, value, validator) {
   const clean = String(value || '').trim();
   if (clean && validator.test(clean)) upstream.searchParams.set(name, clean);
@@ -57,7 +63,7 @@ module.exports = async function publicPageProxy(request, response) {
       },
       signal: controller.signal,
     });
-    const body = request.method === 'HEAD' ? '' : await result.text();
+    let body = request.method === 'HEAD' ? '' : await result.text();
     // public-pages currently emits HTML with a text/plain origin header. Do
     // not propagate that mistake through a nosniff response or browsers will
     // show the document source instead of rendering the page.
@@ -66,6 +72,8 @@ module.exports = async function publicPageProxy(request, response) {
       response.setHeader('Cache-Control', 'no-store');
       return response.status(result.status).type(contentType).send(body);
     }
+
+    if (request.method === 'GET' && mode === 'briefings' && !request.query?.slug) body = injectSignalsFeature(body);
 
     const expected = expectedPath({ mode, kind, slug: String(request.query?.slug || '') });
     const canonical = canonicalPath(body);
@@ -91,3 +99,4 @@ module.exports = async function publicPageProxy(request, response) {
 
 module.exports.canonicalPath = canonicalPath;
 module.exports.expectedPath = expectedPath;
+module.exports.injectSignalsFeature = injectSignalsFeature;

@@ -17,6 +17,7 @@
         ['Regulatory notices', 'Official safety and regulatory signals', '/regulatory'],
         ['Corrections & integrity', 'Corrections, retractions and withdrawals', '/integrity'],
         ['Weekly briefings', 'Concise source-linked field updates', '/briefings'],
+        ['Immortal.life Signals', 'Maps and stories hidden inside the data', '/signals'],
       ],
     },
     '/topics': {
@@ -148,6 +149,10 @@
       copy: 'Use public briefings and feeds, or create a private topic watch for changes that matter to you.',
       action: ['Read all briefings', '/briefings'],
       links: [
+        ['Immortal.life Signals', 'Source-linked maps, graphs and data stories', '/signals'],
+        ['Global Trial Map', 'Where active longevity trials are visible', '/signals/global-longevity-trial-map'],
+        ['Trial Results Gap', 'Completion versus visible registry results', '/signals/longevity-trial-results-gap'],
+        ['Funding Flows', 'Funders, fields and connected institutions', '/signals/where-longevity-funding-flows'],
         ['Latest briefings', 'Newest published field summaries', '/briefings'],
         ['What changed', 'The live source-level timeline', '/changes'],
         ['Longevity Watch', 'Follow selected topics privately', '/you'],
